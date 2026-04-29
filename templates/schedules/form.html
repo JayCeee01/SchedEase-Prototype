@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor</p>
+    <h1>{{ title }}</h1>
+    <p class="subtle">{{ description|default:"Required fields are validated before saving. Time fields use the school scheduling range configured in the backend." }}</p>
+  </div>
+</div>
+<form method="post" class="panel form">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <div class="toolbar" style="justify-content:flex-start">
+    <button class="primary" data-loading-text="Saving">Save</button>
+    <button class="button" type="button" onclick="history.back()">Cancel</button>
+  </div>
+</form>
+{% endblock %}

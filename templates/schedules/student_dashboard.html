@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Student Portal</p>
+    <h1>Class schedule</h1>
+    {% if student %}<p class="subtle">{{ student.section }}</p>{% endif %}
+  </div>
+  <a class="button primary" href="{% url 'browse_schedules' %}">Search Published Schedules</a>
+</div>
+{% include "schedules/entry_table.html" with entries=entries %}
+{% endblock %}

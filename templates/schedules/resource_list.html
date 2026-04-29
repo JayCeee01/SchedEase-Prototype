@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Master Data</p>
+    <h1>{{ resource|title }}</h1>
+    <p class="subtle">{{ description|default:"Search, sort, and maintain records used by the schedule generator." }}</p>
+  </div>
+  <a class="button primary" href="{% url 'resource_create' resource %}">New</a>
+</div>
+<div class="panel table-wrap">
+  <div class="table-tools">
+    <label class="table-search">
+      <span class="icon search-icon"></span>
+      <input type="search" data-table-filter placeholder="Search {{ resource }}">
+    </label>
+    <span class="badge">{{ objects|length }} records</span>
+  </div>
+  <table>
+    <thead><tr><th data-sort>Record</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for obj in objects %}
+      <tr>
+        <td>{{ obj }}</td>
+        <td class="actions-cell">
+          {% if resource == "schedules" %}<a class="button" href="{% url 'schedule_detail' obj.pk %}">Open</a>{% endif %}
+          <a class="button" href="{% url 'resource_update' resource obj.pk %}">Edit</a>
+          <a class="button" href="{% url 'resource_delete' resource obj.pk %}">Delete</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="2" class="table-empty">No records yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

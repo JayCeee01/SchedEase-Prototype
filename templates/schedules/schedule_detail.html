@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Schedule Review</p>
+    <h1>{{ schedule.name }}</h1>
+    <p class="subtle">{{ schedule.term }} | {{ schedule.status }} | score {{ schedule.fitness_score|floatformat:2 }}</p>
+  </div>
+  <div class="actions">
+    <a class="button" href="{% url 'entry_create' schedule.pk %}">Add Entry</a>
+    <a class="button" href="{% url 'export_csv' schedule.pk %}">CSV</a>
+    <a class="button" href="{% url 'export_pdf' schedule.pk %}">PDF</a>
+    <a class="button primary" href="{% url 'publish_schedule' schedule.pk %}">Publish</a>
+  </div>
+</div>
+
+{% if conflicts %}
+<div class="toast error">
+  <span class="toast-dot"></span>
+  <div>
+    <strong>{{ conflicts|length }} conflict{{ conflicts|length|pluralize }} detected</strong>
+    {% for conflict in conflicts %}<p>{{ conflict }}</p>{% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="toast">
+  <span class="toast-dot"></span>
+  <span>No conflicts detected. This schedule is ready for approval or publishing.</span>
+</div>
+{% endif %}
+
+<h2>Timetable View</h2>
+<section class="schedule-board">
+  <div class="day-column">
+    <header>Monday</header>
+    {% for e in entries %}{% if e.day == 0 %}
+    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
+    {% endif %}{% endfor %}
+  </div>
+  <div class="day-column">
+    <header>Tuesday</header>
+    {% for e in entries %}{% if e.day == 1 %}
+    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
+    {% endif %}{% endfor %}
+  </div>
+  <div class="day-column">
+    <header>Wednesday</header>
+    {% for e in entries %}{% if e.day == 2 %}
+    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
+    {% endif %}{% endfor %}
+  </div>
+  <div class="day-column">
+    <header>Thursday</header>
+    {% for e in entries %}{% if e.day == 3 %}
+    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
+    {% endif %}{% endfor %}
+  </div>
+  <div class="day-column">
+    <header>Friday</header>
+    {% for e in entries %}{% if e.day == 4 %}
+    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
+    {% endif %}{% endfor %}
+  </div>
+  <div class="day-column">
+    <header>Saturday</header>
+    {% for e in entries %}{% if e.day == 5 %}
+    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
+    {% endif %}{% endfor %}
+  </div>
+</section>
+
+<h2>Table View</h2>
+{% include "schedules/entry_table.html" with entries=entries schedule=schedule %}
+{% endblock %}

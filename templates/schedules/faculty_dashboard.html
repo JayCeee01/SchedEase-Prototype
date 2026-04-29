@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Faculty Workspace</p>
+    <h1>Assigned teaching schedule</h1>
+    <p class="subtle">Review published class assignments and keep availability up to date for future schedule generation.</p>
+  </div>
+  <a class="button primary" href="{% url 'my_availability' %}">Update Availability</a>
+</div>
+<h2>Assigned Teaching Schedule</h2>
+{% include "schedules/entry_table.html" with entries=entries %}
+{% endblock %}

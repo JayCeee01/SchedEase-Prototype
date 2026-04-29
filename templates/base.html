@@ -1,0 +1,114 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SchedEase{% endblock %}</title>
+  <script>
+    if (sessionStorage.getItem("schedease-sidebar-collapsed") === "true") {
+      document.documentElement.classList.add("sidebar-collapsed");
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-lockup">
+        <button class="icon-button sidebar-menu-button" type="button" data-sidebar-collapse aria-label="Toggle navigation" data-tooltip="Open or close the sidebar menu.">
+          <span class="icon menu-icon"></span>
+        </button>
+        <a class="brand" href="{% url 'dashboard' %}">
+          <span class="brand-mark">SE</span>
+          <span class="brand-text">
+            <strong>SchedEase</strong>
+            <small>Academic Scheduler</small>
+          </span>
+        </a>
+      </div>
+      {% if user.is_authenticated %}
+      <nav class="nav-group" aria-label="Primary navigation">
+        <a href="{% url 'dashboard' %}" data-icon="grid">Dashboard</a>
+        <a href="{% url 'browse_schedules' %}" data-icon="calendar">Browse Schedules</a>
+        {% if user.profile.role == "FACULTY" %}
+        <a href="{% url 'my_availability' %}" data-icon="clock">My Availability</a>
+        {% endif %}
+        {% if user.is_superuser or user.profile.role == "ADMIN" %}
+        <span class="nav-section">Administration</span>
+        <a href="{% url 'generate_schedule' %}" data-icon="spark">Generate</a>
+        <a href="{% url 'resource_list' 'schedules' %}" data-icon="calendar">Manage Schedules</a>
+        <a href="{% url 'resource_list' 'departments' %}" data-icon="building">Departments</a>
+        <a href="{% url 'resource_list' 'programs' %}" data-icon="book">Programs</a>
+        <a href="{% url 'resource_list' 'sections' %}" data-icon="layers">Sections</a>
+        <a href="{% url 'resource_list' 'subjects' %}" data-icon="file">Subjects</a>
+        <a href="{% url 'resource_list' 'credentials' %}" data-icon="check">Credentials</a>
+        <a href="{% url 'resource_list' 'faculty-credentials' %}" data-icon="user">Faculty Credentials</a>
+        <a href="{% url 'resource_list' 'subject-credential-requirements' %}" data-icon="file">Subject Requirements</a>
+        <a href="{% url 'resource_list' 'credential-overrides' %}" data-icon="flag">Credential Overrides</a>
+        <a href="{% url 'resource_list' 'faculty' %}" data-icon="user">Faculty</a>
+        <a href="{% url 'resource_list' 'students' %}" data-icon="users">Students</a>
+        <a href="{% url 'resource_list' 'rooms' %}" data-icon="door">Rooms</a>
+        <a href="{% url 'resource_list' 'terms' %}" data-icon="flag">Terms</a>
+        <a href="{% url 'resource_list' 'assignments' %}" data-icon="check">Assignments</a>
+        <a href="{% url 'resource_list' 'availability' %}" data-icon="clock">Availability</a>
+        <a href="{% url 'resource_list' 'ga-settings' %}" data-icon="sliders">GA Settings</a>
+        {% endif %}
+      </nav>
+      {% endif %}
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <div class="topbar-left">
+          <a class="topbar-brand" href="{% url 'dashboard' %}" aria-label="SchedEase home">
+            <span class="brand-mark">SE</span>
+            <span>SchedEase</span>
+          </a>
+          <button class="icon-button mobile-only" type="button" data-sidebar-toggle aria-label="Open navigation">
+            <span class="icon menu-icon"></span>
+          </button>
+        </div>
+        <div class="topbar-search">
+          <span class="icon search-icon"></span>
+          <input type="search" data-global-filter placeholder="Search visible tables">
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" type="button" data-theme-toggle aria-label="Toggle theme">
+            <span class="icon theme-icon"></span>
+          </button>
+          {% if user.is_authenticated %}
+          <div class="user-menu">
+            <span class="avatar">{{ user.username|slice:":1"|upper }}</span>
+            <span>
+              <strong>{{ user.get_full_name|default:user.username }}</strong>
+              <small>{{ user.profile.get_role_display|default:"Administrator" }}</small>
+            </span>
+          </div>
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button class="button button-ghost" data-loading-text="Signing out">Sign out</button>
+          </form>
+          {% endif %}
+        </div>
+      </header>
+
+      <section class="content">
+        {% for message in messages %}
+        <div class="toast {{ message.tags }}" role="status">
+          <span class="toast-dot"></span>
+          <span>{{ message }}</span>
+          <button type="button" class="toast-close" aria-label="Dismiss">x</button>
+        </div>
+        {% endfor %}
+        {% block content %}{% endblock %}
+      </section>
+    </div>
+  </div>
+  <div class="backdrop" data-sidebar-toggle></div>
+  <script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>

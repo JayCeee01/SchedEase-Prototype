@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Faculty Workspace</p>
+    <h1>My Availability</h1>
+    <p class="subtle">Add preferred, available, and unavailable slots so schedules can respect your teaching time.</p>
+  </div>
+  <a class="button primary" href="{% url 'my_availability_create' %}">Add Slot</a>
+</div>
+<div class="panel table-wrap">
+  <div class="table-tools">
+    <label class="table-search">
+      <span class="icon search-icon"></span>
+      <input type="search" data-table-filter placeholder="Search slots">
+    </label>
+    <span class="badge">{{ availability|length }} slots</span>
+  </div>
+  <table>
+    <thead><tr><th data-sort>Day</th><th data-sort>Time</th><th data-sort>Kind</th><th></th></tr></thead>
+    <tbody>
+    {% for item in availability %}
+      <tr>
+        <td>{{ item.get_day_display }}</td>
+        <td>{{ item.start_time|time:"g:i A" }} - {{ item.end_time|time:"g:i A" }}</td>
+        <td><span class="badge {% if item.kind == 'UNAVAILABLE' %}danger{% elif item.kind == 'PREFERRED' %}success{% endif %}">{{ item.get_kind_display }}</span></td>
+        <td class="actions-cell"><a class="button" href="{% url 'my_availability_update' item.pk %}">Edit</a></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4" class="table-empty">No availability slots yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Delete Record</p>
+    <h1>Delete {{ object }}?</h1>
+    <p class="subtle">This action cannot be undone. For schedules, related schedule entries will also be removed.</p>
+  </div>
+</div>
+<form method="post" class="panel form">
+  {% csrf_token %}
+  <div class="toast error">
+    <span class="toast-dot"></span>
+    <span>Please confirm that you want to delete this {{ resource|title }} record.</span>
+  </div>
+  <div class="toolbar" style="justify-content:flex-start">
+    <button class="primary" data-loading-text="Deleting">Delete</button>
+    <a class="button" href="{% url 'resource_list' resource %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

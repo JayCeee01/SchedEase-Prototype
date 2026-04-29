@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Published Schedules</p>
+    <h1>Browse class schedules</h1>
+    <p class="subtle">Filter by term, department, program, year level, section, or subject.</p>
+  </div>
+</div>
+<form method="get" class="panel form filters">
+  {{ form.as_p }}
+  <button class="primary">Apply Filters</button>
+</form>
+{% include "schedules/entry_table.html" with entries=entries %}
+{% endblock %}

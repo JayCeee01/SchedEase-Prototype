@@ -1,0 +1,12 @@
+<div class="grid">
+  {% for schedule in schedules %}
+  <article class="card">
+    <span class="badge {% if schedule.status == 'PUBLISHED' %}success{% elif schedule.status == 'APPROVED' %}warning{% endif %}">{{ schedule.status }}</span>
+    <h3><a href="{% url 'schedule_detail' schedule.pk %}">{{ schedule.name }}</a></h3>
+    <p class="muted">{{ schedule.term }}</p>
+    <p><strong>Fitness score:</strong> {{ schedule.fitness_score|floatformat:2 }}</p>
+  </article>
+  {% empty %}
+  <p class="muted">No schedules yet.</p>
+  {% endfor %}
+</div>
