@@ -1,0 +1,276 @@
+SchedEase Local Setup Guide
+===========================
+
+This guide explains how to download, install, and run SchedEase on your computer.
+
+SchedEase uses:
+- Python
+- Django
+- SQLite for local development
+
+
+1. Install Python
+-----------------
+
+Make sure Python 3.11 or newer is installed.
+
+Check your Python version:
+
+Windows:
+python --version
+
+macOS/Linux:
+python3 --version
+
+If Python is not installed, download it from:
+https://www.python.org/downloads/
+
+
+2. Clone the GitHub Repository
+------------------------------
+
+Open a terminal or command prompt, then run:
+
+git clone https://github.com/JayCeee01/SchedEase-Prototype.git
+
+
+3. Go Into the Project Folder
+-----------------------------
+
+Windows:
+cd SchedEase-Prototype
+
+macOS/Linux:
+cd SchedEase-Prototype
+
+
+4. Create a Virtual Environment
+-------------------------------
+
+Windows:
+python -m venv .venv
+
+macOS/Linux:
+python3 -m venv .venv
+
+
+5. Activate the Virtual Environment
+-----------------------------------
+
+Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
+
+Windows Command Prompt:
+.venv\Scripts\activate.bat
+
+macOS/Linux:
+source .venv/bin/activate
+
+After activation, you should see (.venv) near the start of your terminal line.
+
+
+6. Install Required Dependencies
+--------------------------------
+
+Run:
+
+pip install -r requirements.txt
+
+
+7. Set Up Environment Variables
+-------------------------------
+
+SchedEase includes an example environment file named:
+
+.env.example
+
+For local development, copy it to a new file named .env.
+
+Windows PowerShell:
+copy .env.example .env
+
+Windows Command Prompt:
+copy .env.example .env
+
+macOS/Linux:
+cp .env.example .env
+
+The default values are already suitable for local testing.
+
+Important local settings:
+
+SCHED_EASE_DEBUG=True
+SCHED_EASE_DATABASE_URL=sqlite:///db.sqlite3
+
+
+8. Run Database Migrations
+--------------------------
+
+This creates the local SQLite database and required tables.
+
+Run:
+
+python manage.py migrate
+
+For macOS/Linux, if python points to Python 2, use:
+
+python3 manage.py migrate
+
+
+9. Seed Sample Data
+-------------------
+
+SchedEase includes sample departments, rooms, subjects, users, credentials, and assignments.
+
+Run:
+
+python manage.py seed_sample
+
+For macOS/Linux, if needed:
+
+python3 manage.py seed_sample
+
+
+10. Start the Development Server
+--------------------------------
+
+Run:
+
+python manage.py runserver
+
+For macOS/Linux, if needed:
+
+python3 manage.py runserver
+
+If the server starts successfully, you will see a message similar to:
+
+Starting development server at http://127.0.0.1:8000/
+
+
+11. Open the Web App
+--------------------
+
+Open your browser and go to:
+
+http://127.0.0.1:8000/
+
+
+12. Sample Login Accounts
+-------------------------
+
+After running the seed command, you can use these accounts:
+
+Admin:
+Username: admin
+Password: admin12345
+
+Faculty:
+Username: f001
+Password: password123
+
+Student:
+Username: student
+Password: password123
+
+
+13. How to Stop the Server
+--------------------------
+
+Go back to the terminal where the server is running.
+
+Press:
+
+Ctrl + C
+
+This stops the Django development server.
+
+
+Troubleshooting
+===============
+
+Problem: "python is not recognized"
+-----------------------------------
+
+Python may not be installed or may not be added to your PATH.
+
+Try:
+
+py --version
+
+If that works on Windows, you can use:
+
+py manage.py runserver
+
+
+Problem: PowerShell blocks virtual environment activation
+---------------------------------------------------------
+
+If this command fails:
+
+.\.venv\Scripts\Activate.ps1
+
+Run this first:
+
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+Then try activating again:
+
+.\.venv\Scripts\Activate.ps1
+
+
+Problem: Missing dependencies
+-----------------------------
+
+Make sure the virtual environment is activated, then run:
+
+pip install -r requirements.txt
+
+
+Problem: Database errors after pulling updates
+----------------------------------------------
+
+Run migrations again:
+
+python manage.py migrate
+
+Then refresh the sample data if needed:
+
+python manage.py seed_sample
+
+
+Problem: Static files or styling do not load
+--------------------------------------------
+
+Make sure local debug mode is enabled in .env:
+
+SCHED_EASE_DEBUG=True
+
+Then restart the server:
+
+Ctrl + C
+python manage.py runserver
+
+
+Problem: Port 8000 is already in use
+------------------------------------
+
+Run the server on another port:
+
+python manage.py runserver 8001
+
+Then open:
+
+http://127.0.0.1:8001/
+
+
+Notes
+=====
+
+- The local database file is named db.sqlite3.
+- The database file is not uploaded to GitHub.
+- You can safely recreate the local database by deleting db.sqlite3, then running:
+
+python manage.py migrate
+python manage.py seed_sample
+
+- Do not use the Django development server for production hosting.
