@@ -27,16 +27,39 @@ class GeneticScheduler:
         self.assignments = list(
             TeachingAssignment.objects.filter(term=term)
             .select_related("subject", "faculty", "section")
+            .prefetch_related(
+                "faculty__credentials__credential",
+                "subject__credential_requirements__required_credential",
+                "subject__credential_requirements__acceptable_equivalents",
+                "faculty__availability_set",
+            )
             .order_by("id")
         )
         self.rooms = list(Room.objects.filter(is_active=True).order_by("id"))
+        self.assignment_map = {a.id: a for a in self.assignments}
+        self.room_map = {r.id: r for r in self.rooms}
+        self.valid_rooms_by_assignment = {
+            assignment.id: [
+                room
+                for room in self.rooms
+                if room.room_type == assignment.subject.required_room_type and room.capacity >= assignment.section.size
+            ]
+            for assignment in self.assignments
+        }
+        self.qualification_cache = {
+            assignment.id: faculty_qualification(assignment.faculty, assignment.subject)["qualified"]
+            for assignment in self.assignments
+        }
         self.faculty_unavailable = self._availability_map(AvailabilityKind.UNAVAILABLE)
         self.faculty_preferred = self._availability_map(AvailabilityKind.PREFERRED)
+        self._fitness_cache = {}
 
     def _availability_map(self, kind):
         data = defaultdict(list)
         for assignment in self.assignments:
-            for item in assignment.faculty.availability_set.filter(kind=kind):
+            for item in assignment.faculty.availability_set.all():
+                if item.kind != kind:
+                    continue
                 data[assignment.faculty_id].append(item)
         return data
 
@@ -48,6 +71,7 @@ class GeneticScheduler:
 
         population = [self._random_chromosome() for _ in range(self.settings.population_size)]
         best = max(population, key=self.fitness)
+        best_score = self.fitness(best)
         for _ in range(self.settings.generations):
             ranked = sorted(population, key=self.fitness, reverse=True)
             next_population = ranked[: self.settings.elitism]
@@ -62,17 +86,17 @@ class GeneticScheduler:
                 next_population.append(child)
             population = next_population
             candidate = max(population, key=self.fitness)
-            if self.fitness(candidate) > self.fitness(best):
+            candidate_score = self.fitness(candidate)
+            if candidate_score > best_score:
                 best = candidate
+                best_score = candidate_score
 
-        schedule = Schedule.objects.create(term=self.term, name=name, fitness_score=self.fitness(best))
-        assignment_map = {a.id: a for a in self.assignments}
-        room_map = {r.id: r for r in self.rooms}
+        schedule = Schedule.objects.create(term=self.term, name=name, fitness_score=best_score)
         entries = [
             ScheduleEntry(
                 schedule=schedule,
-                assignment=assignment_map[gene.assignment_id],
-                room=room_map[gene.room_id],
+                assignment=self.assignment_map[gene.assignment_id],
+                room=self.room_map[gene.room_id],
                 day=gene.day,
                 start_time=gene.start_time,
                 end_time=gene.end_time,
@@ -83,7 +107,7 @@ class GeneticScheduler:
         return schedule
 
     def _random_gene(self, assignment):
-        valid_rooms = [r for r in self.rooms if r.room_type == assignment.subject.required_room_type and r.capacity >= assignment.section.size]
+        valid_rooms = self.valid_rooms_by_assignment[assignment.id]
         room = self.random.choice(valid_rooms or self.rooms)
         duration = max(1, assignment.required_hours)
         day = self.random.choice(list(ALLOWED_DAYS))
@@ -105,31 +129,33 @@ class GeneticScheduler:
 
     def _mutate(self, chromosome):
         mutated = []
-        assignment_map = {a.id: a for a in self.assignments}
         for gene in chromosome:
             if self.random.random() < self.settings.mutation_rate:
-                mutated.append(self._random_gene(assignment_map[gene.assignment_id]))
+                mutated.append(self._random_gene(self.assignment_map[gene.assignment_id]))
             else:
                 mutated.append(gene)
         return mutated
 
     def fitness(self, chromosome):
-        assignment_map = {a.id: a for a in self.assignments}
-        room_map = {r.id: r for r in self.rooms}
+        cache_key = tuple(chromosome)
+        cached = self._fitness_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         score = 1000.0
         hard_penalty = 0
         soft_penalty = 0
 
         for gene in chromosome:
-            assignment = assignment_map[gene.assignment_id]
-            room = room_map[gene.room_id]
+            assignment = self.assignment_map[gene.assignment_id]
+            room = self.room_map[gene.room_id]
             if gene.day not in ALLOWED_DAYS or not contains(SCHOOL_START, SCHOOL_END, gene.start_time, gene.end_time):
                 hard_penalty += 200
             if room.capacity < assignment.section.size:
                 hard_penalty += 150
             if room.room_type != assignment.subject.required_room_type:
                 hard_penalty += 150
-            if not faculty_qualification(assignment.faculty, assignment.subject)["qualified"]:
+            if not self.qualification_cache[assignment.id]:
                 hard_penalty += 300
             if self._blocked(assignment.faculty_id, gene):
                 hard_penalty += 200
@@ -140,11 +166,11 @@ class GeneticScheduler:
                 soft_penalty += 20
 
         for i, gene in enumerate(chromosome):
-            left = assignment_map[gene.assignment_id]
+            left = self.assignment_map[gene.assignment_id]
             for other in chromosome[i + 1 :]:
                 if gene.day != other.day or not overlaps(gene.start_time, gene.end_time, other.start_time, other.end_time):
                     continue
-                right = assignment_map[other.assignment_id]
+                right = self.assignment_map[other.assignment_id]
                 if left.faculty_id == right.faculty_id:
                     hard_penalty += 250
                 if left.section_id == right.section_id:
@@ -152,8 +178,10 @@ class GeneticScheduler:
                 if gene.room_id == other.room_id:
                     hard_penalty += 250
 
-        soft_penalty += self._distribution_penalty(chromosome, assignment_map)
-        return score - hard_penalty - soft_penalty
+        soft_penalty += self._distribution_penalty(chromosome)
+        fitness_score = score - hard_penalty - soft_penalty
+        self._fitness_cache[cache_key] = fitness_score
+        return fitness_score
 
     def _blocked(self, faculty_id, gene):
         return any(overlaps(gene.start_time, gene.end_time, a.start_time, a.end_time) for a in self.faculty_unavailable[faculty_id] if a.day == gene.day)
@@ -161,11 +189,11 @@ class GeneticScheduler:
     def _preferred(self, faculty_id, gene):
         return any(contains(a.start_time, a.end_time, gene.start_time, gene.end_time) for a in self.faculty_preferred[faculty_id] if a.day == gene.day)
 
-    def _distribution_penalty(self, chromosome, assignment_map):
+    def _distribution_penalty(self, chromosome):
         by_faculty_day = defaultdict(list)
         by_section_day = defaultdict(list)
         for gene in chromosome:
-            assignment = assignment_map[gene.assignment_id]
+            assignment = self.assignment_map[gene.assignment_id]
             by_faculty_day[(assignment.faculty_id, gene.day)].append(gene)
             by_section_day[(assignment.section_id, gene.day)].append(gene)
 
