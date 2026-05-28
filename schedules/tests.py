@@ -118,3 +118,21 @@ class SchedulingTestCase(TestCase):
         override = CredentialOverride.objects.get(subject=new_subject, faculty=self.faculty)
         self.assertEqual(override.admin_user, self.admin_user)
         self.assertIn("Programming", override.missing_credentials)
+
+    def test_landing_modal_accepts_email_or_username(self):
+        self.admin_user.email = "admin@schedease.local"
+        self.admin_user.save(update_fields=["email"])
+
+        username_response = self.client.post("/", {"username": "admin", "password": "admin12345"})
+        self.assertEqual(username_response.status_code, 302)
+        self.assertEqual(username_response["Location"], "/dashboard/")
+
+        self.client.logout()
+        email_response = self.client.post("/", {"username": "admin@schedease.local", "password": "admin12345"})
+        self.assertEqual(email_response.status_code, 302)
+        self.assertEqual(email_response["Location"], "/dashboard/")
+
+        self.client.logout()
+        bad_response = self.client.post("/", {"username": "admin", "password": "wrong"})
+        self.assertEqual(bad_response.status_code, 200)
+        self.assertContains(bad_response, "login-modal-shell is-open")

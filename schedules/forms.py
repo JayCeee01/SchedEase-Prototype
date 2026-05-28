@@ -1,4 +1,6 @@
 from django import forms
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import get_user_model
 from django.forms import modelform_factory
 from .models import (
     AcademicTerm,
@@ -75,3 +77,18 @@ class ScheduleSearchForm(forms.Form):
     year_level = forms.ModelChoiceField(queryset=YearLevel.objects.all(), required=False)
     section = forms.ModelChoiceField(queryset=Section.objects.all(), required=False)
     subject = forms.ModelChoiceField(queryset=Subject.objects.all(), required=False)
+
+
+class EmailOrUsernameAuthenticationForm(AuthenticationForm):
+    username = forms.CharField(
+        label="Email or username",
+        widget=forms.TextInput(attrs={"autofocus": True, "autocomplete": "username"}),
+    )
+
+    def clean(self):
+        identifier = self.cleaned_data.get("username", "")
+        if "@" in identifier:
+            user = get_user_model().objects.filter(email__iexact=identifier).first()
+            if user:
+                self.cleaned_data["username"] = user.get_username()
+        return super().clean()

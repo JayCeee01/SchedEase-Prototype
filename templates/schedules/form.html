@@ -7,7 +7,7 @@
     <p class="subtle">{{ description|default:"Required fields are validated before saving. Time fields use the school scheduling range configured in the backend." }}</p>
   </div>
 </div>
-<form method="post" class="panel form">
+<form method="post" class="panel form" data-tooltip-context="{{ tooltip_context|default:title|slugify }}">
   {% csrf_token %}
   {{ form.as_p }}
   <div class="toolbar" style="justify-content:flex-start">

@@ -1,5 +1,6 @@
 import csv
 from django.contrib import messages
+from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -10,7 +11,7 @@ from django.utils import timezone
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
-from .forms import MODEL_FORMS, ScheduleEntryForm, ScheduleGenerationForm, ScheduleSearchForm
+from .forms import EmailOrUsernameAuthenticationForm, MODEL_FORMS, ScheduleEntryForm, ScheduleGenerationForm, ScheduleSearchForm
 from .models import (
     AcademicTerm,
     Availability,
@@ -88,6 +89,21 @@ def admin_required(user):
 
 def faculty_required(user):
     return user.is_authenticated and role(user) == Role.FACULTY
+
+
+def landing_page(request):
+    login_form = EmailOrUsernameAuthenticationForm(request, data=request.POST or None)
+    login_modal_open = False
+    if request.method == "POST":
+        login_modal_open = True
+        if login_form.is_valid():
+            auth_login(request, login_form.get_user())
+            if not request.POST.get("remember_me"):
+                request.session.set_expiry(0)
+            return redirect("dashboard")
+    else:
+        login_form = EmailOrUsernameAuthenticationForm(request)
+    return render(request, "landing.html", {"login_form": login_form, "login_modal_open": login_modal_open})
 
 
 @login_required
@@ -174,7 +190,7 @@ def my_availability_create(request):
         item.save()
         messages.success(request, "Availability saved.")
         return redirect("my_availability")
-    return render(request, "schedules/form.html", {"form": form, "title": "Add Availability"})
+    return render(request, "schedules/form.html", {"form": form, "title": "Add Availability", "tooltip_context": "availability"})
 
 
 @login_required
@@ -193,7 +209,7 @@ def my_availability_update(request, pk):
         item.save()
         messages.success(request, "Availability updated.")
         return redirect("my_availability")
-    return render(request, "schedules/form.html", {"form": form, "title": "Edit Availability"})
+    return render(request, "schedules/form.html", {"form": form, "title": "Edit Availability", "tooltip_context": "availability"})
 
 
 @login_required
@@ -214,7 +230,7 @@ def resource_create(request, resource):
         form.save()
         messages.success(request, "Record created.")
         return redirect("resource_list", resource=resource)
-    return render(request, "schedules/form.html", {"form": form, "title": f"New {resource.replace('-', ' ')}", "description": RESOURCE_DESCRIPTIONS.get(resource, "Create a new record.")})
+    return render(request, "schedules/form.html", {"form": form, "title": f"New {resource.replace('-', ' ')}", "description": RESOURCE_DESCRIPTIONS.get(resource, "Create a new record."), "tooltip_context": resource})
 
 
 @login_required
@@ -229,7 +245,7 @@ def resource_update(request, resource, pk):
         form.save()
         messages.success(request, "Record updated.")
         return redirect("resource_list", resource=resource)
-    return render(request, "schedules/form.html", {"form": form, "title": f"Edit {obj}", "description": RESOURCE_DESCRIPTIONS.get(resource, "Update this record.")})
+    return render(request, "schedules/form.html", {"form": form, "title": f"Edit {obj}", "description": RESOURCE_DESCRIPTIONS.get(resource, "Update this record."), "tooltip_context": resource})
 
 
 def save_assignment_with_credential_check(request, form, resource):
@@ -299,7 +315,7 @@ def generate_schedule(request):
         schedule = scheduler.generate(form.cleaned_data["name"])
         messages.success(request, f"Schedule generated with fitness score {schedule.fitness_score:.2f}.")
         return redirect("schedule_detail", pk=schedule.pk)
-    return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule"})
+    return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
 
 
 @login_required
@@ -316,7 +332,7 @@ def entry_create(request, pk):
     form = ScheduleEntryForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         return save_entry_with_credential_check(request, form, schedule)
-    return render(request, "schedules/form.html", {"form": form, "title": "Add Schedule Entry"})
+    return render(request, "schedules/form.html", {"form": form, "title": "Add Schedule Entry", "tooltip_context": "schedule-entry"})
 
 
 @login_required
@@ -326,7 +342,7 @@ def entry_update(request, pk, entry_pk):
     form = ScheduleEntryForm(request.POST or None, instance=entry)
     if request.method == "POST" and form.is_valid():
         return save_entry_with_credential_check(request, form, entry.schedule)
-    return render(request, "schedules/form.html", {"form": form, "title": "Edit Schedule Entry"})
+    return render(request, "schedules/form.html", {"form": form, "title": "Edit Schedule Entry", "tooltip_context": "schedule-entry"})
 
 
 def save_entry_with_credential_check(request, form, schedule):
@@ -352,7 +368,7 @@ def save_entry_with_credential_check(request, form, schedule):
         entry.full_clean()
     except ValidationError as exc:
         form.add_error(None, exc)
-        return render(request, "schedules/form.html", {"form": form, "title": "Edit Schedule Entry", "description": "Resolve the validation issues before saving this schedule entry."})
+        return render(request, "schedules/form.html", {"form": form, "title": "Edit Schedule Entry", "description": "Resolve the validation issues before saving this schedule entry.", "tooltip_context": "schedule-entry"})
     entry.save()
     messages.success(request, "Schedule entry saved.")
     return redirect("schedule_detail", pk=schedule.pk)

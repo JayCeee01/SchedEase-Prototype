@@ -4,7 +4,8 @@
   if (savedTheme) root.dataset.theme = savedTheme;
 
   const fieldTooltips = {
-    "username": "Enter the username assigned to your account.",
+    "email or username": "Enter the email address or username for your account.",
+    "username": "Enter your account username used for logging in.",
     "password": "Enter your password to sign in securely.",
     "code": "Use a short unique code people can recognize, such as BSIT or IT101.",
     "name": "Enter the display name people will see in lists and schedules.",
@@ -62,6 +63,120 @@
     "override reason": "Briefly explain why this exception should be allowed."
   };
 
+  const contextualTooltips = {
+    "login|email or username": "Enter the email address or username for your account.",
+    "login|password": "Enter your password to sign in securely.",
+    "login|remember me": "Keeps you signed in on this device after logging in.",
+
+    "departments|code": "Enter the short department code, such as CCS or CBA.",
+    "departments|name": "Enter the full department name shown across the system.",
+
+    "programs|department": "Choose the department that offers this program.",
+    "programs|code": "Enter the short program code, such as BSIT or BSCS.",
+    "programs|name": "Enter the full program name students and staff will see.",
+
+    "year-levels|level": "Enter the year number, such as 1 for first year.",
+    "year-levels|label": "Enter the friendly year level name, such as First Year.",
+
+    "sections|program": "Choose the program this section belongs to.",
+    "sections|year level": "Choose the year level for this section.",
+    "sections|name": "Enter the section name or letter, such as A or B.",
+    "sections|size": "Enter the number of students in this section.",
+    "sections|adviser": "Choose the faculty adviser for this section, if assigned.",
+
+    "subjects|code": "Enter the subject code shown in schedules, such as IT101.",
+    "subjects|title": "Enter the full subject title students and faculty will see.",
+    "subjects|department": "Choose the department that owns this subject.",
+    "subjects|units": "Enter the credit units for this subject.",
+    "subjects|lecture hours": "Enter how many classroom hours this subject needs each week.",
+    "subjects|lab hours": "Enter how many lab hours this subject needs each week.",
+    "subjects|required room type": "Choose the kind of room this subject needs.",
+
+    "credentials|name": "Enter the exact credential name used to qualify faculty.",
+    "credentials|description": "Add a short note describing when this credential applies.",
+
+    "faculty-credentials|faculty": "Choose the faculty member who has this credential.",
+    "faculty-credentials|credential": "Choose the credential this faculty member has earned.",
+    "faculty-credentials|issued by": "Enter the school or organization that granted it, if known.",
+    "faculty-credentials|issued on": "Choose the date this credential was issued, if known.",
+    "faculty-credentials|expires on": "Choose the expiration date, if this credential expires.",
+    "faculty-credentials|notes": "Add helpful details about this faculty credential.",
+
+    "subject-credential-requirements|subject": "Choose the subject that needs a teaching credential.",
+    "subject-credential-requirements|required credential": "Choose the credential required to teach this subject.",
+    "subject-credential-requirements|acceptable equivalents": "Choose other credentials that are allowed for this subject.",
+    "subject-credential-requirements|notes": "Add helpful details about this subject requirement.",
+
+    "faculty|user": "Link this faculty record to a login account, if they need access.",
+    "faculty|department": "Choose the department this faculty member belongs to.",
+    "faculty|employee id": "Enter the faculty member's official employee number.",
+    "faculty|full name": "Enter the faculty member's complete name.",
+    "faculty|max weekly hours": "Set the most teaching hours this faculty member should have each week.",
+
+    "students|user": "Link this student record to a login account, if needed.",
+    "students|section": "Choose the section this student belongs to.",
+    "students|student number": "Enter the student's official school ID number.",
+    "students|full name": "Enter the student's complete name.",
+
+    "rooms|name": "Enter the room name or number shown in schedules.",
+    "rooms|room type": "Choose what this room is best used for, such as lecture or lab.",
+    "rooms|capacity": "Make sure the room can fit all students in the class.",
+    "rooms|is active": "Turn this on when the room is available for scheduling.",
+
+    "terms|name": "Enter the term name, such as First Semester.",
+    "terms|school year": "Enter the school year, such as 2026-2027.",
+    "terms|starts on": "Choose the first day of this academic term.",
+    "terms|ends on": "Choose the last day of this academic term.",
+    "terms|is active": "Turn this on when this term is ready to use.",
+
+    "assignments|term": "Choose the term for this teaching assignment.",
+    "assignments|subject": "Choose the subject that will be taught.",
+    "assignments|faculty": "Choose the faculty member assigned to teach it.",
+    "assignments|section": "Choose the section that will take this subject.",
+
+    "availability|faculty": "Choose the faculty member for this time slot.",
+    "availability|room": "Choose the room for this time slot, when setting room availability.",
+    "availability|day": "Choose the day for this availability time.",
+    "availability|start time": "Choose when this time slot begins, e.g., 8:00 AM.",
+    "availability|end time": "Choose when this time slot ends, e.g., 10:00 AM.",
+    "availability|kind": "Choose whether this time is available, preferred, or unavailable.",
+
+    "ga-settings|name": "Enter a clear name for this schedule setup.",
+    "ga-settings|population size": "Controls how many schedule options are compared at a time.",
+    "ga-settings|generations": "Controls how many rounds are used to improve the schedule.",
+    "ga-settings|mutation rate": "Controls how often small changes are made when generating schedules.",
+    "ga-settings|crossover rate": "Controls how often strong parts of schedules are combined.",
+    "ga-settings|elitism": "Keeps the best schedule options from being lost while new ones are made.",
+
+    "schedules|term": "Choose the academic term this schedule belongs to.",
+    "schedules|name": "Enter the schedule name shown to admins and users.",
+    "schedules|status": "Choose whether this schedule is a draft, approved, or published.",
+
+    "credential-overrides|assignment": "Choose the teaching assignment approved for this exception.",
+    "credential-overrides|subject": "Shows the subject involved in this exception.",
+    "credential-overrides|faculty": "Shows the faculty member approved for this exception.",
+    "credential-overrides|admin user": "Shows the admin who approved this exception.",
+    "credential-overrides|reason": "Explain why this exception was approved.",
+    "credential-overrides|missing credentials": "Lists the required credentials that were missing.",
+
+    "generate-schedule|term": "Choose the term you want to create a schedule for.",
+    "generate-schedule|settings": "Choose the saved setup to use for schedule generation.",
+    "generate-schedule|name": "Enter a name for the generated schedule draft.",
+
+    "schedule-entry|assignment": "Choose the class assignment for this schedule entry.",
+    "schedule-entry|room": "Choose where this class meeting will be held.",
+    "schedule-entry|day": "Choose the day this class meeting happens.",
+    "schedule-entry|start time": "Choose when this class meeting starts.",
+    "schedule-entry|end time": "Choose when this class meeting ends.",
+
+    "schedule-filters|term": "Show schedules from one academic term.",
+    "schedule-filters|department": "Show classes from one department.",
+    "schedule-filters|program": "Show classes from one program.",
+    "schedule-filters|year level": "Show classes for one year level.",
+    "schedule-filters|section": "Show classes for one section.",
+    "schedule-filters|subject": "Show classes for one subject."
+  };
+
   const actionTooltips = {
     "sign out": "Sign out of your account.",
     "save": "Save your changes.",
@@ -76,7 +191,7 @@
     "apply filters": "Show only the records that match your selections.",
     "add slot": "Add a day and time for your availability.",
     "add entry": "Add a class meeting to this schedule.",
-    "run genetic algorithm": "Create a new schedule using the saved settings.",
+    "run genetic algorithm": "Create a new schedule draft using the saved setup.",
     "view published schedules": "Open schedules that are already visible to users.",
     "search published schedules": "Find published schedules by section, subject, or term.",
     "update availability": "Change the days and times you can teach.",
@@ -90,6 +205,8 @@
 
   function tooltipForLabel(label) {
     const text = normalize(label.textContent);
+    const context = label.closest("form")?.dataset.tooltipContext || "";
+    if (contextualTooltips[`${context}|${text}`]) return contextualTooltips[`${context}|${text}`];
     return fieldTooltips[text] || `${label.textContent.trim().replace(":", "")} helps keep schedules clear and accurate.`;
   }
 
@@ -201,6 +318,63 @@
 
   document.querySelectorAll(".toast-close").forEach((button) => {
     button.addEventListener("click", () => button.closest(".toast")?.remove());
+  });
+
+  const loginModal = document.querySelector("[data-login-modal]");
+  function openLoginModal() {
+    if (!loginModal) return;
+    loginModal.classList.add("is-open");
+    loginModal.classList.add("is-auto-opening");
+    loginModal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
+    window.setTimeout(() => loginModal.classList.remove("is-auto-opening"), 320);
+    window.setTimeout(() => loginModal.querySelector("input[name='username']")?.focus(), 80);
+  }
+
+  function closeLoginModal() {
+    if (!loginModal) return;
+    loginModal.classList.remove("is-open");
+    loginModal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
+  }
+
+  document.querySelectorAll("[data-login-open]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      openLoginModal();
+    });
+  });
+  document.querySelectorAll("[data-login-close]").forEach((button) => {
+    button.addEventListener("click", closeLoginModal);
+  });
+  document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const input = button.closest(".password-field")?.querySelector("input");
+      if (!input) return;
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      button.textContent = show ? "Hide" : "Show";
+      button.setAttribute("aria-label", show ? "Hide password" : "Show password");
+    });
+  });
+  if (loginModal?.classList.contains("is-open")) {
+    document.body.classList.add("modal-open");
+  }
+  if (loginModal?.dataset.loginAutoOpen === "true") {
+    let autoModalClosed = false;
+    loginModal.querySelectorAll("[data-login-close]").forEach((button) => {
+      button.addEventListener("click", () => {
+        autoModalClosed = true;
+      });
+    });
+    window.setTimeout(() => {
+      if (!autoModalClosed && !loginModal.classList.contains("is-open")) {
+        openLoginModal();
+      }
+    }, 420);
+  }
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeLoginModal();
   });
 
   function filterTables(value, scope) {

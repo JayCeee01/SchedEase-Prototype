@@ -28,7 +28,8 @@ class Command(BaseCommand):
     help = "Seed sample academic data for local testing."
 
     def handle(self, *args, **options):
-        admin, _ = User.objects.get_or_create(username="admin", defaults={"is_staff": True, "is_superuser": True})
+        admin, _ = User.objects.get_or_create(username="admin", defaults={"is_staff": True, "is_superuser": True, "email": "admin@schedease.local"})
+        admin.email = admin.email or "admin@schedease.local"
         admin.set_password("admin12345")
         admin.save()
         Profile.objects.get_or_create(user=admin, defaults={"role": Role.ADMIN})
@@ -42,7 +43,8 @@ class Command(BaseCommand):
         faculty_rows = [("F001", "Ada Santos"), ("F002", "Grace Reyes"), ("F003", "Alan Cruz")]
         faculty = []
         for username, full_name in faculty_rows:
-            user, _ = User.objects.get_or_create(username=username.lower())
+            user, _ = User.objects.get_or_create(username=username.lower(), defaults={"email": f"{username.lower()}@schedease.local"})
+            user.email = user.email or f"{username.lower()}@schedease.local"
             user.set_password("password123")
             user.save()
             Profile.objects.get_or_create(user=user, defaults={"role": Role.FACULTY})
@@ -52,7 +54,8 @@ class Command(BaseCommand):
         sec_a, _ = Section.objects.get_or_create(program=it, year_level=y1, name="A", defaults={"size": 36})
         sec_b, _ = Section.objects.get_or_create(program=it, year_level=y2, name="A", defaults={"size": 32})
 
-        student_user, _ = User.objects.get_or_create(username="student")
+        student_user, _ = User.objects.get_or_create(username="student", defaults={"email": "student@schedease.local"})
+        student_user.email = student_user.email or "student@schedease.local"
         student_user.set_password("password123")
         student_user.save()
         Profile.objects.get_or_create(user=student_user, defaults={"role": Role.STUDENT})
