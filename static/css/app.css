@@ -606,6 +606,59 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary-soft) 35%, transpa
 .badge.success { background: #ecfdf3; color: var(--success); border-color: #abefc6; }
 .badge.warning { background: #fffaeb; color: var(--amber); border-color: #fedf89; }
 .badge.danger { background: #fef3f2; color: var(--danger); border-color: #fecdca; }
+.utilization-summary .metric-icon {
+  background: linear-gradient(135deg, var(--primary-soft), color-mix(in srgb, var(--primary) 18%, white));
+}
+.utilization-filters {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.1fr) minmax(220px, 0.9fr) minmax(220px, 0.9fr) auto;
+  gap: 20px;
+  align-items: end;
+  margin-bottom: 16px;
+  padding: 22px;
+}
+.utilization-filters label {
+  display: grid;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  min-width: 0;
+}
+.field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  line-height: 1.25;
+}
+.utilization-filters input,
+.utilization-filters select,
+.utilization-filters button {
+  min-height: 48px;
+}
+.utilization-filters input,
+.utilization-filters select {
+  width: 100%;
+}
+.utilization-table {
+  min-width: 1120px;
+}
+.utilization-meter {
+  width: 132px;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 58%, transparent);
+  margin-bottom: 6px;
+}
+.utilization-meter span {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), var(--primary-strong));
+}
 .subject-chip {
   display: inline-flex;
   align-items: center;
@@ -1260,6 +1313,7 @@ input[type="checkbox"] {
   .content { padding: 18px; }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .schedule-board { grid-template-columns: 1fr; }
+  .utilization-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .landing-nav { gap: 12px; }
   .landing-nav nav { display: none; }
   .landing-brand small { display: none; }
@@ -1273,6 +1327,7 @@ input[type="checkbox"] {
   .page-hero { align-items: flex-start; }
   .metrics { grid-template-columns: 1fr; }
   .quick-actions { grid-template-columns: 1fr; }
+  .utilization-filters { grid-template-columns: 1fr; }
   .heading-row { align-items: flex-start; }
   .actions, .toolbar { width: 100%; }
   .actions .button, .toolbar .button { flex: 1 1 auto; }

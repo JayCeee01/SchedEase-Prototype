@@ -108,11 +108,19 @@ class GeneticScheduler:
 
     def _random_gene(self, assignment):
         valid_rooms = self.valid_rooms_by_assignment[assignment.id]
-        room = self.random.choice(valid_rooms or self.rooms)
+        room = self._choose_room_for_assignment(assignment, valid_rooms or self.rooms)
         duration = max(1, assignment.required_hours)
         day = self.random.choice(list(ALLOWED_DAYS))
         start = self.random.choice(list(hourly_starts(duration)))
         return Gene(assignment.id, room.id, day, start, add_hours(start, duration))
+
+    def _choose_room_for_assignment(self, assignment, rooms):
+        best_fit = [
+            room
+            for room in rooms
+            if room.capacity >= assignment.section.size and room.capacity <= max(assignment.section.size + 15, assignment.section.size * 1.35)
+        ]
+        return self.random.choice(best_fit or rooms)
 
     def _random_chromosome(self):
         return [self._random_gene(assignment) for assignment in self.assignments]
@@ -161,7 +169,10 @@ class GeneticScheduler:
                 hard_penalty += 200
             if self._preferred(assignment.faculty_id, gene):
                 soft_penalty -= 12
-            soft_penalty += max(0, room.capacity - assignment.section.size) * 0.15
+            capacity_gap = max(0, room.capacity - assignment.section.size)
+            soft_penalty += capacity_gap * 0.15
+            if capacity_gap > assignment.section.size:
+                soft_penalty += 10
             if room.room_type != assignment.subject.required_room_type and room.room_type != "SPECIAL":
                 soft_penalty += 20
 
@@ -179,6 +190,7 @@ class GeneticScheduler:
                     hard_penalty += 250
 
         soft_penalty += self._distribution_penalty(chromosome)
+        soft_penalty += self._room_utilization_penalty(chromosome)
         fitness_score = score - hard_penalty - soft_penalty
         self._fitness_cache[cache_key] = fitness_score
         return fitness_score
@@ -213,4 +225,35 @@ class GeneticScheduler:
         if day_counts:
             spread = max(day_counts.values()) - min(day_counts.values())
             penalty += spread * 3
+        return penalty
+
+    def _room_utilization_penalty(self, chromosome):
+        by_room_hours = defaultdict(float)
+        by_room_classes = defaultdict(int)
+        suitable_room_ids = set()
+        required_room_types = set()
+
+        for gene in chromosome:
+            assignment = self.assignment_map[gene.assignment_id]
+            duration = max(0, gene.end_time.hour - gene.start_time.hour)
+            by_room_hours[gene.room_id] += duration
+            by_room_classes[gene.room_id] += 1
+            required_room_types.add(assignment.subject.required_room_type)
+            for room in self.valid_rooms_by_assignment.get(assignment.id, []):
+                suitable_room_ids.add(room.id)
+
+        penalty = 0
+        used_hours = list(by_room_hours.values())
+        if used_hours:
+            average = sum(used_hours) / len(used_hours)
+            penalty += sum(abs(hours - average) for hours in used_hours) * 2.5
+
+        for room_id in suitable_room_ids:
+            if by_room_classes[room_id] == 0:
+                penalty += 8
+
+        for room in self.rooms:
+            if room.room_type in required_room_types and by_room_classes[room.id] == 0:
+                penalty += 3
+
         return penalty

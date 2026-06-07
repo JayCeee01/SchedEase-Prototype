@@ -293,6 +293,7 @@ class ScheduleEntry(models.Model):
     day = models.PositiveSmallIntegerField(choices=Weekday.choices)
     start_time = models.TimeField()
     end_time = models.TimeField()
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["day", "start_time", "room__name"]

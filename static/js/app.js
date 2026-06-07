@@ -174,7 +174,11 @@
     "schedule-filters|program": "Show classes from one program.",
     "schedule-filters|year level": "Show classes for one year level.",
     "schedule-filters|section": "Show classes for one section.",
-    "schedule-filters|subject": "Show classes for one subject."
+    "schedule-filters|subject": "Show classes for one subject.",
+
+    "room-utilization-filters|search rooms": "Find rooms by name.",
+    "room-utilization-filters|room type": "Show only rooms of the selected type.",
+    "room-utilization-filters|utilization range": "Show rooms by how much they are currently used."
   };
 
   const actionTooltips = {

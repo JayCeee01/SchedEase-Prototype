@@ -6,6 +6,7 @@ from django.test import TestCase
 from .models import AcademicTerm, Availability, AvailabilityKind, Credential, CredentialOverride, Department, Faculty, FacultyCredential, GASettings, Profile, Program, Role, Room, RoomKind, Schedule, Section, Subject, SubjectCredentialRequirement, TeachingAssignment, YearLevel
 from .services.credentials import faculty_qualification
 from .services.ga import GeneticScheduler, Gene
+from .services.room_utilization import filtered_rows, utilization_rows
 
 
 class SchedulingTestCase(TestCase):
@@ -43,6 +44,46 @@ class SchedulingTestCase(TestCase):
         self.assertEqual(schedule.entries.count(), 1)
         entry = schedule.entries.first()
         self.assertEqual(entry.room.room_type, self.subject.required_room_type)
+
+    def test_room_utilization_calculates_latest_schedule_usage(self):
+        schedule = Schedule.objects.create(term=self.term, name="Draft")
+        schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
+        rows = utilization_rows(schedule)
+        row = next(item for item in rows if item.room == self.room)
+        self.assertEqual(row.scheduled_hours, 3)
+        self.assertEqual(row.assigned_classes, 1)
+        self.assertGreater(row.utilization_percentage, 0)
+        self.assertEqual(row.status, "Underutilized")
+
+    def test_room_utilization_respects_room_available_hours(self):
+        Availability.objects.create(room=self.room, day=0, start_time=time(8), end_time=time(12), kind=AvailabilityKind.AVAILABLE)
+        Availability.objects.create(room=self.room, day=1, start_time=time(8), end_time=time(12), kind=AvailabilityKind.AVAILABLE)
+        schedule = Schedule.objects.create(term=self.term, name="Draft")
+        schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
+        row = next(item for item in utilization_rows(schedule) if item.room == self.room)
+        self.assertEqual(row.available_hours, 8)
+        self.assertEqual(row.utilization_percentage, 37.5)
+        self.assertEqual(row.status, "Optimized")
+
+    def test_room_utilization_filters_and_exports(self):
+        schedule = Schedule.objects.create(term=self.term, name="Draft")
+        schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
+        rows = filtered_rows(utilization_rows(schedule), query="Lab", room_type=RoomKind.COMPUTER_LAB, utilization_range="under")
+        self.assertEqual(len(rows), 1)
+
+        self.client.login(username="admin", password="admin12345")
+        dashboard_response = self.client.get("/schedules/room-utilization/")
+        self.assertContains(dashboard_response, "Room Utilization")
+        csv_response = self.client.get("/schedules/room-utilization/export/csv/")
+        self.assertEqual(csv_response.status_code, 200)
+        self.assertIn("room-utilization.csv", csv_response["Content-Disposition"])
+
+    def test_ga_prefers_capacity_fit_for_room_utilization(self):
+        huge_room = Room.objects.create(name="Auditorium", room_type=RoomKind.COMPUTER_LAB, capacity=250)
+        scheduler = GeneticScheduler(self.term, self.settings, seed=4)
+        fit_room = [Gene(self.assignment.id, self.room.id, 1, time(8), time(11))]
+        oversized_room = [Gene(self.assignment.id, huge_room.id, 1, time(8), time(11))]
+        self.assertGreater(scheduler.fitness(fit_room), scheduler.fitness(oversized_room))
 
     def test_credential_exact_match_qualifies_faculty(self):
         credential = Credential.objects.create(name="Programming")

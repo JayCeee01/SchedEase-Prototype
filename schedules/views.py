@@ -24,6 +24,7 @@ from .models import (
     Program,
     Role,
     Room,
+    RoomKind,
     Schedule,
     ScheduleEntry,
     ScheduleStatus,
@@ -37,6 +38,7 @@ from .models import (
 from .services.conflicts import conflict_messages
 from .services.credentials import faculty_qualification, missing_credential_message
 from .services.ga import GeneticScheduler
+from .services.room_utilization import filtered_rows, utilization_rows, utilization_summary
 
 RESOURCE_MODELS = {
     "departments": Department,
@@ -217,6 +219,83 @@ def my_availability_update(request, pk):
 def resource_list(request, resource):
     model = RESOURCE_MODELS[resource]
     return render(request, "schedules/resource_list.html", {"resource": resource, "objects": model.objects.all()[:200], "description": RESOURCE_DESCRIPTIONS.get(resource, "Manage records for this section.")})
+
+
+@login_required
+@user_passes_test(admin_required)
+def room_utilization_dashboard(request):
+    rows = utilization_rows()
+    rows = filtered_rows(
+        rows,
+        query=request.GET.get("q", ""),
+        room_type=request.GET.get("room_type", ""),
+        utilization_range=request.GET.get("utilization", ""),
+    )
+    context = {
+        "rows": rows,
+        "summary": utilization_summary(rows),
+        "room_types": RoomKind.choices,
+        "selected_room_type": request.GET.get("room_type", ""),
+        "selected_utilization": request.GET.get("utilization", ""),
+        "query": request.GET.get("q", ""),
+    }
+    return render(request, "schedules/room_utilization.html", context)
+
+
+@login_required
+@user_passes_test(admin_required)
+def export_room_utilization_csv(request):
+    rows = filtered_rows(
+        utilization_rows(),
+        query=request.GET.get("q", ""),
+        room_type=request.GET.get("room_type", ""),
+        utilization_range=request.GET.get("utilization", ""),
+    )
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="room-utilization.csv"'
+    writer = csv.writer(response)
+    writer.writerow(["Room Name", "Room Type", "Room Capacity", "Available Hours", "Scheduled Hours", "Utilization %", "Assigned Classes", "Status", "Last Updated"])
+    for row in rows:
+        writer.writerow([
+            row.room.name,
+            row.room.get_room_type_display(),
+            row.room.capacity,
+            row.available_hours,
+            row.scheduled_hours,
+            row.utilization_percentage,
+            row.assigned_classes,
+            row.status,
+            row.last_updated,
+        ])
+    return response
+
+
+@login_required
+@user_passes_test(admin_required)
+def export_room_utilization_pdf(request):
+    rows = filtered_rows(
+        utilization_rows(),
+        query=request.GET.get("q", ""),
+        room_type=request.GET.get("room_type", ""),
+        utilization_range=request.GET.get("utilization", ""),
+    )
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="room-utilization.pdf"'
+    pdf = canvas.Canvas(response, pagesize=letter)
+    pdf.drawString(40, 750, "SchedEase Room Utilization Report")
+    y = 720
+    for row in rows:
+        pdf.drawString(
+            40,
+            y,
+            f"{row.room.name} | {row.room.get_room_type_display()} | {row.utilization_percentage}% | {row.status} | {row.scheduled_hours}/{row.available_hours} hrs",
+        )
+        y -= 18
+        if y < 50:
+            pdf.showPage()
+            y = 750
+    pdf.save()
+    return response
 
 
 @login_required

@@ -61,10 +61,17 @@ class Command(BaseCommand):
         Profile.objects.get_or_create(user=student_user, defaults={"role": Role.STUDENT})
         Student.objects.get_or_create(user=student_user, student_number="S2026-0001", defaults={"section": sec_a, "full_name": "Juan Dela Cruz"})
 
-        Room.objects.get_or_create(name="Lec 101", defaults={"room_type": RoomKind.LECTURE, "capacity": 45})
-        Room.objects.get_or_create(name="Lec 102", defaults={"room_type": RoomKind.LECTURE, "capacity": 35})
-        Room.objects.get_or_create(name="Comp Lab 1", defaults={"room_type": RoomKind.COMPUTER_LAB, "capacity": 40})
-        Room.objects.get_or_create(name="Sci Lab 1", defaults={"room_type": RoomKind.SCIENCE_LAB, "capacity": 35})
+        lec_101, _ = Room.objects.get_or_create(name="Lec 101", defaults={"room_type": RoomKind.LECTURE, "capacity": 45})
+        lec_102, _ = Room.objects.get_or_create(name="Lec 102", defaults={"room_type": RoomKind.LECTURE, "capacity": 35})
+        comp_lab, _ = Room.objects.get_or_create(name="Comp Lab 1", defaults={"room_type": RoomKind.COMPUTER_LAB, "capacity": 40})
+        sci_lab, _ = Room.objects.get_or_create(name="Sci Lab 1", defaults={"room_type": RoomKind.SCIENCE_LAB, "capacity": 35})
+        for room in (lec_101, lec_102, comp_lab, sci_lab):
+            Availability.objects.get_or_create(room=room, day=0, start_time=time(7), end_time=time(21), kind=AvailabilityKind.AVAILABLE)
+            Availability.objects.get_or_create(room=room, day=1, start_time=time(7), end_time=time(21), kind=AvailabilityKind.AVAILABLE)
+            Availability.objects.get_or_create(room=room, day=2, start_time=time(7), end_time=time(21), kind=AvailabilityKind.AVAILABLE)
+            Availability.objects.get_or_create(room=room, day=3, start_time=time(7), end_time=time(21), kind=AvailabilityKind.AVAILABLE)
+            Availability.objects.get_or_create(room=room, day=4, start_time=time(7), end_time=time(21), kind=AvailabilityKind.AVAILABLE)
+            Availability.objects.get_or_create(room=room, day=5, start_time=time(7), end_time=time(17), kind=AvailabilityKind.AVAILABLE)
 
         subjects = [
             ("IT101", "Computer Programming 1", 2, 3, RoomKind.COMPUTER_LAB),
