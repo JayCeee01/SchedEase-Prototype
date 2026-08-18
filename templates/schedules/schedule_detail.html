@@ -7,10 +7,17 @@
     <p class="subtle">{{ schedule.term }} | {{ schedule.status }} | score {{ schedule.fitness_score|floatformat:2 }}</p>
   </div>
   <div class="actions">
+    {% if can_manage %}
     <a class="button" href="{% url 'entry_create' schedule.pk %}">Add Entry</a>
+    {% endif %}
     <a class="button" href="{% url 'export_csv' schedule.pk %}">CSV</a>
     <a class="button" href="{% url 'export_pdf' schedule.pk %}">PDF</a>
-    <a class="button primary" href="{% url 'publish_schedule' schedule.pk %}">Publish</a>
+    {% if can_manage and schedule.status != "PUBLISHED" %}
+    <form method="post" action="{% url 'publish_schedule' schedule.pk %}" onsubmit="return confirm('Publish this schedule? Published schedules become visible to faculty and students.');">
+      {% csrf_token %}
+      <button class="primary" type="submit" data-loading-text="Publishing">Publish</button>
+    </form>
+    {% endif %}
   </div>
 </div>
 

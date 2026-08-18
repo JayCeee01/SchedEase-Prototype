@@ -1,0 +1,432 @@
+[
+  {
+    "room": "201",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 11.0,
+    "assigned_classes": 4,
+    "utilization_percentage": 13.1,
+    "status": "Underutilized"
+  },
+  {
+    "room": "202",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 15.0,
+    "assigned_classes": 5,
+    "utilization_percentage": 17.9,
+    "status": "Underutilized"
+  },
+  {
+    "room": "203",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 30.0,
+    "assigned_classes": 16,
+    "utilization_percentage": 35.7,
+    "status": "Optimized"
+  },
+  {
+    "room": "204",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 30.0,
+    "assigned_classes": 16,
+    "utilization_percentage": 35.7,
+    "status": "Optimized"
+  },
+  {
+    "room": "205",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 64.5,
+    "assigned_classes": 38,
+    "utilization_percentage": 76.8,
+    "status": "Highly Utilized"
+  },
+  {
+    "room": "206",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 1.5,
+    "assigned_classes": 1,
+    "utilization_percentage": 1.8,
+    "status": "Underutilized"
+  },
+  {
+    "room": "208A",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 54.0,
+    "assigned_classes": 31,
+    "utilization_percentage": 64.3,
+    "status": "Optimized"
+  },
+  {
+    "room": "208B",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 57.5,
+    "assigned_classes": 35,
+    "utilization_percentage": 68.5,
+    "status": "Optimized"
+  },
+  {
+    "room": "209",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 27.5,
+    "assigned_classes": 17,
+    "utilization_percentage": 32.7,
+    "status": "Underutilized"
+  },
+  {
+    "room": "210",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 5.5,
+    "assigned_classes": 4,
+    "utilization_percentage": 6.5,
+    "status": "Underutilized"
+  },
+  {
+    "room": "211",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 21.0,
+    "assigned_classes": 13,
+    "utilization_percentage": 25.0,
+    "status": "Underutilized"
+  },
+  {
+    "room": "301",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 58.0,
+    "assigned_classes": 36,
+    "utilization_percentage": 69.0,
+    "status": "Optimized"
+  },
+  {
+    "room": "302",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 48.0,
+    "assigned_classes": 29,
+    "utilization_percentage": 57.1,
+    "status": "Optimized"
+  },
+  {
+    "room": "303",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 42.0,
+    "assigned_classes": 27,
+    "utilization_percentage": 50.0,
+    "status": "Optimized"
+  },
+  {
+    "room": "304",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 41.5,
+    "assigned_classes": 27,
+    "utilization_percentage": 49.4,
+    "status": "Optimized"
+  },
+  {
+    "room": "305",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 49.0,
+    "assigned_classes": 30,
+    "utilization_percentage": 58.3,
+    "status": "Optimized"
+  },
+  {
+    "room": "307",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 54.5,
+    "assigned_classes": 35,
+    "utilization_percentage": 64.9,
+    "status": "Optimized"
+  },
+  {
+    "room": "312",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 48.0,
+    "assigned_classes": 28,
+    "utilization_percentage": 57.1,
+    "status": "Optimized"
+  },
+  {
+    "room": "313",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 60.5,
+    "assigned_classes": 37,
+    "utilization_percentage": 72.0,
+    "status": "Optimized"
+  },
+  {
+    "room": "401",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 37.5,
+    "assigned_classes": 21,
+    "utilization_percentage": 44.6,
+    "status": "Optimized"
+  },
+  {
+    "room": "402",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 45.0,
+    "assigned_classes": 26,
+    "utilization_percentage": 53.6,
+    "status": "Optimized"
+  },
+  {
+    "room": "403",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 34.0,
+    "assigned_classes": 19,
+    "utilization_percentage": 40.5,
+    "status": "Optimized"
+  },
+  {
+    "room": "404",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 48.5,
+    "assigned_classes": 28,
+    "utilization_percentage": 57.7,
+    "status": "Optimized"
+  },
+  {
+    "room": "405",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 40.0,
+    "assigned_classes": 20,
+    "utilization_percentage": 47.6,
+    "status": "Optimized"
+  },
+  {
+    "room": "406",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 49.0,
+    "assigned_classes": 27,
+    "utilization_percentage": 58.3,
+    "status": "Optimized"
+  },
+  {
+    "room": "BAR",
+    "room_type": "SPECIAL",
+    "capacity": 30,
+    "available_hours": 84.0,
+    "scheduled_hours": 16.0,
+    "assigned_classes": 6,
+    "utilization_percentage": 19.0,
+    "status": "Underutilized"
+  },
+  {
+    "room": "CA",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 10.0,
+    "assigned_classes": 8,
+    "utilization_percentage": 11.9,
+    "status": "Underutilized"
+  },
+  {
+    "room": "CL1",
+    "room_type": "COMPUTER_LAB",
+    "capacity": 40,
+    "available_hours": 84.0,
+    "scheduled_hours": 34.5,
+    "assigned_classes": 14,
+    "utilization_percentage": 41.1,
+    "status": "Optimized"
+  },
+  {
+    "room": "CL2",
+    "room_type": "COMPUTER_LAB",
+    "capacity": 40,
+    "available_hours": 84.0,
+    "scheduled_hours": 66.0,
+    "assigned_classes": 22,
+    "utilization_percentage": 78.6,
+    "status": "Highly Utilized"
+  },
+  {
+    "room": "CL3",
+    "room_type": "COMPUTER_LAB",
+    "capacity": 40,
+    "available_hours": 84.0,
+    "scheduled_hours": 54.0,
+    "assigned_classes": 23,
+    "utilization_percentage": 64.3,
+    "status": "Optimized"
+  },
+  {
+    "room": "CL4",
+    "room_type": "COMPUTER_LAB",
+    "capacity": 40,
+    "available_hours": 84.0,
+    "scheduled_hours": 40.5,
+    "assigned_classes": 15,
+    "utilization_percentage": 48.2,
+    "status": "Optimized"
+  },
+  {
+    "room": "CON",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 2.0,
+    "assigned_classes": 1,
+    "utilization_percentage": 2.4,
+    "status": "Underutilized"
+  },
+  {
+    "room": "Comp Lab 1",
+    "room_type": "COMPUTER_LAB",
+    "capacity": 40,
+    "available_hours": 84.0,
+    "scheduled_hours": 0,
+    "assigned_classes": 0,
+    "utilization_percentage": 0.0,
+    "status": "Underutilized"
+  },
+  {
+    "room": "HOTEL",
+    "room_type": "SPECIAL",
+    "capacity": 30,
+    "available_hours": 84.0,
+    "scheduled_hours": 3.0,
+    "assigned_classes": 1,
+    "utilization_percentage": 3.6,
+    "status": "Underutilized"
+  },
+  {
+    "room": "KITCHEN",
+    "room_type": "SPECIAL",
+    "capacity": 30,
+    "available_hours": 84.0,
+    "scheduled_hours": 60.0,
+    "assigned_classes": 20,
+    "utilization_percentage": 71.4,
+    "status": "Optimized"
+  },
+  {
+    "room": "Lec 101",
+    "room_type": "LECTURE",
+    "capacity": 45,
+    "available_hours": 84.0,
+    "scheduled_hours": 0,
+    "assigned_classes": 0,
+    "utilization_percentage": 0.0,
+    "status": "Underutilized"
+  },
+  {
+    "room": "Lec 102",
+    "room_type": "LECTURE",
+    "capacity": 35,
+    "available_hours": 84.0,
+    "scheduled_hours": 0,
+    "assigned_classes": 0,
+    "utilization_percentage": 0.0,
+    "status": "Underutilized"
+  },
+  {
+    "room": "PEA1",
+    "room_type": "GYM",
+    "capacity": 60,
+    "available_hours": 84.0,
+    "scheduled_hours": 10.0,
+    "assigned_classes": 5,
+    "utilization_percentage": 11.9,
+    "status": "Underutilized"
+  },
+  {
+    "room": "PEA2",
+    "room_type": "GYM",
+    "capacity": 60,
+    "available_hours": 84.0,
+    "scheduled_hours": 26.0,
+    "assigned_classes": 13,
+    "utilization_percentage": 31.0,
+    "status": "Underutilized"
+  },
+  {
+    "room": "PEA3",
+    "room_type": "GYM",
+    "capacity": 60,
+    "available_hours": 84.0,
+    "scheduled_hours": 24.0,
+    "assigned_classes": 12,
+    "utilization_percentage": 28.6,
+    "status": "Underutilized"
+  },
+  {
+    "room": "PEA4",
+    "room_type": "GYM",
+    "capacity": 60,
+    "available_hours": 84.0,
+    "scheduled_hours": 18.0,
+    "assigned_classes": 9,
+    "utilization_percentage": 21.4,
+    "status": "Underutilized"
+  },
+  {
+    "room": "PHYLAB",
+    "room_type": "SCIENCE_LAB",
+    "capacity": 35,
+    "available_hours": 84.0,
+    "scheduled_hours": 6.0,
+    "assigned_classes": 2,
+    "utilization_percentage": 7.1,
+    "status": "Underutilized"
+  },
+  {
+    "room": "Sci Lab 1",
+    "room_type": "SCIENCE_LAB",
+    "capacity": 35,
+    "available_hours": 84.0,
+    "scheduled_hours": 0,
+    "assigned_classes": 0,
+    "utilization_percentage": 0.0,
+    "status": "Underutilized"
+  }
+]

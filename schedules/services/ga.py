@@ -3,9 +3,12 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import time
 
-from schedules.models import AvailabilityKind, Room, Schedule, ScheduleEntry, TeachingAssignment
+from django.core.exceptions import ValidationError
+from django.db import transaction
+
+from schedules.models import AvailabilityKind, Room, RoomKind, Schedule, ScheduleEntry, TeachingAssignment
 from .credentials import faculty_qualification
-from .time import ALLOWED_DAYS, SCHOOL_END, SCHOOL_START, add_hours, contains, hourly_starts, overlaps
+from .time import ALLOWED_DAYS, SCHOOL_END, SCHOOL_START, add_minutes, contains, overlaps, slot_starts
 
 
 @dataclass(frozen=True)
@@ -32,6 +35,7 @@ class GeneticScheduler:
                 "subject__credential_requirements__required_credential",
                 "subject__credential_requirements__acceptable_equivalents",
                 "faculty__availability_set",
+                "credential_overrides",
             )
             .order_by("id")
         )
@@ -42,16 +46,19 @@ class GeneticScheduler:
             assignment.id: [
                 room
                 for room in self.rooms
-                if room.room_type == assignment.subject.required_room_type and room.capacity >= assignment.section.size
+                if room.room_type == assignment.effective_room_type and room.capacity >= assignment.section.size
             ]
             for assignment in self.assignments
         }
         self.qualification_cache = {
-            assignment.id: faculty_qualification(assignment.faculty, assignment.subject)["qualified"]
+            assignment.id: (faculty_qualification(assignment.faculty, assignment.subject)["qualified"]
+                            or bool(assignment.credential_overrides.all()))
             for assignment in self.assignments
         }
         self.faculty_unavailable = self._availability_map(AvailabilityKind.UNAVAILABLE)
         self.faculty_preferred = self._availability_map(AvailabilityKind.PREFERRED)
+        self.room_available = self._room_availability_map(AvailabilityKind.AVAILABLE)
+        self.room_unavailable = self._room_availability_map(AvailabilityKind.UNAVAILABLE)
         self._fitness_cache = {}
 
     def _availability_map(self, kind):
@@ -63,11 +70,22 @@ class GeneticScheduler:
                 data[assignment.faculty_id].append(item)
         return data
 
+    def _room_availability_map(self, kind):
+        data = defaultdict(list)
+        for room in self.rooms:
+            for item in room.availability_set.all():
+                if item.kind == kind:
+                    data[room.id].append(item)
+        return data
+
     def generate(self, name="Generated Schedule"):
         if not self.assignments:
             raise ValueError("No teaching assignments found for the selected term.")
         if not self.rooms:
             raise ValueError("No active rooms available.")
+        preflight = self.preflight_issues()
+        if preflight:
+            raise ValueError("Schedule requirements are not feasible: " + "; ".join(preflight))
 
         population = [self._random_chromosome() for _ in range(self.settings.population_size)]
         best = max(population, key=self.fitness)
@@ -91,28 +109,49 @@ class GeneticScheduler:
                 best = candidate
                 best_score = candidate_score
 
-        schedule = Schedule.objects.create(term=self.term, name=name, fitness_score=best_score)
-        entries = [
-            ScheduleEntry(
-                schedule=schedule,
-                assignment=self.assignment_map[gene.assignment_id],
-                room=self.room_map[gene.room_id],
-                day=gene.day,
-                start_time=gene.start_time,
-                end_time=gene.end_time,
-            )
-            for gene in best
-        ]
-        ScheduleEntry.objects.bulk_create(entries)
+        with transaction.atomic():
+            schedule = Schedule.objects.create(term=self.term, name=name, fitness_score=best_score, origin=Schedule.Origin.GENERATED)
+            entries = [ScheduleEntry(schedule=schedule, assignment=self.assignment_map[gene.assignment_id],
+                                     room=self.room_map[gene.room_id], day=gene.day,
+                                     start_time=gene.start_time, end_time=gene.end_time) for gene in best]
+            ScheduleEntry.objects.bulk_create(entries)
+            errors = []
+            for entry in schedule.entries.select_related("assignment__faculty", "assignment__subject", "assignment__section", "room"):
+                try:
+                    entry.full_clean()
+                except ValidationError as exc:
+                    errors.extend(exc.messages)
+            if errors:
+                raise ValueError("GA could not produce a feasible schedule: " + "; ".join(sorted(set(errors))))
         return schedule
+
+    def preflight_issues(self):
+        issues = []
+        faculty_minutes = defaultdict(int)
+        for assignment in self.assignments:
+            faculty_minutes[assignment.faculty_id] += assignment.required_duration_minutes
+            if not self.valid_rooms_by_assignment[assignment.id]:
+                issues.append(
+                    f"{assignment.subject.code} / {assignment.section}: no active {dict(RoomKind.choices)[assignment.effective_room_type]} has capacity {assignment.section.size}."
+                )
+            if not self.qualification_cache[assignment.id]:
+                issues.append(f"{assignment.subject.code} / {assignment.section}: {assignment.faculty} lacks the required credential or override.")
+            if assignment.required_duration_minutes > 14 * 60:
+                issues.append(f"{assignment.subject.code} / {assignment.section}: required duration exceeds school operating hours.")
+        faculty_by_id = {assignment.faculty_id: assignment.faculty for assignment in self.assignments}
+        for faculty_id, minutes in faculty_minutes.items():
+            faculty = faculty_by_id[faculty_id]
+            if minutes > faculty.max_weekly_hours * 60:
+                issues.append(f"{faculty}: assigned load is {minutes / 60:g} hours but the maximum is {faculty.max_weekly_hours} hours.")
+        return list(dict.fromkeys(issues))
 
     def _random_gene(self, assignment):
         valid_rooms = self.valid_rooms_by_assignment[assignment.id]
         room = self._choose_room_for_assignment(assignment, valid_rooms or self.rooms)
-        duration = max(1, assignment.required_hours)
+        duration = max(30, assignment.required_duration_minutes)
         day = self.random.choice(list(ALLOWED_DAYS))
-        start = self.random.choice(list(hourly_starts(duration)))
-        return Gene(assignment.id, room.id, day, start, add_hours(start, duration))
+        start = self.random.choice(list(slot_starts(duration)))
+        return Gene(assignment.id, room.id, day, start, add_minutes(start, duration))
 
     def _choose_room_for_assignment(self, assignment, rooms):
         best_fit = [
@@ -161,11 +200,13 @@ class GeneticScheduler:
                 hard_penalty += 200
             if room.capacity < assignment.section.size:
                 hard_penalty += 150
-            if room.room_type != assignment.subject.required_room_type:
+            if room.room_type != assignment.effective_room_type:
                 hard_penalty += 150
             if not self.qualification_cache[assignment.id]:
                 hard_penalty += 300
             if self._blocked(assignment.faculty_id, gene):
+                hard_penalty += 200
+            if self._room_blocked(gene.room_id, gene):
                 hard_penalty += 200
             if self._preferred(assignment.faculty_id, gene):
                 soft_penalty -= 12
@@ -173,21 +214,23 @@ class GeneticScheduler:
             soft_penalty += capacity_gap * 0.15
             if capacity_gap > assignment.section.size:
                 soft_penalty += 10
-            if room.room_type != assignment.subject.required_room_type and room.room_type != "SPECIAL":
+            if room.room_type != assignment.effective_room_type and room.room_type != "SPECIAL":
                 soft_penalty += 20
 
-        for i, gene in enumerate(chromosome):
-            left = self.assignment_map[gene.assignment_id]
-            for other in chromosome[i + 1 :]:
-                if gene.day != other.day or not overlaps(gene.start_time, gene.end_time, other.start_time, other.end_time):
-                    continue
-                right = self.assignment_map[other.assignment_id]
-                if left.faculty_id == right.faculty_id:
-                    hard_penalty += 250
-                if left.section_id == right.section_id:
-                    hard_penalty += 250
-                if gene.room_id == other.room_id:
-                    hard_penalty += 250
+        conflict_buckets = (defaultdict(list), defaultdict(list), defaultdict(list))
+        for gene in chromosome:
+            assignment = self.assignment_map[gene.assignment_id]
+            conflict_buckets[0][(gene.day, assignment.faculty_id)].append(gene)
+            conflict_buckets[1][(gene.day, assignment.section_id)].append(gene)
+            conflict_buckets[2][(gene.day, gene.room_id)].append(gene)
+        for buckets in conflict_buckets:
+            for genes in buckets.values():
+                genes.sort(key=lambda item: item.start_time)
+                active = []
+                for gene in genes:
+                    active = [item for item in active if item.end_time > gene.start_time]
+                    hard_penalty += len(active) * 250
+                    active.append(gene)
 
         soft_penalty += self._distribution_penalty(chromosome)
         soft_penalty += self._room_utilization_penalty(chromosome)
@@ -200,6 +243,12 @@ class GeneticScheduler:
 
     def _preferred(self, faculty_id, gene):
         return any(contains(a.start_time, a.end_time, gene.start_time, gene.end_time) for a in self.faculty_preferred[faculty_id] if a.day == gene.day)
+
+    def _room_blocked(self, room_id, gene):
+        available = [a for a in self.room_available[room_id] if a.day == gene.day]
+        if available and not any(contains(a.start_time, a.end_time, gene.start_time, gene.end_time) for a in available):
+            return True
+        return any(overlaps(gene.start_time, gene.end_time, a.start_time, a.end_time) for a in self.room_unavailable[room_id] if a.day == gene.day)
 
     def _distribution_penalty(self, chromosome):
         by_faculty_day = defaultdict(list)
@@ -235,10 +284,10 @@ class GeneticScheduler:
 
         for gene in chromosome:
             assignment = self.assignment_map[gene.assignment_id]
-            duration = max(0, gene.end_time.hour - gene.start_time.hour)
+            duration = max(0, (gene.end_time.hour * 60 + gene.end_time.minute - gene.start_time.hour * 60 - gene.start_time.minute) / 60)
             by_room_hours[gene.room_id] += duration
             by_room_classes[gene.room_id] += 1
-            required_room_types.add(assignment.subject.required_room_type)
+            required_room_types.add(assignment.effective_room_type)
             for room in self.valid_rooms_by_assignment.get(assignment.id, []):
                 suitable_room_ids.add(room.id)
 

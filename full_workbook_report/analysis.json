@@ -1,0 +1,85 @@
+{
+  "workbooks_processed": 1,
+  "workbook_sha256": "dd645c902c7d68a45e539b36bfe05235b23b1004133a6ae22d642851d255ed47",
+  "worksheets": {
+    "SCHED_REGISTRAR": {
+      "physical_rows": 972,
+      "course_rows": 633,
+      "complete_relational_rows": 116
+    },
+    "TER SCHED 2T2526": {
+      "physical_rows": 529,
+      "course_rows": 519,
+      "complete_relational_rows": 519
+    }
+  },
+  "data_sheet": "TER SCHED 2T2526",
+  "source_rows": 517,
+  "expanded_meetings": 721,
+  "rejected_rows": 2,
+  "programs": [
+    "ACT",
+    "BSAIS",
+    "BSCPE",
+    "BSCS",
+    "BSHM",
+    "BSIT",
+    "BSTM",
+    "OS-BSHM",
+    "OS-BSIT"
+  ],
+  "year_levels": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "sections": 63,
+  "subjects": 125,
+  "faculty": 60,
+  "rooms": 39,
+  "duplicate_signatures": 0,
+  "lecture_meetings": 126,
+  "laboratory_meetings": 132,
+  "general_meetings": 463,
+  "normalization_events": 2,
+  "data_quality": {
+    "rows_processed": 519,
+    "rows_importable": 517,
+    "rows_unresolved": 2,
+    "missing_values_by_field": {
+      "section": 0,
+      "subject_code": 0,
+      "subject_name": 0,
+      "units": 1,
+      "days": 0,
+      "start_time": 0,
+      "end_time": 0,
+      "room": 0,
+      "faculty": 0
+    },
+    "exact_duplicate_signatures": 0,
+    "normalization_events": 2,
+    "derived_duration_values": 721,
+    "derived_day_values": 721,
+    "default_section_sizes": 63,
+    "default_room_capacities": 39,
+    "credentials_available_in_workbook": false
+  },
+  "imported": {
+    "meetings": 721,
+    "programs": 9,
+    "sections": 63,
+    "subjects": 125,
+    "faculty": 60,
+    "rooms": 39
+  },
+  "original_conflicts": 111,
+  "utilization_summary": {
+    "total_rooms": 43,
+    "average_utilization": 37.2,
+    "most_utilized_room": "CL2",
+    "least_utilized_room": "Comp Lab 1",
+    "underutilized_rooms": 19
+  }
+}

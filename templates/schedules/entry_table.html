@@ -27,7 +27,7 @@
         <td>{{ e.assignment.section }}</td>
         <td>{{ e.assignment.faculty }}</td>
         <td>{{ e.room.name }}</td>
-        <td class="actions-cell">{% if schedule %}<a class="button" href="{% url 'entry_update' schedule.pk e.pk %}">Edit</a>{% endif %}</td>
+        <td class="actions-cell">{% if schedule and can_manage %}<a class="button" href="{% url 'entry_update' schedule.pk e.pk %}">Edit</a>{% endif %}</td>
       </tr>
       {% empty %}
       <tr><td colspan="7" class="table-empty">No schedule entries.</td></tr>

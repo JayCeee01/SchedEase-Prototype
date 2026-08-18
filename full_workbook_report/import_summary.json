@@ -1,0 +1,33 @@
+{
+  "workbooks_processed": 1,
+  "source_rows": 517,
+  "expanded_meetings": 721,
+  "rejected_rows": 2,
+  "programs": [
+    "ACT",
+    "BSAIS",
+    "BSCPE",
+    "BSCS",
+    "BSHM",
+    "BSIT",
+    "BSTM",
+    "OS-BSHM",
+    "OS-BSIT"
+  ],
+  "year_levels": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "sections": 63,
+  "subjects": 125,
+  "faculty": 60,
+  "rooms": 39,
+  "lecture_meetings": 126,
+  "laboratory_meetings": 132,
+  "general_meetings": 463,
+  "duplicate_signatures": 0,
+  "normalization_events": 2,
+  "worksheets_processed": 2
+}

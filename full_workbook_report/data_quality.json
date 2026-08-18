@@ -1,0 +1,23 @@
+{
+  "rows_processed": 519,
+  "rows_importable": 517,
+  "rows_unresolved": 2,
+  "missing_values_by_field": {
+    "section": 0,
+    "subject_code": 0,
+    "subject_name": 0,
+    "units": 1,
+    "days": 0,
+    "start_time": 0,
+    "end_time": 0,
+    "room": 0,
+    "faculty": 0
+  },
+  "exact_duplicate_signatures": 0,
+  "normalization_events": 2,
+  "derived_duration_values": 721,
+  "derived_day_values": 721,
+  "default_section_sizes": 63,
+  "default_room_capacities": 39,
+  "credentials_available_in_workbook": false
+}

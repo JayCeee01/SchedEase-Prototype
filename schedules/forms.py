@@ -37,7 +37,7 @@ MODEL_FORMS = {
     "students": modelform_factory(Student, fields=["user", "section", "student_number", "full_name"]),
     "rooms": modelform_factory(Room, fields=["name", "room_type", "capacity", "is_active"]),
     "terms": modelform_factory(AcademicTerm, fields=["name", "school_year", "starts_on", "ends_on", "is_active"], widgets={"starts_on": forms.DateInput(attrs={"type": "date"}), "ends_on": forms.DateInput(attrs={"type": "date"})}),
-    "assignments": modelform_factory(TeachingAssignment, fields=["term", "subject", "faculty", "section"]),
+    "assignments": modelform_factory(TeachingAssignment, fields=["term", "subject", "faculty", "section", "component", "meeting_index", "duration_minutes", "required_room_type_override"]),
     "availability": modelform_factory(Availability, fields=["faculty", "room", "day", "start_time", "end_time", "kind"], widgets={"start_time": forms.TimeInput(attrs={"type": "time"}), "end_time": forms.TimeInput(attrs={"type": "time"})}),
     "ga-settings": modelform_factory(GASettings, fields=["name", "population_size", "generations", "mutation_rate", "crossover_rate", "elitism"]),
     "schedules": modelform_factory(Schedule, fields=["term", "name", "status"]),
@@ -48,7 +48,21 @@ MODEL_FORMS = {
 class TeachingAssignmentForm(forms.ModelForm):
     class Meta:
         model = TeachingAssignment
-        fields = ["term", "subject", "faculty", "section"]
+        fields = ["term", "subject", "faculty", "section", "component", "meeting_index", "duration_minutes", "required_room_type_override"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ("component", "meeting_index", "duration_minutes", "required_room_type_override"):
+            self.fields[name].required = False
+
+    def clean_component(self):
+        return self.cleaned_data.get("component") or TeachingAssignment.Component.GENERAL
+
+    def clean_meeting_index(self):
+        return self.cleaned_data.get("meeting_index") or 1
+
+    def clean_duration_minutes(self):
+        return self.cleaned_data.get("duration_minutes") or 0
 
 
 MODEL_FORMS["assignments"] = TeachingAssignmentForm

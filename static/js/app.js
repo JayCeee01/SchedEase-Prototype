@@ -313,11 +313,29 @@
   });
 
   const currentPath = window.location.pathname;
-  document.querySelectorAll(".nav-group a").forEach((link) => {
+  const navLinks = Array.from(document.querySelectorAll(".nav-group a"));
+  let bestMatch = null;
+  navLinks.forEach((link) => {
     link.dataset.tooltip = link.textContent.trim();
     link.setAttribute("title", link.textContent.trim());
     link.dataset.tooltipPlacement = "right";
-    if (link.getAttribute("href") === currentPath) link.classList.add("is-active");
+    const href = link.getAttribute("href");
+    if (href === currentPath || (href && href !== "/" && currentPath.startsWith(href))) {
+      if (!bestMatch || href.length > bestMatch.getAttribute("href").length) bestMatch = link;
+    }
+  });
+  if (bestMatch) {
+    bestMatch.classList.add("is-active");
+    bestMatch.setAttribute("aria-current", "page");
+  }
+
+  document.querySelectorAll("[data-nav-group]").forEach((group) => {
+    const key = `schedease-nav-group-${group.dataset.navGroup}`;
+    const hasActiveItem = Boolean(group.querySelector("a.is-active"));
+    const saved = sessionStorage.getItem(key);
+    if (hasActiveItem) group.open = true;
+    else if (saved !== null) group.open = saved === "true";
+    group.addEventListener("toggle", () => sessionStorage.setItem(key, String(group.open)));
   });
 
   document.querySelectorAll(".toast-close").forEach((button) => {
@@ -438,6 +456,40 @@
       const submitter = form.querySelector("button[type='submit'], button:not([type]), .primary");
       if (submitter && submitter.dataset.loadingText !== "false") submitter.classList.add("loading");
     });
+  });
+
+  document.querySelectorAll("[data-schedule-generation]").forEach((form) => {
+    const indicator = form.querySelector("[data-generation-loading]");
+    const submitter = form.querySelector(".generation-submit");
+    let submitting = false;
+
+    const resetGenerationState = () => {
+      submitting = false;
+      form.removeAttribute("aria-busy");
+      if (indicator) indicator.hidden = true;
+      if (submitter) {
+        submitter.disabled = false;
+        submitter.removeAttribute("aria-disabled");
+        submitter.classList.remove("loading");
+      }
+    };
+
+    form.addEventListener("submit", (event) => {
+      if (submitting) {
+        event.preventDefault();
+        return;
+      }
+      submitting = true;
+      form.setAttribute("aria-busy", "true");
+      if (indicator) indicator.hidden = false;
+      if (submitter) {
+        submitter.disabled = true;
+        submitter.setAttribute("aria-disabled", "true");
+        submitter.classList.add("loading");
+      }
+    });
+
+    window.addEventListener("pageshow", resetGenerationState);
   });
 
   document.querySelectorAll("a.button, button").forEach((control) => {

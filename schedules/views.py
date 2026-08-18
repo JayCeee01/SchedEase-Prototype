@@ -1,13 +1,17 @@
 import csv
+import logging
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.db.models import Count
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
@@ -35,10 +39,12 @@ from .models import (
     TeachingAssignment,
     YearLevel,
 )
-from .services.conflicts import conflict_messages
+from .services.conflicts import conflict_messages, schedule_validation_messages
 from .services.credentials import faculty_qualification, missing_credential_message
 from .services.ga import GeneticScheduler
 from .services.room_utilization import filtered_rows, utilization_rows, utilization_summary
+
+logger = logging.getLogger(__name__)
 
 RESOURCE_MODELS = {
     "departments": Department,
@@ -93,6 +99,20 @@ def faculty_required(user):
     return user.is_authenticated and role(user) == Role.FACULTY
 
 
+def resource_model(resource):
+    try:
+        return RESOURCE_MODELS[resource]
+    except KeyError as exc:
+        raise Http404("Unknown administrative resource.") from exc
+
+
+def visible_schedule(request, pk):
+    schedules = Schedule.objects.all()
+    if not admin_required(request.user):
+        schedules = schedules.filter(status=ScheduleStatus.PUBLISHED)
+    return get_object_or_404(schedules, pk=pk)
+
+
 def landing_page(request):
     login_form = EmailOrUsernameAuthenticationForm(request, data=request.POST or None)
     login_modal_open = False
@@ -114,13 +134,22 @@ def dashboard(request):
     user_role = role(request.user)
     context = {"schedules": schedules, "user_role": user_role}
     if admin_required(request.user):
+        latest = Schedule.objects.first()
+        latest_entries = latest.entries.count() if latest else 0
+        latest_requirements = latest.term.teachingassignment_set.count() if latest else 0
+        utilization = utilization_summary(utilization_rows(latest)) if latest else {"average_utilization": 0}
         context.update(
             {
                 "counts": {
                     "departments": Department.objects.count(),
                     "faculty": Faculty.objects.count(),
                     "sections": Section.objects.count(),
-                    "assignments": TeachingAssignment.objects.count(),
+                    "subjects": Subject.objects.count(),
+                    "rooms": Room.objects.filter(is_active=True).count(),
+                    "scheduled classes": latest_entries,
+                    "unscheduled classes": max(0, latest_requirements - latest_entries),
+                    "schedule issues": len(schedule_validation_messages(latest)) if latest else 0,
+                    "average room utilization": f"{utilization['average_utilization']}%",
                 }
             }
         )
@@ -217,7 +246,7 @@ def my_availability_update(request, pk):
 @login_required
 @user_passes_test(admin_required)
 def resource_list(request, resource):
-    model = RESOURCE_MODELS[resource]
+    model = resource_model(resource)
     return render(request, "schedules/resource_list.html", {"resource": resource, "objects": model.objects.all()[:200], "description": RESOURCE_DESCRIPTIONS.get(resource, "Manage records for this section.")})
 
 
@@ -301,6 +330,7 @@ def export_room_utilization_pdf(request):
 @login_required
 @user_passes_test(admin_required)
 def resource_create(request, resource):
+    resource_model(resource)
     form_class = MODEL_FORMS[resource]
     form = form_class(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -315,7 +345,7 @@ def resource_create(request, resource):
 @login_required
 @user_passes_test(admin_required)
 def resource_update(request, resource, pk):
-    model = RESOURCE_MODELS[resource]
+    model = resource_model(resource)
     obj = get_object_or_404(model, pk=pk)
     form = MODEL_FORMS[resource](request.POST or None, instance=obj)
     if request.method == "POST" and form.is_valid():
@@ -376,11 +406,14 @@ def render_credential_override_confirmation(request, form, result):
 @login_required
 @user_passes_test(admin_required)
 def resource_delete(request, resource, pk):
-    model = RESOURCE_MODELS[resource]
+    model = resource_model(resource)
     obj = get_object_or_404(model, pk=pk)
     if request.method == "POST":
-        obj.delete()
-        messages.success(request, "Record deleted.")
+        try:
+            obj.delete()
+            messages.success(request, "Record deleted.")
+        except ProtectedError:
+            messages.error(request, "This record is still used by other scheduling data and cannot be deleted. Remove or reassign those references first.")
         return redirect("resource_list", resource=resource)
     return render(request, "schedules/confirm_delete.html", {"resource": resource, "object": obj})
 
@@ -390,8 +423,26 @@ def resource_delete(request, resource, pk):
 def generate_schedule(request):
     form = ScheduleGenerationForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        scheduler = GeneticScheduler(form.cleaned_data["term"], form.cleaned_data["settings"])
-        schedule = scheduler.generate(form.cleaned_data["name"])
+        term = form.cleaned_data["term"]
+        lock_key = f"schedease-generation-term-{term.pk}"
+        if not cache.add(lock_key, request.user.pk, timeout=3600):
+            form.add_error(None, "A schedule is already being generated for this term. Please wait for it to finish.")
+            messages.warning(request, "Generation is already in progress for the selected term.")
+            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
+        try:
+            scheduler = GeneticScheduler(term, form.cleaned_data["settings"])
+            schedule = scheduler.generate(form.cleaned_data["name"])
+        except ValueError as exc:
+            form.add_error(None, str(exc))
+            messages.error(request, "Schedule generation finished without a feasible result. No invalid schedule was saved.")
+            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
+        except Exception:
+            logger.exception("Unexpected schedule generation failure for term %s", term.pk)
+            form.add_error(None, "An unexpected error stopped schedule generation. No schedule was saved; check the server log for details.")
+            messages.error(request, "Schedule generation was unsuccessful. Please review the settings and try again.")
+            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
+        finally:
+            cache.delete(lock_key)
         messages.success(request, f"Schedule generated with fitness score {schedule.fitness_score:.2f}.")
         return redirect("schedule_detail", pk=schedule.pk)
     return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
@@ -399,16 +450,21 @@ def generate_schedule(request):
 
 @login_required
 def schedule_detail(request, pk):
-    schedule = get_object_or_404(Schedule, pk=pk)
+    schedule = visible_schedule(request, pk)
     entries = list(schedule.entries.select_related("assignment__subject", "assignment__faculty", "assignment__section", "room"))
-    return render(request, "schedules/schedule_detail.html", {"schedule": schedule, "entries": entries, "conflicts": conflict_messages(entries)})
+    return render(request, "schedules/schedule_detail.html", {"schedule": schedule, "entries": entries,
+        "conflicts": schedule_validation_messages(schedule), "can_manage": admin_required(request.user)})
 
 
 @login_required
 @user_passes_test(admin_required)
 def entry_create(request, pk):
     schedule = get_object_or_404(Schedule, pk=pk)
+    if schedule.status == ScheduleStatus.PUBLISHED:
+        messages.error(request, "Published schedules are locked. Create or regenerate a draft version before making changes.")
+        return redirect("schedule_detail", pk=pk)
     form = ScheduleEntryForm(request.POST or None)
+    form.fields["assignment"].queryset = TeachingAssignment.objects.filter(term=schedule.term)
     if request.method == "POST" and form.is_valid():
         return save_entry_with_credential_check(request, form, schedule)
     return render(request, "schedules/form.html", {"form": form, "title": "Add Schedule Entry", "tooltip_context": "schedule-entry"})
@@ -418,7 +474,11 @@ def entry_create(request, pk):
 @user_passes_test(admin_required)
 def entry_update(request, pk, entry_pk):
     entry = get_object_or_404(ScheduleEntry, pk=entry_pk, schedule_id=pk)
+    if entry.schedule.status == ScheduleStatus.PUBLISHED:
+        messages.error(request, "Published schedules are locked. Create or regenerate a draft version before making changes.")
+        return redirect("schedule_detail", pk=pk)
     form = ScheduleEntryForm(request.POST or None, instance=entry)
+    form.fields["assignment"].queryset = TeachingAssignment.objects.filter(term=entry.schedule.term)
     if request.method == "POST" and form.is_valid():
         return save_entry_with_credential_check(request, form, entry.schedule)
     return render(request, "schedules/form.html", {"form": form, "title": "Edit Schedule Entry", "tooltip_context": "schedule-entry"})
@@ -455,9 +515,10 @@ def save_entry_with_credential_check(request, form, schedule):
 
 @login_required
 @user_passes_test(admin_required)
+@require_POST
 def publish_schedule(request, pk):
     schedule = get_object_or_404(Schedule, pk=pk)
-    conflicts = conflict_messages(list(schedule.entries.all()))
+    conflicts = schedule_validation_messages(schedule)
     if conflicts:
         messages.error(request, "Resolve conflicts before publishing.")
     else:
@@ -470,7 +531,7 @@ def publish_schedule(request, pk):
 
 @login_required
 def export_csv(request, pk):
-    schedule = get_object_or_404(Schedule, pk=pk)
+    schedule = visible_schedule(request, pk)
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="{schedule.name}.csv"'
     writer = csv.writer(response)
@@ -482,7 +543,7 @@ def export_csv(request, pk):
 
 @login_required
 def export_pdf(request, pk):
-    schedule = get_object_or_404(Schedule, pk=pk)
+    schedule = visible_schedule(request, pk)
     response = HttpResponse(content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="{schedule.name}.pdf"'
     pdf = canvas.Canvas(response, pagesize=letter)

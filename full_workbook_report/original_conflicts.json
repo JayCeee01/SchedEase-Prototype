@@ -1,0 +1,446 @@
+[
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: VISNAR overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 404 (Lecture Room) overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: BUSALANAN overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: PEA3 (Gym) overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: PEA3 (Gym) overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: PEA3 (Gym) overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 301 (Lecture Room) overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 302 (Lecture Room) overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: MAGANA overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 402 (Lecture Room) overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: CASTILLO, R overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 307 (Lecture Room) overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 301 (Lecture Room) overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 301 (Lecture Room) overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: BUSALANAN overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: PEA4 (Gym) overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 404 (Lecture Room) overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: HERMOSA overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 208B (Lecture Room) overlaps on Monday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: DELA CRUZ overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 405 (Lecture Room) overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: VISNAR overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: CL2 (Computer Laboratory) overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 313 (Lecture Room) overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: MENDIOLA overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: MENDIOLA overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: MENDIOLA overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: PEA2 (Gym) overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: MENDIOLA overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 209 (Lecture Room) overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: MENDIOLA overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: MENDIOLA overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: JACINTO overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: PEA1 (Gym) overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: VICTORINO overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 205 (Lecture Room) overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: MAGANA overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 406 (Lecture Room) overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 302 (Lecture Room) overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 302 (Lecture Room) overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 307 (Lecture Room) overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 405 (Lecture Room) overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: MENDIOLA overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 406 (Lecture Room) overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Section conflict: BSCPE-3201 overlaps on Tuesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: DELA CRUZ overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 313 (Lecture Room) overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: VERGARA overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 208B (Lecture Room) overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: MACAOROG overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 401 (Lecture Room) overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: MAGANA overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 402 (Lecture Room) overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: CA (Lecture Room) overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: CASTILLO D overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: DIZON - CUETO overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: CL4 (Computer Laboratory) overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: CL4 (Computer Laboratory) overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: CL4 (Computer Laboratory) overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: CASTILLO D overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: CASTILLO D overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 208B (Lecture Room) overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: MENDIOLA overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: CL3 (Computer Laboratory) overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: GALAMITON overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 406 (Lecture Room) overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: HERMOSA overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 208B (Lecture Room) overlaps on Wednesday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: DELA CRUZ overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 313 (Lecture Room) overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: HERMOSA - VICTORIA overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 304 (Lecture Room) overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: MACAOROG overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 406 (Lecture Room) overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: OLANOZA overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: PEA3 (Gym) overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: REYES overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: CASTILLO, R overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 307 (Lecture Room) overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: DARANTAN overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 406 (Lecture Room) overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: GALAMITON overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: CL2 (Computer Laboratory) overlaps on Thursday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: JACINTO overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: PEA2 (Gym) overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: GALAMITON overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 404 (Lecture Room) overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: GALAMITON overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: GALAMITON overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: CL4 (Computer Laboratory) overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: VICTORINO overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 205 (Lecture Room) overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: BUSALANAN overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 211 (Lecture Room) overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: HERMOSA - VICTORIA overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 211 (Lecture Room) overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: DARANTAN overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 402 (Lecture Room) overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 304 (Lecture Room) overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: REYES overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 303 (Lecture Room) overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: BUSALANAN overlaps on Friday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: GALAMITON overlaps on Saturday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: CL4 (Computer Laboratory) overlaps on Saturday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: DIZON - CUETO overlaps on Saturday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 209 (Lecture Room) overlaps on Saturday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 209 (Lecture Room) overlaps on Saturday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 209 (Lecture Room) overlaps on Saturday."
+  },
+  {
+    "type": "overlap",
+    "message": "Faculty conflict: VENTULA overlaps on Saturday."
+  },
+  {
+    "type": "overlap",
+    "message": "Room conflict: 201 (Lecture Room) overlaps on Saturday."
+  },
+  {
+    "type": "outside_hours",
+    "entry": 1816
+  }
+]

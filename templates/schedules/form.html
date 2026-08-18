@@ -7,12 +7,25 @@
     <p class="subtle">{{ description|default:"Required fields are validated before saving. Time fields use the school scheduling range configured in the backend." }}</p>
   </div>
 </div>
-<form method="post" class="panel form" data-tooltip-context="{{ tooltip_context|default:title|slugify }}">
+<form method="post" class="panel form{% if tooltip_context == 'generate-schedule' %} generation-form{% endif %}" data-tooltip-context="{{ tooltip_context|default:title|slugify }}"{% if tooltip_context == 'generate-schedule' %} data-schedule-generation{% endif %}>
   {% csrf_token %}
   {{ form.as_p }}
   <div class="toolbar" style="justify-content:flex-start">
+    {% if tooltip_context == 'generate-schedule' %}
+    <button class="primary generation-submit" type="submit" data-loading-text="Generating schedule...">Generate Schedule</button>
+    {% else %}
     <button class="primary" data-loading-text="Saving">Save</button>
+    {% endif %}
     <button class="button" type="button" onclick="history.back()">Cancel</button>
   </div>
+  {% if tooltip_context == 'generate-schedule' %}
+  <div class="generation-loading" data-generation-loading role="status" aria-live="polite" aria-atomic="true" hidden>
+    <span class="generation-spinner" aria-hidden="true"></span>
+    <span>
+      <strong>Generating schedule...</strong>
+      <small>Please wait while SchedEase creates the schedule. This may take several minutes for large datasets.</small>
+    </span>
+  </div>
+  {% endif %}
 </form>
 {% endblock %}

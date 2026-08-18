@@ -32,31 +32,63 @@
       </div>
       {% if user.is_authenticated %}
       <nav class="nav-group" aria-label="Primary navigation">
-        <a href="{% url 'dashboard' %}" data-icon="grid">Dashboard</a>
-        <a href="{% url 'browse_schedules' %}" data-icon="calendar">Browse Schedules</a>
+        <a href="{% url 'dashboard' %}" data-icon="grid"{% if request.resolver_match.url_name == 'dashboard' %} class="is-active" aria-current="page"{% endif %}>Dashboard</a>
         {% if user.profile.role == "FACULTY" %}
-        <a href="{% url 'my_availability' %}" data-icon="clock">My Availability</a>
+        <a href="{% url 'browse_schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'browse_schedules' %} class="is-active" aria-current="page"{% endif %}>Browse Schedules</a>
+        <a href="{% url 'my_availability' %}" data-icon="clock"{% if 'my_availability' in request.resolver_match.url_name %} class="is-active" aria-current="page"{% endif %}>My Availability</a>
+        {% elif not user.is_superuser and user.profile.role != "ADMIN" %}
+        <a href="{% url 'browse_schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'browse_schedules' %} class="is-active" aria-current="page"{% endif %}>Browse Schedules</a>
         {% endif %}
         {% if user.is_superuser or user.profile.role == "ADMIN" %}
-        <span class="nav-section">Administration</span>
-        <a href="{% url 'generate_schedule' %}" data-icon="spark">Generate</a>
-        <a href="{% url 'resource_list' 'schedules' %}" data-icon="calendar">Manage Schedules</a>
-        <a href="{% url 'room_utilization' %}" data-icon="door">Room Utilization</a>
-        <a href="{% url 'resource_list' 'departments' %}" data-icon="building">Departments</a>
-        <a href="{% url 'resource_list' 'programs' %}" data-icon="book">Programs</a>
-        <a href="{% url 'resource_list' 'sections' %}" data-icon="layers">Sections</a>
-        <a href="{% url 'resource_list' 'subjects' %}" data-icon="file">Subjects</a>
-        <a href="{% url 'resource_list' 'credentials' %}" data-icon="check">Credentials</a>
-        <a href="{% url 'resource_list' 'faculty-credentials' %}" data-icon="user">Faculty Credentials</a>
-        <a href="{% url 'resource_list' 'subject-credential-requirements' %}" data-icon="file">Subject Requirements</a>
-        <a href="{% url 'resource_list' 'credential-overrides' %}" data-icon="flag">Credential Overrides</a>
-        <a href="{% url 'resource_list' 'faculty' %}" data-icon="user">Faculty</a>
-        <a href="{% url 'resource_list' 'students' %}" data-icon="users">Students</a>
-        <a href="{% url 'resource_list' 'rooms' %}" data-icon="door">Rooms</a>
-        <a href="{% url 'resource_list' 'terms' %}" data-icon="flag">Terms</a>
-        <a href="{% url 'resource_list' 'assignments' %}" data-icon="check">Assignments</a>
-        <a href="{% url 'resource_list' 'availability' %}" data-icon="clock">Availability</a>
-        <a href="{% url 'resource_list' 'ga-settings' %}" data-icon="sliders">GA Settings</a>
+        <details class="nav-disclosure" data-nav-group="academic"{% if request.resolver_match.kwargs.resource == 'departments' or request.resolver_match.kwargs.resource == 'programs' or request.resolver_match.kwargs.resource == 'year-levels' or request.resolver_match.kwargs.resource == 'sections' or request.resolver_match.kwargs.resource == 'subjects' or request.resolver_match.kwargs.resource == 'students' %} open{% endif %}>
+          <summary data-tooltip="Academic Management"><span class="nav-category-icon" data-group-icon="academic"></span><span class="nav-category-label">Academic Management</span><span class="nav-chevron" aria-hidden="true"></span></summary>
+          <div class="nav-children">
+            <a href="{% url 'resource_list' 'departments' %}" data-icon="building">Departments</a>
+            <a href="{% url 'resource_list' 'programs' %}" data-icon="book">Programs</a>
+            <a href="{% url 'resource_list' 'year-levels' %}" data-icon="layers">Year Levels</a>
+            <a href="{% url 'resource_list' 'sections' %}" data-icon="layers">Sections</a>
+            <a href="{% url 'resource_list' 'subjects' %}" data-icon="file">Subjects</a>
+            <a href="{% url 'resource_list' 'students' %}" data-icon="users">Students</a>
+          </div>
+        </details>
+
+        <details class="nav-disclosure" data-nav-group="people"{% if request.resolver_match.kwargs.resource == 'faculty' or request.resolver_match.kwargs.resource == 'credentials' or request.resolver_match.kwargs.resource == 'faculty-credentials' or request.resolver_match.kwargs.resource == 'subject-credential-requirements' or request.resolver_match.kwargs.resource == 'credential-overrides' or request.resolver_match.kwargs.resource == 'availability' %} open{% endif %}>
+          <summary data-tooltip="People and Credentials"><span class="nav-category-icon" data-group-icon="people"></span><span class="nav-category-label">People &amp; Credentials</span><span class="nav-chevron" aria-hidden="true"></span></summary>
+          <div class="nav-children">
+            <a href="{% url 'resource_list' 'faculty' %}" data-icon="user">Faculty</a>
+            <a href="{% url 'resource_list' 'credentials' %}" data-icon="check">Credentials</a>
+            <a href="{% url 'resource_list' 'faculty-credentials' %}" data-icon="user">Faculty Credentials</a>
+            <a href="{% url 'resource_list' 'subject-credential-requirements' %}" data-icon="file">Subject Requirements</a>
+            <a href="{% url 'resource_list' 'credential-overrides' %}" data-icon="flag">Credential Overrides</a>
+            <a href="{% url 'resource_list' 'availability' %}" data-icon="clock">Availability</a>
+          </div>
+        </details>
+
+        <details class="nav-disclosure" data-nav-group="rooms"{% if request.resolver_match.kwargs.resource == 'rooms' or request.resolver_match.url_name == 'room_utilization' %} open{% endif %}>
+          <summary data-tooltip="Room Management"><span class="nav-category-icon" data-group-icon="rooms"></span><span class="nav-category-label">Room Management</span><span class="nav-chevron" aria-hidden="true"></span></summary>
+          <div class="nav-children">
+            <a href="{% url 'resource_list' 'rooms' %}" data-icon="door">Rooms</a>
+            <a href="{% url 'room_utilization' %}" data-icon="sliders">Room Utilization</a>
+          </div>
+        </details>
+
+        <details class="nav-disclosure" data-nav-group="scheduling"{% if request.resolver_match.url_name == 'generate_schedule' or request.resolver_match.url_name == 'browse_schedules' or request.resolver_match.url_name == 'schedule_detail' or request.resolver_match.kwargs.resource == 'schedules' or request.resolver_match.kwargs.resource == 'assignments' or request.resolver_match.kwargs.resource == 'ga-settings' %} open{% endif %}>
+          <summary data-tooltip="Scheduling"><span class="nav-category-icon" data-group-icon="scheduling"></span><span class="nav-category-label">Scheduling</span><span class="nav-chevron" aria-hidden="true"></span></summary>
+          <div class="nav-children">
+            <a href="{% url 'generate_schedule' %}" data-icon="spark">Generate Schedule</a>
+            <a href="{% url 'resource_list' 'schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'schedule_detail' or request.resolver_match.url_name == 'entry_create' or request.resolver_match.url_name == 'entry_update' %} class="is-active" aria-current="page"{% endif %}>Manage Schedules</a>
+            <a href="{% url 'browse_schedules' %}" data-icon="calendar">Browse Published</a>
+            <a href="{% url 'resource_list' 'assignments' %}" data-icon="check">Assignments</a>
+            <a href="{% url 'resource_list' 'ga-settings' %}" data-icon="sliders">GA Settings</a>
+          </div>
+        </details>
+
+        <details class="nav-disclosure" data-nav-group="administration"{% if request.resolver_match.kwargs.resource == 'terms' %} open{% endif %}>
+          <summary data-tooltip="Administration"><span class="nav-category-icon" data-group-icon="administration"></span><span class="nav-category-label">Administration</span><span class="nav-chevron" aria-hidden="true"></span></summary>
+          <div class="nav-children">
+            <a href="{% url 'resource_list' 'terms' %}" data-icon="flag">Academic Terms</a>
+          </div>
+        </details>
         {% endif %}
       </nav>
       {% endif %}

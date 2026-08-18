@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 
 
 class Role(models.TextChoices):
@@ -81,6 +82,10 @@ class AcademicTerm(models.Model):
 
     def __str__(self):
         return f"{self.name} {self.school_year}"
+
+    def clean(self):
+        if self.starts_on >= self.ends_on:
+            raise ValidationError("Academic term end date must be after its start date.")
 
 
 class Section(models.Model):
@@ -196,21 +201,47 @@ class SubjectCredentialRequirement(models.Model):
 
 
 class TeachingAssignment(models.Model):
+    class Component(models.TextChoices):
+        GENERAL = "GENERAL", "General"
+        LECTURE = "LECTURE", "Lecture"
+        LABORATORY = "LABORATORY", "Laboratory"
+
     term = models.ForeignKey(AcademicTerm, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.PROTECT)
     faculty = models.ForeignKey(Faculty, on_delete=models.PROTECT)
     section = models.ForeignKey(Section, on_delete=models.PROTECT)
+    component = models.CharField(max_length=20, choices=Component.choices, default=Component.GENERAL)
+    meeting_index = models.PositiveSmallIntegerField(default=1)
+    duration_minutes = models.PositiveSmallIntegerField(default=0, help_text="Per-meeting duration; zero uses the subject hours.")
+    required_room_type_override = models.CharField(max_length=30, choices=RoomKind.choices, blank=True)
+    source_key = models.CharField(max_length=160, blank=True, db_index=True)
+    source_sheet = models.CharField(max_length=120, blank=True)
+    source_row = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ["section", "subject__code"]
-        constraints = [models.UniqueConstraint(fields=["term", "subject", "section"], name="unique_assignment")]
+        constraints = [models.UniqueConstraint(fields=["term", "subject", "section", "component", "meeting_index"], name="unique_assignment_meeting")]
 
     @property
     def required_hours(self):
-        return int(self.subject.lecture_hours + self.subject.lab_hours)
+        return self.required_duration_minutes / 60
+
+    @property
+    def required_duration_minutes(self):
+        if self.duration_minutes:
+            return self.duration_minutes
+        return int(self.subject.lecture_hours + self.subject.lab_hours) * 60
+
+    @property
+    def effective_room_type(self):
+        return self.required_room_type_override or self.subject.required_room_type
 
     def __str__(self):
         return f"{self.section} {self.subject.code}"
+
+    def clean(self):
+        if self.required_duration_minutes <= 0:
+            raise ValidationError("Teaching assignment must require a positive class duration.")
 
 
 class CredentialOverride(models.Model):
@@ -245,10 +276,16 @@ class Availability(models.Model):
 
     class Meta:
         ordering = ["day", "start_time"]
+        constraints = [
+            models.CheckConstraint(
+                check=(Q(faculty__isnull=False, room__isnull=True) | Q(faculty__isnull=True, room__isnull=False)),
+                name="availability_exactly_one_owner",
+            )
+        ]
 
     def clean(self):
-        if not self.faculty and not self.room:
-            raise ValidationError("Availability must belong to a faculty member or a room.")
+        if bool(self.faculty) == bool(self.room):
+            raise ValidationError("Availability must belong to exactly one faculty member or room.")
         if self.start_time >= self.end_time:
             raise ValidationError("Start time must be earlier than end time.")
 
@@ -264,6 +301,17 @@ class GASettings(models.Model):
     def __str__(self):
         return self.name
 
+    def clean(self):
+        errors = {}
+        if not 0 <= self.mutation_rate <= 1:
+            errors["mutation_rate"] = "Mutation rate must be between 0 and 1."
+        if not 0 <= self.crossover_rate <= 1:
+            errors["crossover_rate"] = "Crossover rate must be between 0 and 1."
+        if self.elitism >= self.population_size:
+            errors["elitism"] = "Elitism must be smaller than the population size."
+        if errors:
+            raise ValidationError(errors)
+
 
 class ScheduleStatus(models.TextChoices):
     DRAFT = "DRAFT", "Draft"
@@ -272,12 +320,18 @@ class ScheduleStatus(models.TextChoices):
 
 
 class Schedule(models.Model):
+    class Origin(models.TextChoices):
+        MANUAL = "MANUAL", "Manual"
+        IMPORTED = "IMPORTED", "Imported Original"
+        GENERATED = "GENERATED", "SchedEase Generated"
+
     term = models.ForeignKey(AcademicTerm, on_delete=models.CASCADE)
     name = models.CharField(max_length=120)
     status = models.CharField(max_length=20, choices=ScheduleStatus.choices, default=ScheduleStatus.DRAFT)
     fitness_score = models.FloatField(default=0)
     generated_at = models.DateTimeField(auto_now_add=True)
     published_at = models.DateTimeField(null=True, blank=True)
+    origin = models.CharField(max_length=20, choices=Origin.choices, default=Origin.MANUAL)
 
     class Meta:
         ordering = ["-generated_at"]
@@ -297,6 +351,7 @@ class ScheduleEntry(models.Model):
 
     class Meta:
         ordering = ["day", "start_time", "room__name"]
+        constraints = [models.UniqueConstraint(fields=["schedule", "assignment"], name="unique_schedule_assignment")]
 
     def clean(self):
         from .services.conflicts import validate_entry
