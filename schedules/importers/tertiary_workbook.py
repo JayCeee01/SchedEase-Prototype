@@ -14,6 +14,11 @@ REL_NS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 
 SAMPLE_ROWS = (12, 13, 15, 16, 21, 22, 23, 26, 76, 77, 205, 210, 341)
 SAMPLE_SHEET = "TER SCHED 2T2526"
+SELECTED_SECTIONS = (
+    ("ACT", 1, "201"),
+    ("BSCS", 3, "201"),
+    ("BSAIS", 2, "201"),
+)
 
 PROGRAMS = {
     "ACT": ("CCS", "College of Computer Studies", "Associate in Computer Technology"),

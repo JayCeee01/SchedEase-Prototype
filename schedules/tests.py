@@ -12,6 +12,7 @@ from .services.generation_issues import record_generation_messages
 from .services.room_utilization import filtered_rows, utilization_rows
 from .services.schedule_comparison import compare_schedules
 from .importers.full_tertiary import days, subject_title, time_pair
+from .importers.tertiary_workbook import SELECTED_SECTIONS
 
 
 class SchedulingTestCase(TestCase):
@@ -319,6 +320,12 @@ class SchedulingTestCase(TestCase):
     def test_full_workbook_normalizes_days_and_component_titles(self):
         self.assertEqual(days("M/Th"), [0, 3])
         self.assertEqual(subject_title("Advanced Web Programming (LAB)"), "Advanced Web Programming")
+
+    def test_representative_sample_uses_three_complete_sections(self):
+        self.assertEqual(
+            SELECTED_SECTIONS,
+            (("ACT", 1, "201"), ("BSCS", 3, "201"), ("BSAIS", 2, "201")),
+        )
 
     def test_original_and_generated_schedules_remain_distinguishable(self):
         original = Schedule.objects.create(term=self.term, name="Imported", origin=Schedule.Origin.IMPORTED)
