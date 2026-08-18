@@ -761,6 +761,31 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary-soft) 35%, transpa
 .component-laboratory { background: #ecfdf3; color: var(--success); border-color: #abefc6; }
 .component-lecture { background: var(--primary-soft); color: var(--primary-strong); border-color: color-mix(in srgb, var(--primary) 30%, transparent); }
 .view-heading { margin-top: 0; }
+.selection-note, .planning-callout { padding: 12px 16px; margin: 0 0 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-soft); color: var(--muted); }
+.room-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.room-report-filters { display: grid; grid-template-columns: repeat(4, minmax(170px, 1fr)); gap: 16px; margin-bottom: 16px; }
+.room-report-filters label, .room-schedule-filters label, .planning-assumptions label { display: grid; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 800; }
+.room-report-filters .toolbar { align-self: end; }
+.daily-utilization-table { min-width: 1540px; }
+.daily-utilization-table td small { display: block; margin-top: 3px; color: var(--muted); white-space: nowrap; }
+.daily-percent { font-weight: 800; }
+.room-schedule-filters { display: grid; grid-template-columns: repeat(3, minmax(200px, 1fr)) auto; gap: 16px; align-items: end; margin-bottom: 14px; }
+.legend { display: flex; gap: 18px; margin: 12px 0; color: var(--muted); font-size: 13px; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend-swatch { width: 13px; height: 13px; border-radius: 4px; border: 1px solid var(--line); }
+.legend-swatch.occupied { background: var(--primary-soft); border-color: var(--primary); }
+.legend-swatch.vacant { background: var(--surface-soft); }
+.legend-swatch.unavailable, .unavailable-cell { background: color-mix(in srgb, var(--line) 55%, var(--surface)); }
+.room-schedule-grid { min-width: 1120px; table-layout: fixed; }
+.room-schedule-grid th:first-child { width: 130px; }
+.room-schedule-grid tbody th small { display: block; color: var(--muted); font-weight: 500; }
+.room-schedule-grid td { height: 52px; padding: 5px; vertical-align: top; }
+.vacant-cell { background: color-mix(in srgb, var(--surface-soft) 65%, transparent); }
+.occupied-cell { background: color-mix(in srgb, var(--primary-soft) 48%, var(--surface)); }
+.room-slot { display: grid; gap: 2px; padding: 6px; border-left: 3px solid var(--primary); border-radius: 5px; background: var(--surface); font-size: 11px; }
+.room-slot span, .room-slot small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.planning-assumptions { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)) auto; gap: 16px; align-items: end; margin-bottom: 16px; }
+.planning-results { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 16px; }
 .utilization-summary .metric-icon {
   background: linear-gradient(135deg, var(--primary-soft), color-mix(in srgb, var(--primary) 18%, white));
 }
@@ -1475,6 +1500,9 @@ input[type="checkbox"] {
   .utilization-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .error-log-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .schedule-entry-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .room-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .room-report-filters, .planning-assumptions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .room-schedule-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .detail-grid { grid-template-columns: 1fr; }
   .landing-nav { gap: 12px; }
   .landing-nav nav { display: none; }
@@ -1506,6 +1534,7 @@ input[type="checkbox"] {
   .metrics { grid-template-columns: 1fr; }
   .error-log-filters { grid-template-columns: 1fr; }
   .schedule-entry-filters { grid-template-columns: 1fr; }
+  .room-report-filters, .room-schedule-filters, .planning-assumptions, .planning-results { grid-template-columns: 1fr; }
   .generation-result { align-items: stretch; flex-direction: column; }
   .quick-actions { grid-template-columns: 1fr; }
   .utilization-filters { grid-template-columns: 1fr; }

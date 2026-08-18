@@ -9,7 +9,7 @@ from .models import AcademicTerm, Availability, AvailabilityKind, Credential, Cr
 from .services.credentials import faculty_qualification
 from .services.ga import GeneticScheduler, Gene
 from .services.generation_issues import record_generation_messages
-from .services.room_utilization import filtered_rows, utilization_rows
+from .services.room_utilization import capacity_planning, filtered_rows, room_schedule_grid, utilization_rows, utilization_summary
 from .services.schedule_comparison import compare_schedules
 from .importers.full_tertiary import days, subject_title, time_pair
 from .importers.tertiary_workbook import SELECTED_SECTIONS
@@ -196,7 +196,63 @@ class SchedulingTestCase(TestCase):
         row = next(item for item in utilization_rows(schedule) if item.room == self.room)
         self.assertEqual(row.available_hours, 8)
         self.assertEqual(row.utilization_percentage, 37.5)
-        self.assertEqual(row.status, "Optimized")
+        self.assertEqual(row.status, "Moderately Utilized")
+
+    def test_room_utilization_calculates_daily_and_weighted_weekly_values(self):
+        Availability.objects.create(room=self.room, day=0, start_time=time(7), end_time=time(19), kind=AvailabilityKind.AVAILABLE)
+        Availability.objects.create(room=self.room, day=1, start_time=time(7), end_time=time(13), kind=AvailabilityKind.AVAILABLE)
+        schedule = Schedule.objects.create(term=self.term, name="Variable availability")
+        schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
+        row = next(item for item in utilization_rows(schedule) if item.room == self.room)
+        self.assertEqual(row.daily[0]["percentage"], 25.0)
+        self.assertEqual(row.daily[1]["percentage"], 0)
+        self.assertEqual(row.available_hours, 18)
+        self.assertEqual(row.utilization_percentage, 16.7)
+        self.assertEqual(row.capacity_utilization, 85.7)
+        self.assertEqual(utilization_summary([row])["average_utilization"], 16.7)
+
+    def test_room_schedule_uses_thirty_minute_slots(self):
+        schedule = Schedule.objects.create(term=self.term, name="Room grid")
+        schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
+        grid = room_schedule_grid(self.room, schedule)
+        self.assertEqual(len(grid), 24)
+        eight_am = next(row for row in grid if row["start"] == time(8))
+        self.assertEqual(eight_am["cells"][0]["entries"][0].assignment, self.assignment)
+        self.assertFalse(eight_am["cells"][1]["entries"])
+        self.assertTrue(eight_am["cells"][1]["available"])
+
+    def test_room_capacity_planning_uses_actual_room_types_and_requirements(self):
+        culinary_room = Room.objects.create(name="Training Kitchen", room_type=RoomKind.SPECIAL, capacity=30)
+        culinary_subject = Subject.objects.create(
+            code="CUL101", title="Culinary Laboratory", department=self.department,
+            lecture_hours=0, lab_hours=3, required_room_type=RoomKind.SPECIAL,
+        )
+        TeachingAssignment.objects.create(
+            term=self.term, subject=culinary_subject, faculty=self.faculty, section=self.section,
+            component=TeachingAssignment.Component.LABORATORY, meeting_index=1, duration_minutes=180,
+        )
+        planning, lecture = capacity_planning(self.term, {"students": 80, "class_size": 40, "subjects": 5, "hours": 3})
+        computer = next(row for row in planning if row["room_type"] == RoomKind.COMPUTER_LAB)
+        culinary = next(row for row in planning if row["room_type"] == RoomKind.SPECIAL)
+        self.assertEqual(computer["requirements"], 1)
+        self.assertEqual(computer["required_hours"], 3)
+        self.assertEqual(culinary["rooms"], 1)
+        self.assertEqual(culinary["required_hours"], 3)
+        self.assertEqual(lecture["sections"], 2)
+        self.assertEqual(lecture["required_hours"], 30)
+
+    def test_room_modules_filter_schedule_version_and_require_admin(self):
+        schedule = Schedule.objects.create(term=self.term, name="Selected room schedule")
+        schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
+        self.client.login(username="admin", password="admin12345")
+        utilization = self.client.get("/schedules/room-utilization/", {"term": self.term.pk, "schedule": schedule.pk})
+        self.assertContains(utilization, "Selected room schedule")
+        self.assertContains(utilization, "Monday")
+        room_schedule = self.client.get("/schedules/room-schedule/", {"schedule": schedule.pk, "room": self.room.pk})
+        self.assertContains(room_schedule, "Weekly room timetable")
+        self.assertContains(room_schedule, self.subject.code)
+        planning = self.client.get("/schedules/room-capacity-planning/", {"term": self.term.pk})
+        self.assertContains(planning, "Plan room capacity")
 
     def test_room_utilization_filters_and_exports(self):
         schedule = Schedule.objects.create(term=self.term, name="Draft")

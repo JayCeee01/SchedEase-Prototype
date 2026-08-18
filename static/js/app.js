@@ -496,6 +496,16 @@
     });
   });
 
+  document.querySelectorAll("[data-planning-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const selected = button.dataset.planningTab;
+      document.querySelectorAll("[data-planning-tab]").forEach((item) => item.classList.toggle("is-active", item === button));
+      document.querySelectorAll("[data-planning-row]").forEach((row) => {
+        row.hidden = selected !== "all" && row.dataset.planningRow !== selected;
+      });
+    });
+  });
+
   document.querySelectorAll("[data-schedule-generation]").forEach((form) => {
     const indicator = form.querySelector("[data-generation-loading]");
     const submitter = form.querySelector(".generation-submit");

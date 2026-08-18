@@ -1,99 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-hero">
-  <div>
-    <p class="eyebrow">Room Utilization</p>
-    <h1>Monitor facility usage</h1>
-    <p class="subtle">Review how much each room is used in the latest schedule and spot rooms that may need better assignment balance.</p>
-  </div>
-  <div class="actions">
-    <a class="button" href="{% url 'room_utilization_csv' %}?{{ request.GET.urlencode }}">CSV</a>
-    <a class="button" href="{% url 'room_utilization_pdf' %}?{{ request.GET.urlencode }}">PDF</a>
-  </div>
-</div>
-
-<section class="metrics utilization-summary">
-  <article>
-    <span class="metric-icon">RM</span>
-    <span><strong>{{ summary.total_rooms }}</strong><span>Total Rooms</span></span>
-  </article>
-  <article>
-    <span class="metric-icon">AV</span>
-    <span><strong>{{ summary.average_utilization }}%</strong><span>Average Utilization</span></span>
-  </article>
-  <article>
-    <span class="metric-icon">HI</span>
-    <span><strong>{{ summary.most_utilized_room }}</strong><span>Most Utilized</span></span>
-  </article>
-  <article>
-    <span class="metric-icon">LO</span>
-    <span><strong>{{ summary.underutilized_rooms }}</strong><span>Underutilized Rooms</span></span>
-  </article>
+<div class="page-hero"><div><p class="eyebrow">Room Utilization</p><h1>Weekly room usage</h1><p class="subtle">See how frequently each room is used throughout the week using its actual availability.</p></div><div class="actions"><a class="button" href="{% url 'room_utilization_csv' %}?{{ request.GET.urlencode }}">CSV</a><a class="button" href="{% url 'room_utilization_pdf' %}?{{ request.GET.urlencode }}">PDF</a></div></div>
+{% if schedule %}<p class="selection-note"><strong>Schedule:</strong> {{ schedule.name }} · {{ schedule.term }} · <span class="badge">{{ schedule.get_status_display }}</span></p>{% endif %}
+<section class="metrics utilization-summary room-metrics">
+  <article><span><strong>{{ summary.total_rooms }}</strong><span>Total Rooms</span></span></article>
+  <article><span><strong>{{ summary.lecture_rooms }}</strong><span>Lecture Rooms</span></span></article>
+  <article><span><strong>{{ summary.laboratories }}</strong><span>Laboratories</span></span></article>
+  <article><span><strong>{{ summary.average_utilization }}%</strong><span>Weekly Utilization</span></span></article>
+  <article><span><strong>{{ summary.most_utilized_room }}</strong><span>Most Utilized</span></span></article>
+  <article><span><strong>{{ summary.least_utilized_room }}</strong><span>Least Utilized</span></span></article>
+  <article><span><strong>{{ summary.underutilized_rooms }}</strong><span>Underutilized</span></span></article>
+  <article><span><strong>{{ summary.unused_rooms }}</strong><span>Unused Rooms</span></span></article>
 </section>
-
-<form method="get" class="panel utilization-filters" data-tooltip-context="room-utilization-filters">
-  <label>
-    <span class="field-label">Search rooms <span class="info-icon" data-tooltip="Find rooms by name.">i</span></span>
-    <input type="search" name="q" value="{{ query }}" placeholder="Room name">
-  </label>
-  <label>
-    <span class="field-label">Room type <span class="info-icon" data-tooltip="Show only rooms of the selected type.">i</span></span>
-    <select name="room_type">
-      <option value="">All room types</option>
-      {% for value, label in room_types %}
-      <option value="{{ value }}" {% if selected_room_type == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </label>
-  <label>
-    <span class="field-label">Utilization range <span class="info-icon" data-tooltip="Show rooms by how much they are currently used.">i</span></span>
-    <select name="utilization">
-      <option value="">All ranges</option>
-      <option value="under" {% if selected_utilization == "under" %}selected{% endif %}>Underutilized</option>
-      <option value="optimized" {% if selected_utilization == "optimized" %}selected{% endif %}>Optimized</option>
-      <option value="high" {% if selected_utilization == "high" %}selected{% endif %}>Highly Utilized</option>
-    </select>
-  </label>
-  <button class="primary" type="submit">Apply Filters</button>
+<form method="get" class="panel room-report-filters" data-auto-tooltips="false">
+  <label><span class="field-label">Academic Term</span><select name="term"><option value="">All terms</option>{% for item in terms %}<option value="{{ item.pk }}"{% if selected_term == item.pk|stringformat:'s' %} selected{% endif %}>{{ item }}</option>{% endfor %}</select></label>
+  <label><span class="field-label">Schedule Version</span><select name="schedule"><option value="">Latest schedule</option>{% for item in schedules %}<option value="{{ item.pk }}"{% if selected_schedule == item.pk|stringformat:'s' %} selected{% endif %}>{{ item.name }} · {{ item.get_status_display }}</option>{% endfor %}</select></label>
+  <label><span class="field-label">Room Group</span><select name="room_group"><option value="">All rooms</option><option value="lecture"{% if selected_room_group == 'lecture' %} selected{% endif %}>Lecture Rooms</option><option value="laboratory"{% if selected_room_group == 'laboratory' %} selected{% endif %}>Laboratories</option></select></label>
+  <label><span class="field-label">Room Type</span><select name="room_type"><option value="">All types</option>{% for value,label in room_types %}<option value="{{ value }}"{% if selected_room_type == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label><span class="field-label">Day</span><select name="day"><option value="">All days</option>{% for value,label in weekdays %}<option value="{{ value }}"{% if selected_day == value|stringformat:'s' %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label><span class="field-label">Department</span><select name="department"><option value="">All departments</option>{% for item in departments %}<option value="{{ item.pk }}"{% if selected_department == item.pk|stringformat:'s' %} selected{% endif %}>{{ item.code }}</option>{% endfor %}</select></label>
+  <label><span class="field-label">Status</span><select name="utilization"><option value="">All statuses</option><option{% if selected_utilization == 'Unused' %} selected{% endif %}>Unused</option><option{% if selected_utilization == 'Underutilized' %} selected{% endif %}>Underutilized</option><option{% if selected_utilization == 'Moderately Utilized' %} selected{% endif %}>Moderately Utilized</option><option{% if selected_utilization == 'Well Utilized' %} selected{% endif %}>Well Utilized</option><option{% if selected_utilization == 'Highly Utilized' %} selected{% endif %}>Highly Utilized</option><option{% if selected_utilization == 'Fully Utilized' %} selected{% endif %}>Fully Utilized</option></select></label>
+  <label><span class="field-label">Search Room</span><input type="search" name="q" value="{{ query }}" placeholder="Room name"></label>
+  <div class="toolbar"><button class="primary" type="submit">Apply Filters</button><a class="button" href="{% url 'room_utilization' %}">Clear</a></div>
 </form>
-
-<div class="panel table-wrap">
-  <table class="utilization-table">
-    <thead>
-      <tr>
-        <th data-sort>Room Name</th>
-        <th data-sort>Room Type</th>
-        <th data-sort>Room Capacity</th>
-        <th data-sort>Total Available Hours per Week</th>
-        <th data-sort>Total Scheduled Hours per Week</th>
-        <th data-sort>Utilization Percentage</th>
-        <th data-sort>Assigned Classes</th>
-        <th data-sort>Status</th>
-        <th data-sort>Last Updated</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in rows %}
-      <tr>
-        <td><strong>{{ row.room.name }}</strong></td>
-        <td>{{ row.room.get_room_type_display }}</td>
-        <td>{{ row.room.capacity }}</td>
-        <td>{{ row.available_hours }}</td>
-        <td>{{ row.scheduled_hours }}</td>
-        <td>
-          <div class="utilization-meter" aria-label="{{ row.utilization_percentage }} percent utilized">
-            <span style="width: {{ row.utilization_percentage }}%"></span>
-          </div>
-          <strong>{{ row.utilization_percentage }}%</strong>
-        </td>
-        <td>{{ row.assigned_classes }}</td>
-        <td><span class="badge {{ row.badge_class }}">{{ row.status }}</span></td>
-        <td>{% if row.last_updated %}{{ row.last_updated|date:"M d, Y g:i A" }}{% else %}No schedule yet{% endif %}</td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="9" class="table-empty">No rooms match the selected filters.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+<div class="panel table-wrap"><table class="daily-utilization-table"><thead><tr><th data-sort>Room</th><th data-sort>Type</th><th data-sort>Capacity</th><th data-sort>Mon</th><th data-sort>Tue</th><th data-sort>Wed</th><th data-sort>Thu</th><th data-sort>Fri</th><th data-sort>Sat</th><th data-sort><span data-tooltip="Scheduled weekly hours divided by actual available weekly hours.">Weekly %</span></th><th data-sort><span data-tooltip="Average section size compared with room capacity.">Seat %</span></th><th data-sort>Scheduled / Available</th><th data-sort>Classes</th><th data-sort>Status</th></tr></thead><tbody>
+{% for row in rows %}<tr><td><strong>{{ row.room.name }}</strong></td><td>{{ row.room.get_room_type_display }}</td><td>{{ row.room.capacity }}</td>{% for daily in row.daily %}<td><span class="daily-percent">{{ daily.percentage }}%</span><small>{{ daily.scheduled }}/{{ daily.available }}h</small></td>{% endfor %}<td><div class="utilization-meter"><span style="width:{{ row.utilization_percentage }}%"></span></div><strong>{{ row.utilization_percentage }}%</strong></td><td>{{ row.capacity_utilization }}%</td><td>{{ row.scheduled_hours }} / {{ row.available_hours }}h</td><td>{{ row.assigned_classes }}</td><td><span class="badge {{ row.badge_class }}">{{ row.status }}</span></td></tr>{% empty %}<tr><td colspan="14" class="table-empty">No rooms match the selected filters.</td></tr>{% endfor %}
+</tbody></table></div>
 {% endblock %}

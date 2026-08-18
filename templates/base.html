@@ -64,11 +64,13 @@
           </div>
         </details>
 
-        <details class="nav-disclosure" data-nav-group="rooms"{% if request.resolver_match.kwargs.resource == 'rooms' or request.resolver_match.url_name == 'room_utilization' %} open{% endif %}>
+        <details class="nav-disclosure" data-nav-group="rooms"{% if request.resolver_match.kwargs.resource == 'rooms' or request.resolver_match.url_name == 'room_utilization' or request.resolver_match.url_name == 'room_schedule' or request.resolver_match.url_name == 'room_capacity_planning' %} open{% endif %}>
           <summary data-tooltip="Room Management"><span class="nav-category-icon" data-group-icon="rooms"></span><span class="nav-category-label">Room Management</span><span class="nav-chevron" aria-hidden="true"></span></summary>
           <div class="nav-children">
             <a href="{% url 'resource_list' 'rooms' %}" data-icon="door">Rooms</a>
             <a href="{% url 'room_utilization' %}" data-icon="sliders">Room Utilization</a>
+            <a href="{% url 'room_schedule' %}" data-icon="calendar">Room Schedule</a>
+            <a href="{% url 'room_capacity_planning' %}" data-icon="layers">Capacity Planning</a>
           </div>
         </details>
 

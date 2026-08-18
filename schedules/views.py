@@ -39,13 +39,14 @@ from .models import (
     Subject,
     SubjectCredentialRequirement,
     TeachingAssignment,
+    Weekday,
     YearLevel,
 )
 from .services.conflicts import conflict_messages, schedule_validation_messages
 from .services.credentials import faculty_qualification, missing_credential_message
 from .services.ga import GeneticScheduler
 from .services.generation_issues import record_generation_messages, record_unexpected_failure
-from .services.room_utilization import filtered_rows, utilization_rows, utilization_summary
+from .services.room_utilization import capacity_planning, filtered_rows, latest_schedule, room_schedule_grid, utilization_rows, utilization_summary
 
 logger = logging.getLogger(__name__)
 
@@ -256,19 +257,34 @@ def resource_list(request, resource):
 @login_required
 @user_passes_test(admin_required)
 def room_utilization_dashboard(request):
-    rows = utilization_rows()
+    term = AcademicTerm.objects.filter(pk=request.GET.get("term")).first() if request.GET.get("term") else None
+    schedule = Schedule.objects.filter(pk=request.GET.get("schedule")).first() if request.GET.get("schedule") else latest_schedule(term)
+    department = Department.objects.filter(pk=request.GET.get("department")).first() if request.GET.get("department") else None
+    rows = utilization_rows(schedule, department=department)
     rows = filtered_rows(
         rows,
         query=request.GET.get("q", ""),
         room_type=request.GET.get("room_type", ""),
         utilization_range=request.GET.get("utilization", ""),
+        room_group=request.GET.get("room_group", ""),
+        day=request.GET.get("day", ""),
     )
     context = {
         "rows": rows,
         "summary": utilization_summary(rows),
+        "schedule": schedule,
+        "terms": AcademicTerm.objects.all(),
+        "schedules": Schedule.objects.filter(term=term).order_by("-generated_at") if term else Schedule.objects.all().order_by("-generated_at"),
+        "departments": Department.objects.all(),
+        "weekdays": Weekday.choices,
         "room_types": RoomKind.choices,
         "selected_room_type": request.GET.get("room_type", ""),
         "selected_utilization": request.GET.get("utilization", ""),
+        "selected_room_group": request.GET.get("room_group", ""),
+        "selected_day": request.GET.get("day", ""),
+        "selected_term": str(term.pk) if term else "",
+        "selected_schedule": str(schedule.pk) if schedule else "",
+        "selected_department": str(department.pk) if department else "",
         "query": request.GET.get("q", ""),
     }
     return render(request, "schedules/room_utilization.html", context)
@@ -276,28 +292,51 @@ def room_utilization_dashboard(request):
 
 @login_required
 @user_passes_test(admin_required)
+def room_schedule_dashboard(request):
+    term = AcademicTerm.objects.filter(pk=request.GET.get("term")).first() if request.GET.get("term") else None
+    schedule = Schedule.objects.filter(pk=request.GET.get("schedule")).first() if request.GET.get("schedule") else latest_schedule(term)
+    room = Room.objects.filter(pk=request.GET.get("room")).first() if request.GET.get("room") else Room.objects.order_by("name").first()
+    return render(request, "schedules/room_schedule.html", {
+        "term": term, "schedule": schedule, "room": room,
+        "terms": AcademicTerm.objects.all(),
+        "schedules": Schedule.objects.filter(term=term).order_by("-generated_at") if term else Schedule.objects.all().order_by("-generated_at"),
+        "rooms": Room.objects.filter(is_active=True), "weekdays": Weekday.choices,
+        "grid": room_schedule_grid(room, schedule) if room else [],
+    })
+
+
+@login_required
+@user_passes_test(admin_required)
+def room_capacity_planning(request):
+    term = AcademicTerm.objects.filter(pk=request.GET.get("term")).first() if request.GET.get("term") else AcademicTerm.objects.filter(is_active=True).first()
+    planning, lecture = capacity_planning(term, request.GET)
+    return render(request, "schedules/room_capacity_planning.html", {
+        "term": term, "terms": AcademicTerm.objects.all(), "planning": planning,
+        "lecture": lecture, "room_types": RoomKind.choices,
+    })
+
+
+@login_required
+@user_passes_test(admin_required)
 def export_room_utilization_csv(request):
+    schedule = Schedule.objects.filter(pk=request.GET.get("schedule")).first() if request.GET.get("schedule") else latest_schedule()
     rows = filtered_rows(
-        utilization_rows(),
+        utilization_rows(schedule),
         query=request.GET.get("q", ""),
         room_type=request.GET.get("room_type", ""),
         utilization_range=request.GET.get("utilization", ""),
+        room_group=request.GET.get("room_group", ""), day=request.GET.get("day", ""),
     )
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = 'attachment; filename="room-utilization.csv"'
     writer = csv.writer(response)
-    writer.writerow(["Room Name", "Room Type", "Room Capacity", "Available Hours", "Scheduled Hours", "Utilization %", "Assigned Classes", "Status", "Last Updated"])
+    writer.writerow(["Room", "Room Type", "Capacity", "Monday %", "Tuesday %", "Wednesday %", "Thursday %", "Friday %", "Saturday %", "Weekly Utilization %", "Seat Utilization %", "Available Hours", "Scheduled Hours", "Assigned Classes", "Status"])
     for row in rows:
         writer.writerow([
             row.room.name,
             row.room.get_room_type_display(),
-            row.room.capacity,
-            row.available_hours,
-            row.scheduled_hours,
-            row.utilization_percentage,
-            row.assigned_classes,
-            row.status,
-            row.last_updated,
+            row.room.capacity, *[item["percentage"] for item in row.daily], row.utilization_percentage,
+            row.capacity_utilization, row.available_hours, row.scheduled_hours, row.assigned_classes, row.status,
         ])
     return response
 
@@ -305,11 +344,13 @@ def export_room_utilization_csv(request):
 @login_required
 @user_passes_test(admin_required)
 def export_room_utilization_pdf(request):
+    schedule = Schedule.objects.filter(pk=request.GET.get("schedule")).first() if request.GET.get("schedule") else latest_schedule()
     rows = filtered_rows(
-        utilization_rows(),
+        utilization_rows(schedule),
         query=request.GET.get("q", ""),
         room_type=request.GET.get("room_type", ""),
         utilization_range=request.GET.get("utilization", ""),
+        room_group=request.GET.get("room_group", ""), day=request.GET.get("day", ""),
     )
     response = HttpResponse(content_type="application/pdf")
     response["Content-Disposition"] = 'attachment; filename="room-utilization.pdf"'
