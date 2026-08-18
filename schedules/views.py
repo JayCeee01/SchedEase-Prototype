@@ -15,7 +15,7 @@ from django.views.decorators.http import require_POST
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
-from .forms import EmailOrUsernameAuthenticationForm, MODEL_FORMS, ScheduleEntryForm, ScheduleGenerationForm, ScheduleSearchForm
+from .forms import EmailOrUsernameAuthenticationForm, MODEL_FORMS, ScheduleEntryFilterForm, ScheduleEntryForm, ScheduleGenerationForm, ScheduleSearchForm
 from .models import (
     AcademicTerm,
     Availability,
@@ -532,9 +532,47 @@ def generation_error_detail(request, pk):
 @login_required
 def schedule_detail(request, pk):
     schedule = visible_schedule(request, pk)
-    entries = list(schedule.entries.select_related("assignment__subject", "assignment__faculty", "assignment__section", "room"))
-    return render(request, "schedules/schedule_detail.html", {"schedule": schedule, "entries": entries,
-        "conflicts": schedule_validation_messages(schedule), "can_manage": admin_required(request.user)})
+    entries = schedule.entries.select_related(
+        "assignment__subject__department", "assignment__faculty",
+        "assignment__section__program__department", "assignment__section__year_level", "room",
+    )
+    filter_form = ScheduleEntryFilterForm(request.GET or None)
+    if filter_form.is_valid():
+        values = filter_form.cleaned_data
+        if values.get("department"):
+            entries = entries.filter(assignment__section__program__department=values["department"])
+        if values.get("program"):
+            entries = entries.filter(assignment__section__program=values["program"])
+        if values.get("year_level"):
+            entries = entries.filter(assignment__section__year_level=values["year_level"])
+        if values.get("section"):
+            entries = entries.filter(assignment__section=values["section"])
+        if values.get("faculty"):
+            entries = entries.filter(assignment__faculty=values["faculty"])
+        if values.get("room"):
+            entries = entries.filter(room=values["room"])
+        if values.get("day") != "" and values.get("day") is not None:
+            entries = entries.filter(day=values["day"])
+        if values.get("component"):
+            entries = entries.filter(assignment__component=values["component"])
+        search = values.get("q", "").strip()
+        if search:
+            entries = entries.filter(
+                Q(assignment__section__name__icontains=search)
+                | Q(assignment__section__program__code__icontains=search)
+                | Q(assignment__subject__code__icontains=search)
+                | Q(assignment__subject__title__icontains=search)
+                | Q(assignment__faculty__full_name__icontains=search)
+                | Q(room__name__icontains=search)
+            )
+    entries = list(entries.order_by(
+        "assignment__section__program__code", "assignment__section__year_level__level",
+        "assignment__section__name", "assignment__subject__code", "assignment__component", "day", "start_time",
+    ))
+    return render(request, "schedules/schedule_detail.html", {
+        "schedule": schedule, "entries": entries, "filter_form": filter_form,
+        "conflicts": schedule_validation_messages(schedule), "can_manage": admin_required(request.user),
+    })
 
 
 @login_required

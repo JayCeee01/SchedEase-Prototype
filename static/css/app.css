@@ -736,6 +736,31 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary-soft) 35%, transpa
 .generation-result { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; border-radius: var(--radius); }
 .generation-result small { display: block; margin-top: 4px; }
 .generation-result-error { color: var(--danger); background: #fef3f2; border: 1px solid #fecdca; }
+.schedule-entry-filters {
+  max-width: none;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.schedule-entry-filters label { display: grid; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 800; }
+.schedule-entry-filters .toolbar { align-self: end; }
+.view-switcher { display: inline-flex; gap: 4px; padding: 4px; margin: 0 0 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-soft); }
+.view-tab { min-height: 40px; border: 0; box-shadow: none; background: transparent; color: var(--muted); }
+.view-tab.is-active { background: var(--surface); color: var(--primary-strong); box-shadow: var(--shadow-soft); }
+.academic-schedule-panel { overflow: hidden; padding: 0; }
+.academic-schedule-panel .table-tools small { display: block; margin-top: 4px; color: var(--muted); }
+.schedule-section-group + .schedule-section-group { border-top: 1px solid var(--line-strong); }
+.schedule-section-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 18px 10px; background: color-mix(in srgb, var(--primary-soft) 32%, var(--surface)); }
+.schedule-section-header h2 { margin: 2px 0 0; font-size: 20px; }
+.academic-table-wrap { border-radius: 0; }
+.academic-schedule-table { min-width: 1460px; }
+.academic-schedule-table .course-description { min-width: 250px; white-space: normal; }
+.academic-schedule-table .sticky-code { position: sticky; left: 0; z-index: 2; background: var(--surface); box-shadow: 1px 0 0 var(--line); }
+.academic-schedule-table tbody tr:hover .sticky-code { background: color-mix(in srgb, var(--primary-soft) 35%, var(--surface)); }
+.component-laboratory { background: #ecfdf3; color: var(--success); border-color: #abefc6; }
+.component-lecture { background: var(--primary-soft); color: var(--primary-strong); border-color: color-mix(in srgb, var(--primary) 30%, transparent); }
+.view-heading { margin-top: 0; }
 .utilization-summary .metric-icon {
   background: linear-gradient(135deg, var(--primary-soft), color-mix(in srgb, var(--primary) 18%, white));
 }
@@ -1449,6 +1474,7 @@ input[type="checkbox"] {
   .schedule-board { grid-template-columns: 1fr; }
   .utilization-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .error-log-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .schedule-entry-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .detail-grid { grid-template-columns: 1fr; }
   .landing-nav { gap: 12px; }
   .landing-nav nav { display: none; }
@@ -1479,6 +1505,7 @@ input[type="checkbox"] {
   .page-hero { align-items: flex-start; }
   .metrics { grid-template-columns: 1fr; }
   .error-log-filters { grid-template-columns: 1fr; }
+  .schedule-entry-filters { grid-template-columns: 1fr; }
   .generation-result { align-items: stretch; flex-direction: column; }
   .quick-actions { grid-template-columns: 1fr; }
   .utilization-filters { grid-template-columns: 1fr; }

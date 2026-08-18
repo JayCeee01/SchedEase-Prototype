@@ -20,6 +20,7 @@ from .models import (
     Subject,
     SubjectCredentialRequirement,
     TeachingAssignment,
+    Weekday,
     YearLevel,
 )
 
@@ -91,6 +92,22 @@ class ScheduleSearchForm(forms.Form):
     year_level = forms.ModelChoiceField(queryset=YearLevel.objects.all(), required=False)
     section = forms.ModelChoiceField(queryset=Section.objects.all(), required=False)
     subject = forms.ModelChoiceField(queryset=Subject.objects.all(), required=False)
+
+
+class ScheduleEntryFilterForm(forms.Form):
+    q = forms.CharField(required=False, label="Search", widget=forms.TextInput(attrs={
+        "type": "search", "placeholder": "Section, subject, faculty, or room", "data-schedule-live-filter": "true",
+    }))
+    department = forms.ModelChoiceField(queryset=Department.objects.all(), required=False)
+    program = forms.ModelChoiceField(queryset=Program.objects.all(), required=False)
+    year_level = forms.ModelChoiceField(queryset=YearLevel.objects.all(), required=False)
+    section = forms.ModelChoiceField(queryset=Section.objects.all(), required=False)
+    faculty = forms.ModelChoiceField(queryset=Faculty.objects.all(), required=False)
+    room = forms.ModelChoiceField(queryset=Room.objects.all(), required=False)
+    day = forms.ChoiceField(choices=[("", "All days"), *Weekday.choices], required=False)
+    component = forms.ChoiceField(
+        choices=[("", "All class types"), *TeachingAssignment.Component.choices], required=False, label="Lecture/Laboratory Type"
+    )
 
 
 class EmailOrUsernameAuthenticationForm(AuthenticationForm):

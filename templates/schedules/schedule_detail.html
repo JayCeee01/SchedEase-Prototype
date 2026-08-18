@@ -36,46 +36,28 @@
 </div>
 {% endif %}
 
-<h2>Timetable View</h2>
-<section class="schedule-board">
-  <div class="day-column">
-    <header>Monday</header>
-    {% for e in entries %}{% if e.day == 0 %}
-    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
-    {% endif %}{% endfor %}
-  </div>
-  <div class="day-column">
-    <header>Tuesday</header>
-    {% for e in entries %}{% if e.day == 1 %}
-    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
-    {% endif %}{% endfor %}
-  </div>
-  <div class="day-column">
-    <header>Wednesday</header>
-    {% for e in entries %}{% if e.day == 2 %}
-    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
-    {% endif %}{% endfor %}
-  </div>
-  <div class="day-column">
-    <header>Thursday</header>
-    {% for e in entries %}{% if e.day == 3 %}
-    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
-    {% endif %}{% endfor %}
-  </div>
-  <div class="day-column">
-    <header>Friday</header>
-    {% for e in entries %}{% if e.day == 4 %}
-    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
-    {% endif %}{% endfor %}
-  </div>
-  <div class="day-column">
-    <header>Saturday</header>
-    {% for e in entries %}{% if e.day == 5 %}
-    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
-    {% endif %}{% endfor %}
-  </div>
-</section>
+<form method="get" class="panel schedule-entry-filters" data-auto-tooltips="false">
+  <label><span class="field-label">Search</span>{{ filter_form.q }}</label>
+  <label><span class="field-label">Department</span>{{ filter_form.department }}</label>
+  <label><span class="field-label">Program</span>{{ filter_form.program }}</label>
+  <label><span class="field-label">Year Level</span>{{ filter_form.year_level }}</label>
+  <label><span class="field-label">Section</span>{{ filter_form.section }}</label>
+  <label><span class="field-label">Faculty</span>{{ filter_form.faculty }}</label>
+  <label><span class="field-label">Room</span>{{ filter_form.room }}</label>
+  <label><span class="field-label">Day</span>{{ filter_form.day }}</label>
+  <label><span class="field-label">Class Type</span>{{ filter_form.component }}</label>
+  <div class="toolbar"><button class="primary" type="submit">Apply Filters</button><a class="button" href="{% url 'schedule_detail' schedule.pk %}">Clear</a></div>
+</form>
 
-<h2>Table View</h2>
-{% include "schedules/entry_table.html" with entries=entries schedule=schedule %}
+<div class="view-switcher" role="tablist" aria-label="Schedule view">
+  <button class="view-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="schedule-table-view" data-schedule-view-button="table">Table View</button>
+  <button class="view-tab" type="button" role="tab" aria-selected="false" aria-controls="schedule-timetable-view" data-schedule-view-button="timetable">Timetable View</button>
+</div>
+
+<section id="schedule-table-view" role="tabpanel" data-schedule-view-panel="table">
+  {% include "schedules/schedule_table_view.html" %}
+</section>
+<section id="schedule-timetable-view" role="tabpanel" data-schedule-view-panel="timetable" hidden>
+  {% include "schedules/schedule_timetable_view.html" %}
+</section>
 {% endblock %}

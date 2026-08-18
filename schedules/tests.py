@@ -337,6 +337,32 @@ class SchedulingTestCase(TestCase):
         self.assertEqual(comparison["generated"]["origin"], Schedule.Origin.GENERATED)
         self.assertEqual(comparison["generation_status"], "complete")
 
+    def test_schedule_detail_defaults_to_grouped_academic_table(self):
+        schedule = Schedule.objects.create(term=self.term, name="Academic Table")
+        schedule.entries.create(
+            assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11)
+        )
+        self.client.login(username="admin", password="admin12345")
+        response = self.client.get(f"/schedules/{schedule.pk}/")
+        self.assertContains(response, 'data-schedule-view-panel="table"')
+        self.assertContains(response, 'data-schedule-view-panel="timetable" hidden')
+        self.assertContains(response, "Course Description")
+        self.assertContains(response, "Time Start")
+        self.assertContains(response, "Instructor")
+        self.assertContains(response, str(self.section))
+        content = response.content.decode()
+        self.assertLess(content.index(">Table View<"), content.index(">Timetable View<"))
+
+    def test_schedule_detail_filters_by_day_and_shows_empty_state(self):
+        schedule = Schedule.objects.create(term=self.term, name="Filtered Academic Table")
+        schedule.entries.create(
+            assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11)
+        )
+        self.client.login(username="admin", password="admin12345")
+        response = self.client.get(f"/schedules/{schedule.pk}/", {"day": "5"})
+        self.assertContains(response, "No schedule entries found")
+        self.assertContains(response, '<option value="5" selected>Saturday</option>', html=True)
+
     def test_manual_entry_requires_matching_term_and_duration(self):
         other_term = AcademicTerm.objects.create(name="Second", school_year="2026-2027", starts_on=date(2027, 1, 1), ends_on=date(2027, 5, 1))
         schedule = Schedule.objects.create(term=other_term, name="Wrong term")

@@ -470,6 +470,32 @@
     });
   });
 
+  document.querySelectorAll("[data-schedule-live-filter]").forEach((input) => {
+    input.addEventListener("input", () => {
+      const panel = document.querySelector('[data-schedule-view-panel="table"]');
+      if (!panel) return;
+      filterTables(input.value, panel);
+      panel.querySelectorAll(".schedule-section-group").forEach((group) => {
+        const rows = Array.from(group.querySelectorAll("tbody tr"));
+        group.hidden = rows.length > 0 && rows.every((row) => row.hidden);
+      });
+    });
+  });
+
+  document.querySelectorAll("[data-schedule-view-button]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const selected = button.dataset.scheduleViewButton;
+      document.querySelectorAll("[data-schedule-view-button]").forEach((item) => {
+        const active = item.dataset.scheduleViewButton === selected;
+        item.classList.toggle("is-active", active);
+        item.setAttribute("aria-selected", String(active));
+      });
+      document.querySelectorAll("[data-schedule-view-panel]").forEach((panel) => {
+        panel.hidden = panel.dataset.scheduleViewPanel !== selected;
+      });
+    });
+  });
+
   document.querySelectorAll("[data-schedule-generation]").forEach((form) => {
     const indicator = form.querySelector("[data-generation-loading]");
     const submitter = form.querySelector(".generation-submit");
