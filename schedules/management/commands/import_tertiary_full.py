@@ -1,6 +1,6 @@
 import re
 from collections import Counter, defaultdict
-from datetime import date, time
+from datetime import date
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
@@ -11,6 +11,7 @@ from schedules.models import (AcademicTerm, Availability, AvailabilityKind, Depa
     Program, Room, Schedule, ScheduleEntry, Section, Subject, TeachingAssignment, YearLevel)
 from schedules.services.conflicts import conflict_messages
 from schedules.services.room_utilization import utilization_rows, utilization_summary
+from schedules.services.time import SCHOOL_END, SCHOOL_START
 
 
 class Command(BaseCommand):
@@ -73,7 +74,7 @@ class Command(BaseCommand):
             rooms[m["room"]], _ = Room.objects.get_or_create(name=m["room"], defaults={"room_type": m["room_type"], "capacity": CAPACITY_DEFAULTS[m["room_type"]]})
         for room in rooms.values():
             for day in range(6):
-                Availability.objects.get_or_create(room=room, day=day, start_time=time(7), end_time=time(21), kind=AvailabilityKind.AVAILABLE)
+                Availability.objects.get_or_create(room=room, day=day, start_time=SCHOOL_START, end_time=SCHOOL_END, kind=AvailabilityKind.AVAILABLE)
         # Stable occurrence index within subject/section/component, ordered by source provenance.
         indices = defaultdict(int); assignments = []
         for m in meetings:
@@ -112,7 +113,7 @@ class Command(BaseCommand):
         for e in entries:
             if e.start_time >= e.end_time:
                 output.append({"type": "invalid_time", "entry": e.id})
-            if not (time(7) <= e.start_time and e.end_time <= time(21)):
+            if not (SCHOOL_START <= e.start_time and e.end_time <= SCHOOL_END):
                 output.append({"type": "outside_hours", "entry": e.id})
             if e.room.room_type != e.assignment.effective_room_type:
                 output.append({"type": "room_type", "entry": e.id})

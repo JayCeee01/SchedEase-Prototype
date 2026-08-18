@@ -72,10 +72,11 @@
           </div>
         </details>
 
-        <details class="nav-disclosure" data-nav-group="scheduling"{% if request.resolver_match.url_name == 'generate_schedule' or request.resolver_match.url_name == 'browse_schedules' or request.resolver_match.url_name == 'schedule_detail' or request.resolver_match.kwargs.resource == 'schedules' or request.resolver_match.kwargs.resource == 'assignments' or request.resolver_match.kwargs.resource == 'ga-settings' %} open{% endif %}>
+        <details class="nav-disclosure" data-nav-group="scheduling"{% if request.resolver_match.url_name == 'generate_schedule' or request.resolver_match.url_name == 'generation_error_log' or request.resolver_match.url_name == 'generation_error_detail' or request.resolver_match.url_name == 'browse_schedules' or request.resolver_match.url_name == 'schedule_detail' or request.resolver_match.kwargs.resource == 'schedules' or request.resolver_match.kwargs.resource == 'assignments' or request.resolver_match.kwargs.resource == 'ga-settings' %} open{% endif %}>
           <summary data-tooltip="Scheduling"><span class="nav-category-icon" data-group-icon="scheduling"></span><span class="nav-category-label">Scheduling</span><span class="nav-chevron" aria-hidden="true"></span></summary>
           <div class="nav-children">
             <a href="{% url 'generate_schedule' %}" data-icon="spark">Generate Schedule</a>
+            <a href="{% url 'generation_error_log' %}" data-icon="flag">Error Log</a>
             <a href="{% url 'resource_list' 'schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'schedule_detail' or request.resolver_match.url_name == 'entry_create' or request.resolver_match.url_name == 'entry_update' %} class="is-active" aria-current="page"{% endif %}>Manage Schedules</a>
             <a href="{% url 'browse_schedules' %}" data-icon="calendar">Browse Published</a>
             <a href="{% url 'resource_list' 'assignments' %}" data-icon="check">Assignments</a>

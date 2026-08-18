@@ -320,16 +320,6 @@
     "status": "Underutilized"
   },
   {
-    "room": "Comp Lab 1",
-    "room_type": "COMPUTER_LAB",
-    "capacity": 40,
-    "available_hours": 84.0,
-    "scheduled_hours": 0,
-    "assigned_classes": 0,
-    "utilization_percentage": 0.0,
-    "status": "Underutilized"
-  },
-  {
     "room": "HOTEL",
     "room_type": "SPECIAL",
     "capacity": 30,
@@ -348,26 +338,6 @@
     "assigned_classes": 20,
     "utilization_percentage": 71.4,
     "status": "Optimized"
-  },
-  {
-    "room": "Lec 101",
-    "room_type": "LECTURE",
-    "capacity": 45,
-    "available_hours": 84.0,
-    "scheduled_hours": 0,
-    "assigned_classes": 0,
-    "utilization_percentage": 0.0,
-    "status": "Underutilized"
-  },
-  {
-    "room": "Lec 102",
-    "room_type": "LECTURE",
-    "capacity": 35,
-    "available_hours": 84.0,
-    "scheduled_hours": 0,
-    "assigned_classes": 0,
-    "utilization_percentage": 0.0,
-    "status": "Underutilized"
   },
   {
     "room": "PEA1",
@@ -417,16 +387,6 @@
     "scheduled_hours": 6.0,
     "assigned_classes": 2,
     "utilization_percentage": 7.1,
-    "status": "Underutilized"
-  },
-  {
-    "room": "Sci Lab 1",
-    "room_type": "SCIENCE_LAB",
-    "capacity": 35,
-    "available_hours": 84.0,
-    "scheduled_hours": 0,
-    "assigned_classes": 0,
-    "utilization_percentage": 0.0,
     "status": "Underutilized"
   }
 ]

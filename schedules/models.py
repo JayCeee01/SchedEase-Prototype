@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -360,3 +362,78 @@ class ScheduleEntry(models.Model):
 
     def __str__(self):
         return f"{self.assignment} {self.get_day_display()} {self.start_time}-{self.end_time}"
+
+
+class GenerationRun(models.Model):
+    class Status(models.TextChoices):
+        RUNNING = "RUNNING", "Running"
+        SUCCEEDED = "SUCCEEDED", "Succeeded"
+        SUCCEEDED_WITH_ISSUES = "SUCCEEDED_WITH_ISSUES", "Succeeded with issues"
+        FAILED = "FAILED", "Failed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    term = models.ForeignKey(AcademicTerm, on_delete=models.PROTECT, related_name="generation_runs")
+    ga_settings = models.ForeignKey(GASettings, on_delete=models.SET_NULL, null=True, related_name="generation_runs")
+    schedule = models.ForeignKey(Schedule, on_delete=models.SET_NULL, null=True, blank=True, related_name="generation_runs")
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="schedule_generation_runs")
+    requested_name = models.CharField(max_length=120)
+    status = models.CharField(max_length=30, choices=Status.choices, default=Status.RUNNING)
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"{str(self.id)[:8]} - {self.term}"
+
+
+class GenerationIssue(models.Model):
+    class Category(models.TextChoices):
+        FACULTY_CONFLICT = "FACULTY_CONFLICT", "Faculty Conflict"
+        ROOM_CONFLICT = "ROOM_CONFLICT", "Room Conflict"
+        SECTION_CONFLICT = "SECTION_CONFLICT", "Section Conflict"
+        FACULTY_UNAVAILABLE = "FACULTY_UNAVAILABLE", "Faculty Unavailable"
+        ROOM_UNAVAILABLE = "ROOM_UNAVAILABLE", "Room Unavailable"
+        ROOM_CAPACITY = "ROOM_CAPACITY", "Room Capacity"
+        ROOM_TYPE = "ROOM_TYPE", "Room Type Requirement"
+        FACULTY_CREDENTIAL = "FACULTY_CREDENTIAL", "Faculty Credential Requirement"
+        FACULTY_WORKLOAD = "FACULTY_WORKLOAD", "Faculty Workload"
+        INVALID_DURATION = "INVALID_DURATION", "Invalid Class Duration"
+        NO_SLOT = "NO_SLOT", "No Available Time Slot"
+        UNSCHEDULED = "UNSCHEDULED", "Unscheduled Class"
+        INVALID_DATA = "INVALID_DATA", "Invalid Input/Data"
+        GENERATION_FAILURE = "GENERATION_FAILURE", "Generation Failure"
+        OTHER = "OTHER", "Other"
+
+    class Severity(models.TextChoices):
+        INFO = "INFO", "Info"
+        WARNING = "WARNING", "Warning"
+        ERROR = "ERROR", "Error"
+        CRITICAL = "CRITICAL", "Critical"
+
+    class Status(models.TextChoices):
+        OPEN = "OPEN", "Open"
+        REVIEWED = "REVIEWED", "Reviewed"
+        RESOLVED = "RESOLVED", "Resolved"
+
+    run = models.ForeignKey(GenerationRun, on_delete=models.CASCADE, related_name="issues")
+    category = models.CharField(max_length=40, choices=Category.choices)
+    severity = models.CharField(max_length=12, choices=Severity.choices, default=Severity.ERROR)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.OPEN)
+    assignment = models.ForeignKey(TeachingAssignment, on_delete=models.SET_NULL, null=True, blank=True, related_name="generation_issues")
+    room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True, related_name="generation_issues")
+    short_description = models.CharField(max_length=240)
+    reason = models.TextField()
+    suggested_action = models.TextField()
+    day = models.PositiveSmallIntegerField(choices=Weekday.choices, null=True, blank=True)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "id"]
+
+    def __str__(self):
+        return f"Issue {self.pk}: {self.get_category_display()}"

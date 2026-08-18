@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -25,6 +25,8 @@ from .models import (
     Faculty,
     FacultyCredential,
     GASettings,
+    GenerationIssue,
+    GenerationRun,
     Program,
     Role,
     Room,
@@ -42,6 +44,7 @@ from .models import (
 from .services.conflicts import conflict_messages, schedule_validation_messages
 from .services.credentials import faculty_qualification, missing_credential_message
 from .services.ga import GeneticScheduler
+from .services.generation_issues import record_generation_messages, record_unexpected_failure
 from .services.room_utilization import filtered_rows, utilization_rows, utilization_summary
 
 logger = logging.getLogger(__name__)
@@ -429,23 +432,101 @@ def generate_schedule(request):
             form.add_error(None, "A schedule is already being generated for this term. Please wait for it to finish.")
             messages.warning(request, "Generation is already in progress for the selected term.")
             return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
+        run = GenerationRun.objects.create(
+            term=term,
+            ga_settings=form.cleaned_data["settings"],
+            requested_by=request.user,
+            requested_name=form.cleaned_data["name"],
+        )
         try:
             scheduler = GeneticScheduler(term, form.cleaned_data["settings"])
             schedule = scheduler.generate(form.cleaned_data["name"])
         except ValueError as exc:
-            form.add_error(None, str(exc))
-            messages.error(request, "Schedule generation finished without a feasible result. No invalid schedule was saved.")
-            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
+            record_generation_messages(run, str(exc))
+            run.status = GenerationRun.Status.FAILED
+            run.completed_at = timezone.now()
+            run.save(update_fields=["status", "completed_at"])
+            form.add_error(None, "Schedule generation could not be completed. Review the Error Log for complete details and suggested actions.")
+            messages.error(request, "Schedule generation could not be completed. Please check the Error Log for more information.")
+            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule", "error_run": run})
         except Exception:
             logger.exception("Unexpected schedule generation failure for term %s", term.pk)
-            form.add_error(None, "An unexpected error stopped schedule generation. No schedule was saved; check the server log for details.")
-            messages.error(request, "Schedule generation was unsuccessful. Please review the settings and try again.")
-            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
+            record_unexpected_failure(run)
+            run.status = GenerationRun.Status.FAILED
+            run.completed_at = timezone.now()
+            run.save(update_fields=["status", "completed_at"])
+            form.add_error(None, "Schedule generation could not be completed. Review the Error Log for complete details and suggested actions.")
+            messages.error(request, "Schedule generation could not be completed. Please check the Error Log for more information.")
+            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule", "error_run": run})
         finally:
             cache.delete(lock_key)
+        run.schedule = schedule
+        run.status = GenerationRun.Status.SUCCEEDED
+        run.completed_at = timezone.now()
+        run.save(update_fields=["schedule", "status", "completed_at"])
         messages.success(request, f"Schedule generated with fitness score {schedule.fitness_score:.2f}.")
         return redirect("schedule_detail", pk=schedule.pk)
     return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
+
+
+@login_required
+@user_passes_test(admin_required)
+def generation_error_log(request):
+    issues = GenerationIssue.objects.select_related(
+        "run__term", "assignment__subject", "assignment__section", "assignment__faculty", "room"
+    )
+    filters = {
+        "run": "run_id", "term": "run__term_id", "category": "category", "severity": "severity",
+        "subject": "assignment__subject_id", "section": "assignment__section_id",
+        "faculty": "assignment__faculty_id", "room": "room_id", "status": "status",
+    }
+    for parameter, lookup in filters.items():
+        value = request.GET.get(parameter, "").strip()
+        if value:
+            issues = issues.filter(**{lookup: value})
+    date_value = request.GET.get("date", "").strip()
+    if date_value:
+        issues = issues.filter(created_at__date=date_value)
+    search = request.GET.get("q", "").strip()
+    if search:
+        issues = issues.filter(
+            Q(short_description__icontains=search) | Q(reason__icontains=search)
+            | Q(assignment__subject__code__icontains=search) | Q(assignment__subject__title__icontains=search)
+            | Q(assignment__section__name__icontains=search) | Q(assignment__faculty__full_name__icontains=search)
+            | Q(room__name__icontains=search)
+        )
+    summary_source = issues
+    summary = {
+        "total": summary_source.count(),
+        "critical": summary_source.filter(severity=GenerationIssue.Severity.CRITICAL).count(),
+        "errors": summary_source.filter(severity=GenerationIssue.Severity.ERROR).count(),
+        "warnings": summary_source.filter(severity=GenerationIssue.Severity.WARNING).count(),
+        "unscheduled": summary_source.filter(category=GenerationIssue.Category.UNSCHEDULED).count(),
+    }
+    return render(request, "schedules/error_log.html", {
+        "issues": issues[:500], "summary": summary,
+        "runs": GenerationRun.objects.select_related("term")[:100], "terms": AcademicTerm.objects.all(),
+        "categories": GenerationIssue.Category.choices, "severities": GenerationIssue.Severity.choices,
+        "statuses": GenerationIssue.Status.choices, "subjects": Subject.objects.all(), "sections": Section.objects.all(),
+        "faculty_list": Faculty.objects.all(), "rooms": Room.objects.all(),
+    })
+
+
+@login_required
+@user_passes_test(admin_required)
+def generation_error_detail(request, pk):
+    issue = get_object_or_404(GenerationIssue.objects.select_related(
+        "run__term", "run__ga_settings", "run__schedule", "assignment__subject",
+        "assignment__section", "assignment__faculty", "room"
+    ), pk=pk)
+    if request.method == "POST":
+        status = request.POST.get("status")
+        if status in GenerationIssue.Status.values:
+            issue.status = status
+            issue.save(update_fields=["status", "updated_at"])
+            messages.success(request, "Issue status updated.")
+            return redirect("generation_error_detail", pk=issue.pk)
+    return render(request, "schedules/error_detail.html", {"issue": issue, "statuses": GenerationIssue.Status.choices})
 
 
 @login_required

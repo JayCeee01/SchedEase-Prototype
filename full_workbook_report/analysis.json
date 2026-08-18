@@ -76,10 +76,10 @@
   },
   "original_conflicts": 111,
   "utilization_summary": {
-    "total_rooms": 43,
-    "average_utilization": 37.2,
+    "total_rooms": 39,
+    "average_utilization": 41.0,
     "most_utilized_room": "CL2",
-    "least_utilized_room": "Comp Lab 1",
-    "underutilized_rooms": 19
+    "least_utilized_room": "206",
+    "underutilized_rooms": 15
   }
 }

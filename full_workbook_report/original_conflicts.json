@@ -1,446 +1,446 @@
 [
   {
     "type": "overlap",
-    "message": "Faculty conflict: VISNAR overlaps on Monday."
+    "message": "Faculty conflict: VISNAR teaches INTE1127 and INTE1084 on Monday at 07:00:00-09:00:00 / 07:00:00-09:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 404 (Lecture Room) overlaps on Monday."
+    "message": "Room conflict: 404 is assigned to INTE1127 and INTE1084 on Monday at 07:00:00-09:00:00 / 07:00:00-09:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: BUSALANAN overlaps on Monday."
+    "message": "Faculty conflict: BUSALANAN teaches PHED1005 and PHED1005 on Monday at 08:00:00-10:00:00 / 08:00:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: PEA3 (Gym) overlaps on Monday."
+    "message": "Room conflict: PEA3 is assigned to PHED1005 and PHED1005 on Monday at 08:00:00-10:00:00 / 08:00:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: PEA3 (Gym) overlaps on Monday."
+    "message": "Room conflict: PEA3 is assigned to PHED1005 and PHED1008 on Monday at 08:00:00-10:00:00 / 08:00:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: PEA3 (Gym) overlaps on Monday."
+    "message": "Room conflict: PEA3 is assigned to PHED1005 and PHED1008 on Monday at 08:00:00-10:00:00 / 08:00:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 301 (Lecture Room) overlaps on Monday."
+    "message": "Room conflict: 301 is assigned to TOUR1012 and OJTC1003 on Monday at 10:00:00-12:00:00 / 11:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 302 (Lecture Room) overlaps on Monday."
+    "message": "Room conflict: 302 is assigned to GEDC1009 and CBMC1003 on Monday at 10:00:00-11:30:00 / 10:00:00-11:30:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: MAGANA overlaps on Monday."
+    "message": "Faculty conflict: MAGANA teaches GEDC1006 and GEDC1006 on Monday at 10:00:00-11:30:00 / 10:00:00-11:30:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 402 (Lecture Room) overlaps on Monday."
+    "message": "Room conflict: 402 is assigned to GEDC1006 and GEDC1006 on Monday at 10:00:00-11:30:00 / 10:00:00-11:30:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: CASTILLO, R overlaps on Monday."
+    "message": "Faculty conflict: CASTILLO, R teaches GEDC1016 and GEDC1016 on Monday at 11:30:00-13:00:00 / 11:30:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 307 (Lecture Room) overlaps on Monday."
+    "message": "Room conflict: 307 is assigned to GEDC1016 and GEDC1016 on Monday at 11:30:00-13:00:00 / 11:30:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 301 (Lecture Room) overlaps on Monday."
+    "message": "Room conflict: 301 is assigned to GEDC1009 and CTHC1011 on Monday at 13:00:00-14:30:00 / 13:00:00-15:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 301 (Lecture Room) overlaps on Monday."
+    "message": "Room conflict: 301 is assigned to CTHC1011 and TOUR1014 on Monday at 13:00:00-15:00:00 / 14:30:00-16:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: BUSALANAN overlaps on Monday."
+    "message": "Faculty conflict: BUSALANAN teaches PHED1008 and PHED1008 on Monday at 13:30:00-15:30:00 / 15:00:00-17:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: PEA4 (Gym) overlaps on Monday."
+    "message": "Room conflict: PEA4 is assigned to PHED1008 and PHED1008 on Monday at 13:30:00-15:30:00 / 15:00:00-17:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 404 (Lecture Room) overlaps on Monday."
+    "message": "Room conflict: 404 is assigned to GEDC1041 and GEDC1013 on Monday at 16:00:00-19:00:00 / 16:00:00-17:30:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: HERMOSA overlaps on Monday."
+    "message": "Faculty conflict: HERMOSA teaches GEDC1041 and GEDC1041 on Monday at 17:30:00-19:00:00 / 17:30:00-19:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 208B (Lecture Room) overlaps on Monday."
+    "message": "Room conflict: 208B is assigned to GEDC1041 and GEDC1041 on Monday at 17:30:00-19:00:00 / 17:30:00-19:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: DELA CRUZ overlaps on Tuesday."
+    "message": "Faculty conflict: DELA CRUZ teaches GEDC1005 and GEDC1005 on Tuesday at 07:00:00-10:00:00 / 07:00:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 405 (Lecture Room) overlaps on Tuesday."
+    "message": "Room conflict: 405 is assigned to GEDC1005 and GEDC1005 on Tuesday at 07:00:00-10:00:00 / 07:00:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: VISNAR overlaps on Tuesday."
+    "message": "Faculty conflict: VISNAR teaches INTE1127 and INTE1084 on Tuesday at 07:00:00-10:00:00 / 07:00:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: CL2 (Computer Laboratory) overlaps on Tuesday."
+    "message": "Room conflict: CL2 is assigned to INTE1127 and INTE1084 on Tuesday at 07:00:00-10:00:00 / 07:00:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 313 (Lecture Room) overlaps on Tuesday."
+    "message": "Room conflict: 313 is assigned to CTHC1017 and GEDC1013 on Tuesday at 10:00:00-11:30:00 / 10:00:00-11:30:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: MENDIOLA overlaps on Tuesday."
+    "message": "Faculty conflict: MENDIOLA teaches INTE1010 and INTE1120 on Tuesday at 10:00:00-13:00:00 / 11:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: MENDIOLA overlaps on Tuesday."
+    "message": "Faculty conflict: MENDIOLA teaches INTE1010 and COSC1051 on Tuesday at 10:00:00-13:00:00 / 11:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: MENDIOLA overlaps on Tuesday."
+    "message": "Faculty conflict: MENDIOLA teaches INTE1010 and ENGR1027 on Tuesday at 10:00:00-13:00:00 / 11:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: PEA2 (Gym) overlaps on Tuesday."
+    "message": "Room conflict: PEA2 is assigned to PHED1006 and PHED1006 on Tuesday at 10:00:00-12:00:00 / 11:30:00-13:30:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: MENDIOLA overlaps on Tuesday."
+    "message": "Faculty conflict: MENDIOLA teaches INTE1120 and COSC1051 on Tuesday at 11:00:00-12:00:00 / 11:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 209 (Lecture Room) overlaps on Tuesday."
+    "message": "Room conflict: 209 is assigned to INTE1120 and COSC1051 on Tuesday at 11:00:00-12:00:00 / 11:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: MENDIOLA overlaps on Tuesday."
+    "message": "Faculty conflict: MENDIOLA teaches INTE1120 and ENGR1027 on Tuesday at 11:00:00-12:00:00 / 11:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: MENDIOLA overlaps on Tuesday."
+    "message": "Faculty conflict: MENDIOLA teaches COSC1051 and ENGR1027 on Tuesday at 11:00:00-12:00:00 / 11:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: JACINTO overlaps on Tuesday."
+    "message": "Faculty conflict: JACINTO teaches PHED1007 and PHED1007 on Tuesday at 11:00:00-13:00:00 / 11:00:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: PEA1 (Gym) overlaps on Tuesday."
+    "message": "Room conflict: PEA1 is assigned to PHED1007 and PHED1007 on Tuesday at 11:00:00-13:00:00 / 11:00:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: VICTORINO overlaps on Tuesday."
+    "message": "Faculty conflict: VICTORINO teaches GEDC1016 and GEDC1016 on Tuesday at 11:30:00-13:00:00 / 11:30:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 205 (Lecture Room) overlaps on Tuesday."
+    "message": "Room conflict: 205 is assigned to GEDC1016 and GEDC1016 on Tuesday at 11:30:00-13:00:00 / 11:30:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: MAGANA overlaps on Tuesday."
+    "message": "Faculty conflict: MAGANA teaches GEDC1009 and GEDC1009 on Tuesday at 11:30:00-14:30:00 / 11:30:00-14:30:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 406 (Lecture Room) overlaps on Tuesday."
+    "message": "Room conflict: 406 is assigned to GEDC1009 and GEDC1009 on Tuesday at 11:30:00-14:30:00 / 11:30:00-14:30:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 302 (Lecture Room) overlaps on Tuesday."
+    "message": "Room conflict: 302 is assigned to TOUR1012 and CTHC1011 on Tuesday at 12:30:00-14:30:00 / 13:00:00-15:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 302 (Lecture Room) overlaps on Tuesday."
+    "message": "Room conflict: 302 is assigned to CTHC1011 and CBMC1001 on Tuesday at 13:00:00-15:00:00 / 14:30:00-16:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 307 (Lecture Room) overlaps on Tuesday."
+    "message": "Room conflict: 307 is assigned to CTHC1007 and HOSP1022 on Tuesday at 14:30:00-16:00:00 / 15:00:00-16:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 405 (Lecture Room) overlaps on Tuesday."
+    "message": "Room conflict: 405 is assigned to GEDC1009 and ENGR1026 on Tuesday at 14:30:00-16:00:00 / 15:00:00-18:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: MENDIOLA overlaps on Tuesday."
+    "message": "Faculty conflict: MENDIOLA teaches INTE1126 and COSC1012 on Tuesday at 14:30:00-16:30:00 / 14:30:00-16:30:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 406 (Lecture Room) overlaps on Tuesday."
+    "message": "Room conflict: 406 is assigned to INTE1126 and COSC1012 on Tuesday at 14:30:00-16:30:00 / 14:30:00-16:30:00."
   },
   {
     "type": "overlap",
-    "message": "Section conflict: BSCPE-3201 overlaps on Tuesday."
+    "message": "Section conflict: BSCPE-3201 has ENGR1026 and ENGR1023 on Tuesday at 15:00:00-18:00:00 / 17:30:00-19:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: DELA CRUZ overlaps on Wednesday."
+    "message": "Faculty conflict: DELA CRUZ teaches COSC1002 and COSC1002 on Wednesday at 07:00:00-08:30:00 / 07:00:00-08:30:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 313 (Lecture Room) overlaps on Wednesday."
+    "message": "Room conflict: 313 is assigned to COSC1002 and COSC1002 on Wednesday at 07:00:00-08:30:00 / 07:00:00-08:30:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: VERGARA overlaps on Wednesday."
+    "message": "Faculty conflict: VERGARA teaches INTE1021 and INTE1043 on Wednesday at 08:00:00-10:00:00 / 09:00:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 208B (Lecture Room) overlaps on Wednesday."
+    "message": "Room conflict: 208B is assigned to GEDC1009 and INTE1043 on Wednesday at 08:30:00-10:00:00 / 09:00:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: MACAOROG overlaps on Wednesday."
+    "message": "Faculty conflict: MACAOROG teaches GEDC1013 and GEDC1013 on Wednesday at 08:30:00-10:00:00 / 08:30:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 401 (Lecture Room) overlaps on Wednesday."
+    "message": "Room conflict: 401 is assigned to GEDC1013 and GEDC1013 on Wednesday at 08:30:00-10:00:00 / 08:30:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: MAGANA overlaps on Wednesday."
+    "message": "Faculty conflict: MAGANA teaches GEDC1006 and GEDC1006 on Wednesday at 10:00:00-11:30:00 / 10:00:00-11:30:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 402 (Lecture Room) overlaps on Wednesday."
+    "message": "Room conflict: 402 is assigned to GEDC1006 and GEDC1006 on Wednesday at 10:00:00-11:30:00 / 10:00:00-11:30:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: CA (Lecture Room) overlaps on Wednesday."
+    "message": "Room conflict: CA is assigned to ACCT1037 and INTE1031 on Wednesday at 10:00:00-11:00:00 / 10:00:00-11:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: CASTILLO D overlaps on Wednesday."
+    "message": "Faculty conflict: CASTILLO D teaches INTE1031 and CITE1011 on Wednesday at 10:00:00-11:00:00 / 10:00:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: DIZON - CUETO overlaps on Wednesday."
+    "message": "Faculty conflict: DIZON - CUETO teaches CITE1006 and CITE1006 on Wednesday at 10:00:00-13:00:00 / 10:00:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: CL4 (Computer Laboratory) overlaps on Wednesday."
+    "message": "Room conflict: CL4 is assigned to CITE1006 and CITE1006 on Wednesday at 10:00:00-13:00:00 / 10:00:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: CL4 (Computer Laboratory) overlaps on Wednesday."
+    "message": "Room conflict: CL4 is assigned to CITE1006 and CITE1011 on Wednesday at 10:00:00-13:00:00 / 10:00:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: CL4 (Computer Laboratory) overlaps on Wednesday."
+    "message": "Room conflict: CL4 is assigned to CITE1006 and CITE1011 on Wednesday at 10:00:00-13:00:00 / 10:00:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: CASTILLO D overlaps on Wednesday."
+    "message": "Faculty conflict: CASTILLO D teaches CITE1011 and INTE1031 on Wednesday at 10:00:00-13:00:00 / 11:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: CASTILLO D overlaps on Wednesday."
+    "message": "Faculty conflict: CASTILLO D teaches CITE1011 and INTE1031 on Wednesday at 10:00:00-13:00:00 / 12:00:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 208B (Lecture Room) overlaps on Wednesday."
+    "message": "Room conflict: 208B is assigned to CTHC1011 and INTE1043 on Wednesday at 11:00:00-13:00:00 / 12:00:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: MENDIOLA overlaps on Wednesday."
+    "message": "Faculty conflict: MENDIOLA teaches INTE1126 and COSC1012 on Wednesday at 15:00:00-18:00:00 / 15:00:00-18:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: CL3 (Computer Laboratory) overlaps on Wednesday."
+    "message": "Room conflict: CL3 is assigned to INTE1126 and COSC1012 on Wednesday at 15:00:00-18:00:00 / 15:00:00-18:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: GALAMITON overlaps on Wednesday."
+    "message": "Faculty conflict: GALAMITON teaches INTE1128 and COSC1042 on Wednesday at 17:00:00-19:00:00 / 17:00:00-19:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 406 (Lecture Room) overlaps on Wednesday."
+    "message": "Room conflict: 406 is assigned to INTE1128 and COSC1042 on Wednesday at 17:00:00-19:00:00 / 17:00:00-19:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: HERMOSA overlaps on Wednesday."
+    "message": "Faculty conflict: HERMOSA teaches GEDC1041 and GEDC1041 on Wednesday at 17:30:00-19:00:00 / 17:30:00-19:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 208B (Lecture Room) overlaps on Wednesday."
+    "message": "Room conflict: 208B is assigned to GEDC1041 and GEDC1041 on Wednesday at 17:30:00-19:00:00 / 17:30:00-19:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: DELA CRUZ overlaps on Thursday."
+    "message": "Faculty conflict: DELA CRUZ teaches COSC1002 and COSC1002 on Thursday at 07:00:00-08:30:00 / 07:00:00-08:30:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 313 (Lecture Room) overlaps on Thursday."
+    "message": "Room conflict: 313 is assigned to COSC1002 and COSC1002 on Thursday at 07:00:00-08:30:00 / 07:00:00-08:30:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: HERMOSA - VICTORIA overlaps on Thursday."
+    "message": "Faculty conflict: HERMOSA - VICTORIA teaches NSTP1008 and NSTP1008 on Thursday at 08:30:00-10:00:00 / 08:30:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 304 (Lecture Room) overlaps on Thursday."
+    "message": "Room conflict: 304 is assigned to NSTP1008 and NSTP1008 on Thursday at 08:30:00-10:00:00 / 08:30:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: MACAOROG overlaps on Thursday."
+    "message": "Faculty conflict: MACAOROG teaches GEDC1013 and GEDC1013 on Thursday at 08:30:00-10:00:00 / 08:30:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 406 (Lecture Room) overlaps on Thursday."
+    "message": "Room conflict: 406 is assigned to GEDC1013 and GEDC1013 on Thursday at 08:30:00-10:00:00 / 08:30:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: OLANOZA overlaps on Thursday."
+    "message": "Faculty conflict: OLANOZA teaches PHED1006 and PHED1006 on Thursday at 10:00:00-12:00:00 / 10:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: PEA3 (Gym) overlaps on Thursday."
+    "message": "Room conflict: PEA3 is assigned to PHED1006 and PHED1006 on Thursday at 10:00:00-12:00:00 / 10:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: REYES overlaps on Thursday."
+    "message": "Faculty conflict: REYES teaches GEDC1008 and GEDC1008 on Thursday at 11:30:00-13:00:00 / 11:30:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: CASTILLO, R overlaps on Thursday."
+    "message": "Faculty conflict: CASTILLO, R teaches GEDC1016 and GEDC1016 on Thursday at 13:00:00-14:30:00 / 13:00:00-14:30:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 307 (Lecture Room) overlaps on Thursday."
+    "message": "Room conflict: 307 is assigned to GEDC1016 and GEDC1016 on Thursday at 13:00:00-14:30:00 / 13:00:00-14:30:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: DARANTAN overlaps on Thursday."
+    "message": "Faculty conflict: DARANTAN teaches GEDC1010 and GEDC1010 on Thursday at 14:30:00-16:00:00 / 14:30:00-16:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 406 (Lecture Room) overlaps on Thursday."
+    "message": "Room conflict: 406 is assigned to GEDC1010 and GEDC1010 on Thursday at 14:30:00-16:00:00 / 14:30:00-16:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: GALAMITON overlaps on Thursday."
+    "message": "Faculty conflict: GALAMITON teaches INTE1128 and COSC1042 on Thursday at 16:00:00-19:00:00 / 16:00:00-19:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: CL2 (Computer Laboratory) overlaps on Thursday."
+    "message": "Room conflict: CL2 is assigned to INTE1128 and COSC1042 on Thursday at 16:00:00-19:00:00 / 16:00:00-19:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: JACINTO overlaps on Friday."
+    "message": "Faculty conflict: JACINTO teaches PHED1008 and PHED1008 on Friday at 08:00:00-10:00:00 / 08:00:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: PEA2 (Gym) overlaps on Friday."
+    "message": "Room conflict: PEA2 is assigned to PHED1008 and PHED1008 on Friday at 08:00:00-10:00:00 / 08:00:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: GALAMITON overlaps on Friday."
+    "message": "Faculty conflict: GALAMITON teaches INTE1124 and INTE1010 on Friday at 10:00:00-12:00:00 / 10:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 404 (Lecture Room) overlaps on Friday."
+    "message": "Room conflict: 404 is assigned to INTE1124 and INTE1010 on Friday at 10:00:00-12:00:00 / 10:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: GALAMITON overlaps on Friday."
+    "message": "Faculty conflict: GALAMITON teaches INTE1124 and COSC1007 on Friday at 10:00:00-12:00:00 / 11:30:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: GALAMITON overlaps on Friday."
+    "message": "Faculty conflict: GALAMITON teaches INTE1010 and COSC1007 on Friday at 10:00:00-12:00:00 / 11:30:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: CL4 (Computer Laboratory) overlaps on Friday."
+    "message": "Room conflict: CL4 is assigned to STIC1003 and ENGR1014 on Friday at 10:00:00-11:30:00 / 10:00:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: VICTORINO overlaps on Friday."
+    "message": "Faculty conflict: VICTORINO teaches GEDC1016 and GEDC1016 on Friday at 11:30:00-13:00:00 / 11:30:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 205 (Lecture Room) overlaps on Friday."
+    "message": "Room conflict: 205 is assigned to GEDC1016 and GEDC1016 on Friday at 11:30:00-13:00:00 / 11:30:00-13:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: BUSALANAN overlaps on Friday."
+    "message": "Faculty conflict: BUSALANAN teaches STIC1002 and STIC1002 on Friday at 13:00:00-14:00:00 / 13:00:00-14:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 211 (Lecture Room) overlaps on Friday."
+    "message": "Room conflict: 211 is assigned to STIC1002 and STIC1002 on Friday at 13:00:00-14:00:00 / 13:00:00-14:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: HERMOSA - VICTORIA overlaps on Friday."
+    "message": "Faculty conflict: HERMOSA - VICTORIA teaches NSTP1008 and NSTP1008 on Friday at 14:30:00-16:00:00 / 14:30:00-16:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 211 (Lecture Room) overlaps on Friday."
+    "message": "Room conflict: 211 is assigned to NSTP1008 and NSTP1008 on Friday at 14:30:00-16:00:00 / 14:30:00-16:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: DARANTAN overlaps on Friday."
+    "message": "Faculty conflict: DARANTAN teaches GEDC1010 and GEDC1010 on Friday at 14:30:00-16:00:00 / 14:30:00-16:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 402 (Lecture Room) overlaps on Friday."
+    "message": "Room conflict: 402 is assigned to GEDC1010 and GEDC1010 on Friday at 14:30:00-16:00:00 / 14:30:00-16:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 304 (Lecture Room) overlaps on Friday."
+    "message": "Room conflict: 304 is assigned to INTE1033 and CTHC1016 on Friday at 15:30:00-17:00:00 / 16:00:00-17:30:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: REYES overlaps on Friday."
+    "message": "Faculty conflict: REYES teaches GEDC1008 and GEDC1008 on Friday at 16:00:00-17:30:00 / 16:00:00-17:30:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 303 (Lecture Room) overlaps on Friday."
+    "message": "Room conflict: 303 is assigned to GEDC1008 and GEDC1008 on Friday at 16:00:00-17:30:00 / 16:00:00-17:30:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: BUSALANAN overlaps on Friday."
+    "message": "Faculty conflict: BUSALANAN teaches PHED1006 and PHED1006 on Friday at 16:00:00-18:00:00 / 16:00:00-18:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: GALAMITON overlaps on Saturday."
+    "message": "Faculty conflict: GALAMITON teaches INTE1124 and INTE1010 on Saturday at 07:00:00-10:00:00 / 07:00:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: CL4 (Computer Laboratory) overlaps on Saturday."
+    "message": "Room conflict: CL4 is assigned to INTE1124 and INTE1010 on Saturday at 07:00:00-10:00:00 / 07:00:00-10:00:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: DIZON - CUETO overlaps on Saturday."
+    "message": "Faculty conflict: DIZON - CUETO teaches CITE1006 and CITE1006 on Saturday at 10:00:00-12:00:00 / 10:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 209 (Lecture Room) overlaps on Saturday."
+    "message": "Room conflict: 209 is assigned to CITE1006 and CITE1006 on Saturday at 10:00:00-12:00:00 / 10:00:00-12:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 209 (Lecture Room) overlaps on Saturday."
+    "message": "Room conflict: 209 is assigned to CITE1006 and NSTP1010 on Saturday at 10:00:00-12:00:00 / 11:30:00-14:30:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 209 (Lecture Room) overlaps on Saturday."
+    "message": "Room conflict: 209 is assigned to CITE1006 and NSTP1010 on Saturday at 10:00:00-12:00:00 / 11:30:00-14:30:00."
   },
   {
     "type": "overlap",
-    "message": "Faculty conflict: VENTULA overlaps on Saturday."
+    "message": "Faculty conflict: VENTULA teaches NSTP1010 and NSTP1010 on Saturday at 13:00:00-16:00:00 / 13:00:00-16:00:00."
   },
   {
     "type": "overlap",
-    "message": "Room conflict: 201 (Lecture Room) overlaps on Saturday."
+    "message": "Room conflict: 201 is assigned to NSTP1010 and NSTP1010 on Saturday at 13:00:00-16:00:00 / 13:00:00-16:00:00."
   },
   {
     "type": "outside_hours",
-    "entry": 1816
+    "entry": 1050
   }
 ]

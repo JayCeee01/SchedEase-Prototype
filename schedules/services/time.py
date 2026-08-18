@@ -1,7 +1,7 @@
 from datetime import time, timedelta, datetime
 
 SCHOOL_START = time(7, 0)
-SCHOOL_END = time(21, 0)
+SCHOOL_END = time(19, 0)
 SLOT_MINUTES = 60
 ALLOWED_DAYS = range(6)
 

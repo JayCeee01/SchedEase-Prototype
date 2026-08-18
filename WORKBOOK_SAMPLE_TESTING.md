@@ -40,7 +40,7 @@ Delete `tertiary_sample.sqlite3` afterward if it is no longer needed. Do not use
 
 ## Test result (seed 2526)
 
-The isolated import created 9 assignments, 8 subjects, 7 sections, 7 faculty records, and 12 rooms. The existing GA generated all 9 entries with fitness **942.5**. Independent `full_clean()` validation passed every entry, and `conflict_messages()` reported no faculty, room, or section overlaps. All entries were Monday–Saturday between 7:00 AM and 9:00 PM, used sufficient-capacity rooms of the required type, and had the synthetic test credential. Three entries matched a workbook-derived faculty preference.
+The isolated import created 9 assignments, 8 subjects, 7 sections, 7 faculty records, and 12 rooms. The existing GA generated all 9 entries with fitness **942.5**. Independent `full_clean()` validation passed every entry, and `conflict_messages()` reported no faculty, room, or section overlaps. The system now limits generated entries to Monday–Saturday between 7:00 AM and 7:00 PM, with sufficient-capacity rooms of the required type and the synthetic test credential.
 
 The existing automated suite also passed (13 tests). It directly covers room capacity, faculty unavailability, room type generation, credential qualification/override, and capacity-fit optimization.
 
@@ -67,7 +67,7 @@ The command is dry-run without `--commit`, is deterministic/idempotent, preserve
 
 The analyzed workbook produced 721 meetings from 517 of 519 normalized source rows: 9 programs, all 4 year levels, 63 sections, 125 subjects, 60 faculty labels, and 39 normalized rooms. Rows 156 and 516 were rejected because each supplies multiple rooms/times for only one day, so associating them would require silently inventing an occurrence. The original schedule produced 111 findings: 59 room conflicts, 50 faculty conflicts, 1 section conflict, and 1 class outside the allowed hours. No credentials were created because the workbook contains no qualification evidence; subjects without requirements remain eligible under the existing credential rules.
 
-The workbook provides neither capacities nor availability. Imported sections therefore use test size 30; inferred room types use documented test capacities (lecture 45, computer lab 40, science lab 35, gym 60, specialized 30); and rooms are available Monday–Saturday, 7:00 AM–9:00 PM. Each faculty member's test maximum is the larger of 24 hours or their derived spreadsheet workload, so the importer does not reject the workload it is meant to reproduce. These are explicitly test/derived values, not claims about the institution.
+The workbook provides neither capacities nor availability. Imported sections therefore use test size 30; inferred room types use documented test capacities (lecture 45, computer lab 40, science lab 35, gym 60, specialized 30); and rooms are available Monday–Saturday, 7:00 AM–7:00 PM. Each faculty member's test maximum is the larger of 24 hours or their derived spreadsheet workload, so the importer does not reject the workload it is meant to reproduce. These are explicitly test/derived values, not claims about the institution.
 
 On the imported original schedule, all 39 rooms were used. Average weekly utilization was 41.0%; 15 rooms were underutilized and 2 highly utilized. `CL2` was highest at 78.6% (66 scheduled hours, 22 classes), while `206` was the least-used active room at 1.8% (1.5 hours, 1 class). Full per-room results are in `full_workbook_report/room_utilization.json`.
 

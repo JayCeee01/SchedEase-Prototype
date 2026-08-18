@@ -1,6 +1,6 @@
 import re
 from collections import defaultdict
-from datetime import date, time
+from datetime import date
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -14,6 +14,7 @@ from schedules.models import (
     FacultyCredential, GASettings, Program, Room, RoomKind, Section, Subject,
     SubjectCredentialRequirement, TeachingAssignment, YearLevel,
 )
+from schedules.services.time import SCHOOL_END, SCHOOL_START
 
 
 CAPACITY_DEFAULTS = {RoomKind.LECTURE: 45, RoomKind.COMPUTER_LAB: 40,
@@ -94,7 +95,7 @@ class Command(BaseCommand):
             name = m["row"].room.strip().upper()
             kind = m["room_type"]
             rooms[name], _ = Room.objects.get_or_create(name=name, defaults={"room_type": kind, "capacity": CAPACITY_DEFAULTS[kind]})
-            Availability.objects.get_or_create(room=rooms[name], day=m["day"], start_time=time(7), end_time=time(21), kind=AvailabilityKind.AVAILABLE)
+            Availability.objects.get_or_create(room=rooms[name], day=m["day"], start_time=SCHOOL_START, end_time=SCHOOL_END, kind=AvailabilityKind.AVAILABLE)
 
         grouped = defaultdict(list)
         for m in meetings:

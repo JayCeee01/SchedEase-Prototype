@@ -299,19 +299,6 @@
     });
   });
 
-  document.querySelectorAll(".nav-group").forEach((nav) => {
-    const savedScroll = sessionStorage.getItem("schedease-sidebar-scroll");
-    if (savedScroll) nav.scrollTop = Number(savedScroll);
-    nav.addEventListener("scroll", () => {
-      sessionStorage.setItem("schedease-sidebar-scroll", String(nav.scrollTop));
-    });
-    nav.querySelectorAll("a").forEach((link) => {
-      link.addEventListener("click", () => {
-        sessionStorage.setItem("schedease-sidebar-scroll", String(nav.scrollTop));
-      });
-    });
-  });
-
   const currentPath = window.location.pathname;
   const navLinks = Array.from(document.querySelectorAll(".nav-group a"));
   let bestMatch = null;
@@ -336,6 +323,29 @@
     if (hasActiveItem) group.open = true;
     else if (saved !== null) group.open = saved === "true";
     group.addEventListener("toggle", () => sessionStorage.setItem(key, String(group.open)));
+  });
+
+  document.querySelectorAll(".nav-group").forEach((nav) => {
+    const scrollKey = "schedease-sidebar-scroll";
+    const saveScroll = () => sessionStorage.setItem(scrollKey, String(nav.scrollTop));
+    const restoreScroll = () => {
+      const savedScroll = sessionStorage.getItem(scrollKey);
+      if (savedScroll === null) return;
+      const target = Number(savedScroll);
+      if (Number.isFinite(target)) nav.scrollTop = target;
+    };
+
+    // Expanded groups affect the scrollable height, so restore only after their
+    // saved state has been applied and the browser has completed layout.
+    restoreScroll();
+    window.requestAnimationFrame(() => {
+      restoreScroll();
+      window.requestAnimationFrame(restoreScroll);
+    });
+
+    nav.addEventListener("scroll", saveScroll, { passive: true });
+    nav.querySelectorAll("a").forEach((link) => link.addEventListener("pointerdown", saveScroll));
+    window.addEventListener("pagehide", saveScroll);
   });
 
   document.querySelectorAll(".toast-close").forEach((button) => {
@@ -436,15 +446,17 @@
   });
 
   document.querySelectorAll("form").forEach((form) => {
-    form.querySelectorAll("label").forEach((label) => {
-      if (label.querySelector(".info-icon")) return;
-      const text = label.textContent.trim().replace(":", "");
-      const icon = document.createElement("span");
-      icon.className = "info-icon";
-      icon.textContent = "i";
-      icon.dataset.tooltip = tooltipForLabel(label);
-      label.appendChild(icon);
-    });
+    if (form.dataset.autoTooltips !== "false") {
+      form.querySelectorAll("label").forEach((label) => {
+        if (label.querySelector(".info-icon")) return;
+        const text = label.textContent.trim().replace(":", "");
+        const icon = document.createElement("span");
+        icon.className = "info-icon";
+        icon.textContent = "i";
+        icon.dataset.tooltip = tooltipForLabel(label);
+        label.appendChild(icon);
+      });
+    }
 
     form.querySelectorAll("button, .button").forEach((control) => {
       if (control.dataset.tooltip) return;

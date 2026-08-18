@@ -12,7 +12,7 @@ def validate_entry(entry):
     if entry.day not in ALLOWED_DAYS:
         errors.append("Classes must be scheduled Monday to Saturday.")
     if not contains(SCHOOL_START, SCHOOL_END, entry.start_time, entry.end_time):
-        errors.append("Classes must be scheduled from 7:00 AM to 9:00 PM.")
+        errors.append("Classes must be scheduled from 7:00 AM to 7:00 PM.")
     if entry.start_time >= entry.end_time:
         errors.append("Start time must be earlier than end time.")
     else:

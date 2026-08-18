@@ -19,6 +19,15 @@
     <button class="button" type="button" onclick="history.back()">Cancel</button>
   </div>
   {% if tooltip_context == 'generate-schedule' %}
+  {% if error_run %}
+  <div class="generation-result generation-result-error" role="alert">
+    <div>
+      <strong>Schedule generation could not be completed.</strong>
+      <small>SchedEase encountered scheduling problems. The detailed causes and suggested actions are available in the Error Log.</small>
+    </div>
+    <a class="button" href="{% url 'generation_error_log' %}?run={{ error_run.pk }}">View Error Log</a>
+  </div>
+  {% endif %}
   <div class="generation-loading" data-generation-loading role="status" aria-live="polite" aria-atomic="true" hidden>
     <span class="generation-spinner" aria-hidden="true"></span>
     <span>

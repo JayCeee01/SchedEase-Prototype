@@ -22,6 +22,7 @@ from schedules.models import (
     TeachingAssignment,
     YearLevel,
 )
+from schedules.services.time import SCHOOL_END, SCHOOL_START
 
 
 class Command(BaseCommand):
@@ -66,12 +67,11 @@ class Command(BaseCommand):
         comp_lab, _ = Room.objects.get_or_create(name="Comp Lab 1", defaults={"room_type": RoomKind.COMPUTER_LAB, "capacity": 40})
         sci_lab, _ = Room.objects.get_or_create(name="Sci Lab 1", defaults={"room_type": RoomKind.SCIENCE_LAB, "capacity": 35})
         for room in (lec_101, lec_102, comp_lab, sci_lab):
-            Availability.objects.get_or_create(room=room, day=0, start_time=time(7), end_time=time(21), kind=AvailabilityKind.AVAILABLE)
-            Availability.objects.get_or_create(room=room, day=1, start_time=time(7), end_time=time(21), kind=AvailabilityKind.AVAILABLE)
-            Availability.objects.get_or_create(room=room, day=2, start_time=time(7), end_time=time(21), kind=AvailabilityKind.AVAILABLE)
-            Availability.objects.get_or_create(room=room, day=3, start_time=time(7), end_time=time(21), kind=AvailabilityKind.AVAILABLE)
-            Availability.objects.get_or_create(room=room, day=4, start_time=time(7), end_time=time(21), kind=AvailabilityKind.AVAILABLE)
-            Availability.objects.get_or_create(room=room, day=5, start_time=time(7), end_time=time(17), kind=AvailabilityKind.AVAILABLE)
+            for day in range(6):
+                Availability.objects.get_or_create(
+                    room=room, day=day, start_time=SCHOOL_START, end_time=SCHOOL_END,
+                    kind=AvailabilityKind.AVAILABLE,
+                )
 
         subjects = [
             ("IT101", "Computer Programming 1", 2, 3, RoomKind.COMPUTER_LAB),

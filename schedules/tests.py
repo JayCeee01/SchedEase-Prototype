@@ -5,9 +5,10 @@ from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
-from .models import AcademicTerm, Availability, AvailabilityKind, Credential, CredentialOverride, Department, Faculty, FacultyCredential, GASettings, Profile, Program, Role, Room, RoomKind, Schedule, ScheduleEntry, ScheduleStatus, Section, Student, Subject, SubjectCredentialRequirement, TeachingAssignment, YearLevel
+from .models import AcademicTerm, Availability, AvailabilityKind, Credential, CredentialOverride, Department, Faculty, FacultyCredential, GASettings, GenerationIssue, GenerationRun, Profile, Program, Role, Room, RoomKind, Schedule, ScheduleEntry, ScheduleStatus, Section, Student, Subject, SubjectCredentialRequirement, TeachingAssignment, YearLevel
 from .services.credentials import faculty_qualification
 from .services.ga import GeneticScheduler, Gene
+from .services.generation_issues import record_generation_messages
 from .services.room_utilization import filtered_rows, utilization_rows
 from .services.schedule_comparison import compare_schedules
 from .importers.full_tertiary import days, subject_title, time_pair
@@ -57,8 +58,89 @@ class SchedulingTestCase(TestCase):
             response = self.client.post("/schedules/generate/", {
                 "term": self.term.id, "settings": self.settings.id, "name": "Impossible"})
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "No feasible test schedule.")
+        self.assertContains(response, "Schedule generation could not be completed")
+        self.assertContains(response, "View Error Log")
+        self.assertNotContains(response, "No feasible test schedule")
         self.assertFalse(Schedule.objects.filter(name="Impossible").exists())
+        run = GenerationRun.objects.get(requested_name="Impossible")
+        self.assertEqual(run.status, GenerationRun.Status.FAILED)
+        self.assertEqual(run.issues.count(), 1)
+
+    def test_generation_issue_is_categorized_and_associated_with_run(self):
+        run = GenerationRun.objects.create(
+            term=self.term, ga_settings=self.settings, requested_by=self.admin_user, requested_name="Problem run"
+        )
+        issues = record_generation_messages(
+            run, "IT101 / BSIT-1A: no active Computer Laboratory has capacity 30."
+        )
+        self.assertEqual(issues[0].run, run)
+        self.assertEqual(issues[0].category, GenerationIssue.Category.ROOM_CAPACITY)
+        self.assertEqual(issues[0].assignment, self.assignment)
+        self.assertEqual(issues[0].severity, GenerationIssue.Severity.ERROR)
+
+    def test_warning_and_unscheduled_issue_are_supported(self):
+        run = GenerationRun.objects.create(
+            term=self.term, ga_settings=self.settings, requested_by=self.admin_user, requested_name="Warning run"
+        )
+        issues = record_generation_messages(
+            run, "IT101 / BSIT-1A: class remains unscheduled.", severity=GenerationIssue.Severity.WARNING
+        )
+        self.assertEqual(issues[0].category, GenerationIssue.Category.UNSCHEDULED)
+        self.assertEqual(issues[0].severity, GenerationIssue.Severity.WARNING)
+
+    def test_unexpected_generation_failure_creates_critical_safe_log(self):
+        from unittest.mock import patch
+
+        self.client.login(username="admin", password="admin12345")
+        with patch("schedules.views.GeneticScheduler.generate", side_effect=RuntimeError("private technical detail")):
+            response = self.client.post("/schedules/generate/", {
+                "term": self.term.id, "settings": self.settings.id, "name": "Crashed run"
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "private technical detail")
+        issue = GenerationRun.objects.get(requested_name="Crashed run").issues.get()
+        self.assertEqual(issue.severity, GenerationIssue.Severity.CRITICAL)
+        self.assertNotIn("private technical detail", issue.reason)
+
+    def test_error_log_filters_and_displays_issue_details(self):
+        run = GenerationRun.objects.create(
+            term=self.term, ga_settings=self.settings, requested_by=self.admin_user, requested_name="Filtered run"
+        )
+        issue = GenerationIssue.objects.create(
+            run=run, assignment=self.assignment, category=GenerationIssue.Category.FACULTY_WORKLOAD,
+            severity=GenerationIssue.Severity.ERROR, short_description="Faculty workload is too high.",
+            reason="Ada exceeds the maximum weekly load.", suggested_action="Reassign one class."
+        )
+        self.client.login(username="admin", password="admin12345")
+        response = self.client.get("/schedules/error-log/", {"run": run.pk, "severity": "ERROR", "q": "Ada"})
+        self.assertContains(response, "Faculty workload is too high")
+        self.assertContains(response, 'data-auto-tooltips="false"')
+        self.assertContains(response, 'class="info-icon"', count=3)
+        self.assertContains(response, 'class="field-label">Generation Run <span class="info-icon"', html=False)
+        detail = self.client.get(f"/schedules/error-log/{issue.pk}/")
+        self.assertContains(detail, "Reassign one class")
+        self.client.post(f"/schedules/error-log/{issue.pk}/", {"status": "REVIEWED"})
+        issue.refresh_from_db()
+        self.assertEqual(issue.status, GenerationIssue.Status.REVIEWED)
+
+    def test_error_log_is_restricted_to_administrators(self):
+        student_user = User.objects.create_user(username="logstudent", password="password123")
+        Profile.objects.create(user=student_user, role=Role.STUDENT)
+        Student.objects.create(user=student_user, section=self.section, student_number="LOG1", full_name="Log Student")
+        self.client.login(username="logstudent", password="password123")
+        response = self.client.get("/schedules/error-log/")
+        self.assertEqual(response.status_code, 302)
+
+    def test_successful_generation_run_has_no_error_issues(self):
+        self.client.login(username="admin", password="admin12345")
+        response = self.client.post("/schedules/generate/", {
+            "term": self.term.id, "settings": self.settings.id, "name": "Successful run"
+        })
+        self.assertEqual(response.status_code, 302)
+        run = GenerationRun.objects.get(requested_name="Successful run")
+        self.assertEqual(run.status, GenerationRun.Status.SUCCEEDED)
+        self.assertIsNotNone(run.schedule)
+        self.assertFalse(run.issues.exists())
 
     def test_generate_page_has_accessible_loading_state(self):
         self.client.login(username="admin", password="admin12345")
@@ -257,6 +339,20 @@ class SchedulingTestCase(TestCase):
         self.assertIn("different academic term", str(caught.exception))
         self.assertIn("must be 180 minutes", str(caught.exception))
 
+    def test_manual_entry_cannot_end_after_seven_pm(self):
+        schedule = Schedule.objects.create(term=self.term, name="After hours")
+        entry = ScheduleEntry(
+            schedule=schedule,
+            assignment=self.assignment,
+            room=self.room,
+            day=0,
+            start_time=time(17),
+            end_time=time(20),
+        )
+        with self.assertRaises(ValidationError) as caught:
+            entry.full_clean()
+        self.assertIn("7:00 AM to 7:00 PM", str(caught.exception))
+
     def test_availability_requires_exactly_one_owner(self):
         item = Availability(faculty=self.faculty, room=self.room, day=0, start_time=time(8), end_time=time(10))
         with self.assertRaisesMessage(ValidationError, "exactly one"):
@@ -309,6 +405,7 @@ class SchedulingTestCase(TestCase):
         self.assertContains(response, 'data-nav-group="academic"')
         self.assertContains(response, ">Year Levels</a>", html=False)
         self.assertContains(response, ">Academic Terms</a>", html=False)
+        self.assertContains(response, ">Error Log</a>", html=False)
 
     def test_student_sidebar_hides_admin_groups(self):
         student_user = User.objects.create_user(username="navstudent", password="password123")

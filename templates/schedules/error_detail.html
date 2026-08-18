@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hero"><div><p class="eyebrow">Error Log · Issue #{{ issue.pk }}</p><h1>{{ issue.get_category_display }}</h1><p class="subtle">Generation run {{ issue.run_id|stringformat:"s"|slice:":8" }} · {{ issue.created_at|date:"M j, Y H:i" }}</p></div><a class="button" href="{% url 'generation_error_log' %}?run={{ issue.run_id }}">Back to Run</a></div>
+<div class="detail-grid">
+  <section class="panel issue-detail">
+    <div class="toolbar"><span class="badge severity-{{ issue.severity|lower }}">{{ issue.get_severity_display }}</span><span class="badge status-{{ issue.status|lower }}">{{ issue.get_status_display }}</span></div>
+    <h2>What happened</h2><p>{{ issue.short_description }}</p>
+    <h2>Reason</h2><p>{{ issue.reason }}</p>
+    <h2>Suggested action</h2><p>{{ issue.suggested_action }}</p>
+    {% if issue.assignment %}<h2>Affected class</h2><dl class="detail-list"><dt>Subject</dt><dd>{{ issue.assignment.subject.code }} · {{ issue.assignment.subject.title }}</dd><dt>Section</dt><dd>{{ issue.assignment.section }}</dd><dt>Faculty</dt><dd>{{ issue.assignment.faculty }}</dd><dt>Required room type</dt><dd>{{ issue.assignment.get_effective_room_type_display|default:issue.assignment.effective_room_type }}</dd>{% if issue.room %}<dt>Room</dt><dd>{{ issue.room }}</dd>{% endif %}</dl>{% endif %}
+  </section>
+  <aside class="panel issue-context"><h2>Generation run</h2><dl class="detail-list"><dt>Run ID</dt><dd>{{ issue.run_id }}</dd><dt>Term</dt><dd>{{ issue.run.term }}</dd><dt>Requested schedule</dt><dd>{{ issue.run.requested_name }}</dd><dt>Run status</dt><dd>{{ issue.run.get_status_display }}</dd><dt>GA settings</dt><dd>{{ issue.run.ga_settings|default:"Unavailable" }}</dd></dl><form method="post" class="form">{% csrf_token %}<label>Resolution status<select name="status">{% for value,label in statuses %}<option value="{{ value }}"{% if issue.status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button class="primary" type="submit">Update Status</button></form></aside>
+</div>
+{% endblock %}
