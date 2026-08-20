@@ -8,6 +8,20 @@
   </div>
   <a class="button primary" href="{% url 'resource_create' resource %}">New</a>
 </div>
+{% if drafts %}
+<section class="panel draft-list" aria-labelledby="draft-list-title">
+  <div><h2 id="draft-list-title">Unfinished drafts</h2><p class="subtle">Resume your saved work or discard it without changing official records.</p></div>
+  {% for draft in drafts %}
+  <div class="draft-list-item">
+    <span><strong>{% if draft.object_pk %}Edit draft for record #{{ draft.object_pk }}{% else %}New {{ resource|slice:":-1" }} draft{% endif %}</strong><small>Saved {{ draft.updated_at|timesince }} ago</small></span>
+    <span class="actions-cell">
+      {% if draft.object_pk %}<a class="button" href="{% url 'resource_update' resource draft.object_pk %}">Resume</a>{% else %}<a class="button" href="{% url 'resource_create' resource %}">Resume</a>{% endif %}
+      <form method="post" action="{% url 'discard_form_draft' draft.pk %}" data-auto-tooltips="false">{% csrf_token %}<button class="button" type="submit">Discard</button></form>
+    </span>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
 <div class="panel table-wrap">
   <div class="table-tools">
     <label class="table-search">

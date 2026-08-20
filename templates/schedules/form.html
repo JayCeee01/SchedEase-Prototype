@@ -7,16 +7,38 @@
     <p class="subtle">{{ description|default:"Required fields are validated before saving. Time fields use the school scheduling range configured in the backend." }}</p>
   </div>
 </div>
-<form method="post" class="panel form{% if tooltip_context == 'generate-schedule' %} generation-form{% endif %}" data-tooltip-context="{{ tooltip_context|default:title|slugify }}"{% if tooltip_context == 'generate-schedule' %} data-schedule-generation{% endif %}>
+{% if draft %}
+<div class="draft-banner" role="status">
+  <div><strong>Draft restored</strong><small>You are continuing unfinished changes saved {{ draft.updated_at|timesince }} ago.</small></div>
+  <form method="post" action="{% url 'discard_form_draft' draft.pk %}" data-auto-tooltips="false">
+    {% csrf_token %}<button class="button" type="submit">Discard draft</button>
+  </form>
+</div>
+{% endif %}
+<form method="post" class="panel form{% if tooltip_context == 'generate-schedule' %} generation-form{% endif %}" data-tooltip-context="{{ tooltip_context|default:title|slugify }}"{% if tooltip_context == 'generate-schedule' %} data-schedule-generation{% endif %}{% if draft_resource %} data-form-draft data-draft-save-url="{% url 'save_form_draft' %}" data-draft-resource="{{ draft_resource }}" data-draft-object-pk="{{ draft_object_pk }}" data-has-draft="{% if draft %}true{% else %}false{% endif %}"{% endif %}>
   {% csrf_token %}
+  {% if draft_conflict %}
+  <div class="draft-conflict" role="alert">
+    <strong>The saved record changed after this draft began.</strong>
+    <small>Review the values carefully. Updating now will replace the newer saved record.</small>
+    <label><input type="checkbox" name="draft_conflict_confirm" value="yes" required> I reviewed the conflict and want to update the record.</label>
+  </div>
+  {% endif %}
   {{ form.as_p }}
+  {% if tooltip_context == 'sections' %}
+  <div class="section-name-preview" data-section-preview role="status" aria-live="polite">
+    <small>Section Name Preview <span class="info-icon" tabindex="0" data-tooltip="Shows how this section will appear throughout SchedEase." aria-label="About the section name preview">i</span></small>
+    <strong>Choose a program, year level, and section code</strong>
+  </div>
+  {% endif %}
+  {% if draft_resource %}<div class="draft-save-status" data-draft-status role="status" aria-live="polite">{% if draft %}Draft saved{% else %}Changes are saved as a draft automatically{% endif %}</div>{% endif %}
   <div class="toolbar" style="justify-content:flex-start">
     {% if tooltip_context == 'generate-schedule' %}
     <button class="primary generation-submit" type="submit" data-loading-text="Generating schedule...">Generate Schedule</button>
     {% else %}
     <button class="primary" data-loading-text="Saving">Save</button>
     {% endif %}
-    <button class="button" type="button" onclick="history.back()">Cancel</button>
+    {% if draft_resource %}<a class="button" href="{% url 'resource_list' draft_resource %}">Cancel</a>{% else %}<button class="button" type="button" onclick="history.back()">Cancel</button>{% endif %}
   </div>
   {% if tooltip_context == 'generate-schedule' %}
   {% if error_run %}

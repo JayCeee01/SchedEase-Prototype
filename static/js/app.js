@@ -78,9 +78,9 @@
     "year-levels|level": "Enter the year number, such as 1 for first year.",
     "year-levels|label": "Enter the friendly year level name, such as First Year.",
 
-    "sections|program": "Choose the program this section belongs to.",
-    "sections|year level": "Choose the year level for this section.",
-    "sections|name": "Enter the section name or letter, such as A or B.",
+    "sections|program": "Select the academic program this section belongs to.",
+    "sections|year level": "Select the students' current year level.",
+    "sections|section code": "Enter the section identifier, such as 201 or 202.",
     "sections|size": "Enter the number of students in this section.",
     "sections|adviser": "Choose the faculty adviser for this section, if assigned.",
 
@@ -259,6 +259,9 @@
   function hideTooltip() {
     appTooltip.classList.remove("is-visible");
   }
+
+  window.addEventListener("scroll", hideTooltip, true);
+  window.addEventListener("resize", hideTooltip);
 
   function bindTooltips(scope = document) {
     scope.querySelectorAll("[data-tooltip]").forEach((target) => {
@@ -538,6 +541,129 @@
     });
 
     window.addEventListener("pageshow", resetGenerationState);
+  });
+
+  document.querySelectorAll("[data-form-draft]").forEach((form) => {
+    const status = form.querySelector("[data-draft-status]");
+    const csrf = form.querySelector("input[name='csrfmiddlewaretoken']")?.value || "";
+    let savedState;
+    let dirty = false;
+    let finalSubmitting = false;
+    let timer;
+
+    const payload = () => {
+      const values = {};
+      Array.from(form.elements).forEach((field) => {
+        if (!field.name || field.disabled || ["csrfmiddlewaretoken", "draft_conflict_confirm"].includes(field.name)) return;
+        if (["submit", "button", "file"].includes(field.type)) return;
+        if ((field.type === "checkbox" || field.type === "radio") && !field.checked) {
+          if (!(field.name in values)) values[field.name] = "";
+          return;
+        }
+        if (field.multiple) {
+          values[field.name] = Array.from(field.selectedOptions).map((option) => option.value);
+        } else if (field.name in values) {
+          values[field.name] = [].concat(values[field.name], field.value);
+        } else {
+          values[field.name] = field.value;
+        }
+      });
+      return values;
+    };
+
+    const setStatus = (text, state = "") => {
+      if (!status) return;
+      status.textContent = text;
+      status.dataset.state = state;
+    };
+
+    const saveDraft = async (keepalive = false) => {
+      if (!dirty || finalSubmitting) return true;
+      const currentPayload = payload();
+      setStatus("Saving draft...", "saving");
+      try {
+        const response = await fetch(form.dataset.draftSaveUrl, {
+          method: "POST",
+          credentials: "same-origin",
+          keepalive,
+          headers: {"Content-Type": "application/json", "X-CSRFToken": csrf},
+          body: JSON.stringify({
+            resource: form.dataset.draftResource,
+            object_pk: form.dataset.draftObjectPk,
+            payload: currentPayload,
+            changed: true,
+          }),
+        });
+        if (!response.ok) throw new Error("Draft request failed");
+        savedState = JSON.stringify(currentPayload);
+        dirty = false;
+        setStatus("Draft saved", "saved");
+        return true;
+      } catch (error) {
+        setStatus("Draft could not be saved. Check your connection and try again.", "error");
+        return false;
+      }
+    };
+
+    const noteChange = () => {
+      dirty = JSON.stringify(payload()) !== savedState;
+      window.clearTimeout(timer);
+      if (dirty) {
+        setStatus("Unsaved draft changes", "pending");
+        timer = window.setTimeout(() => saveDraft(), 900);
+      }
+    };
+
+    savedState = JSON.stringify(payload());
+    form.addEventListener("input", noteChange);
+    form.addEventListener("change", noteChange);
+    form.addEventListener("focusout", () => {
+      if (dirty) {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => saveDraft(), 250);
+      }
+    });
+    form.addEventListener("submit", () => {
+      finalSubmitting = true;
+      window.clearTimeout(timer);
+    });
+
+    document.addEventListener("click", async (event) => {
+      const link = event.target.closest("a[href]");
+      if (!link || !dirty || finalSubmitting || link.target === "_blank") return;
+      const destination = new URL(link.href, window.location.href);
+      if (destination.origin !== window.location.origin) return;
+      event.preventDefault();
+      window.clearTimeout(timer);
+      if (await saveDraft()) window.location.assign(destination.href);
+    }, true);
+
+    window.addEventListener("pagehide", () => {
+      if (dirty && !finalSubmitting) saveDraft(true);
+    });
+  });
+
+  document.querySelectorAll("[data-section-preview]").forEach((preview) => {
+    const form = preview.closest("form");
+    const program = form?.querySelector("[data-section-program]");
+    const year = form?.querySelector("[data-section-year]");
+    const code = form?.querySelector("[data-section-code]");
+    const output = preview.querySelector("strong");
+    const update = () => {
+      const programCode = program?.selectedOptions[0]?.textContent.trim().toUpperCase() || "";
+      const yearLevel = year?.selectedOptions[0]?.textContent.trim().match(/^\d+/)?.[0] || "";
+      let sectionCode = code?.value.trim().toUpperCase() || "";
+      const complete = sectionCode.match(/^\S+\s+\d+-([A-Z0-9][A-Z0-9_-]*)$/);
+      if (complete) sectionCode = complete[1];
+      output.textContent = programCode && yearLevel && sectionCode
+        ? `${programCode} ${yearLevel}-${sectionCode}`
+        : "Choose a program, year level, and section code";
+    };
+    [program, year, code].forEach((field) => {
+      field?.addEventListener("input", update);
+      field?.addEventListener("change", update);
+    });
+    update();
   });
 
   document.querySelectorAll("a.button, button").forEach((control) => {

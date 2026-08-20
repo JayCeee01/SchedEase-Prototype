@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import get_user_model
@@ -44,6 +46,43 @@ MODEL_FORMS = {
     "schedules": modelform_factory(Schedule, fields=["term", "name", "status"]),
     "credential-overrides": modelform_factory(CredentialOverride, fields=["assignment", "subject", "faculty", "admin_user", "reason", "missing_credentials"]),
 }
+
+
+class SectionForm(forms.ModelForm):
+    class Meta:
+        model = Section
+        fields = ["program", "year_level", "name", "size", "adviser"]
+        labels = {"name": "Section Code"}
+        help_texts = {"name": "Enter only the identifier, such as 201 or 202."}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["program"].widget.attrs["data-section-program"] = ""
+        self.fields["year_level"].widget.attrs["data-section-year"] = ""
+        self.fields["name"].widget.attrs["data-section-code"] = ""
+        self.fields["year_level"].label_from_instance = lambda item: f"{item.level} — {item.label}"
+
+    def clean(self):
+        cleaned = super().clean()
+        program = cleaned.get("program")
+        year_level = cleaned.get("year_level")
+        name = cleaned.get("name")
+        if program and year_level and name:
+            normalized = re.sub(r"\s+", " ", name.strip().upper())
+            full_name = re.fullmatch(
+                rf"{re.escape(program.code)}\s+{year_level.level}-([A-Z0-9][A-Z0-9_-]*)",
+                normalized,
+                flags=re.IGNORECASE,
+            )
+            cleaned["name"] = full_name.group(1).upper() if full_name else normalized
+            if Section.objects.filter(
+                program=program, year_level=year_level, name__iexact=cleaned["name"]
+            ).exclude(pk=self.instance.pk).exists():
+                self.add_error("name", "This section already exists.")
+        return cleaned
+
+
+MODEL_FORMS["sections"] = SectionForm
 
 
 class TeachingAssignmentForm(forms.ModelForm):

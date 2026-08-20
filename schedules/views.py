@@ -1,5 +1,7 @@
 import csv
+import json
 import logging
+import re
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -8,7 +10,7 @@ from django.core.cache import cache
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from django.db.models import Count, Q
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -25,6 +27,7 @@ from .models import (
     Faculty,
     FacultyCredential,
     GASettings,
+    FormDraft,
     GenerationIssue,
     GenerationRun,
     Program,
@@ -46,6 +49,7 @@ from .services.conflicts import conflict_messages, schedule_validation_messages
 from .services.credentials import faculty_qualification, missing_credential_message
 from .services.ga import GeneticScheduler
 from .services.generation_issues import record_generation_messages, record_unexpected_failure
+from .services.form_drafts import object_signature, safe_draft_payload
 from .services.room_utilization import capacity_planning, filtered_rows, latest_schedule, room_schedule_grid, utilization_rows, utilization_summary
 
 logger = logging.getLogger(__name__)
@@ -108,6 +112,23 @@ def resource_model(resource):
         return RESOURCE_MODELS[resource]
     except KeyError as exc:
         raise Http404("Unknown administrative resource.") from exc
+
+
+def section_search_q(prefix, search):
+    base = (
+        Q(**{f"{prefix}name__icontains": search})
+        | Q(**{f"{prefix}program__code__icontains": search})
+    )
+    full = re.fullmatch(r"\s*(\S+)\s+(\d+)-([A-Z0-9][A-Z0-9_-]*)\s*", search, flags=re.IGNORECASE)
+    if full:
+        base |= Q(**{
+            f"{prefix}program__code__iexact": full.group(1),
+            f"{prefix}year_level__level": int(full.group(2)),
+            f"{prefix}name__iexact": full.group(3),
+        })
+    elif search.isdigit():
+        base |= Q(**{f"{prefix}year_level__level": int(search)})
+    return base
 
 
 def visible_schedule(request, pk):
@@ -251,7 +272,9 @@ def my_availability_update(request, pk):
 @user_passes_test(admin_required)
 def resource_list(request, resource):
     model = resource_model(resource)
-    return render(request, "schedules/resource_list.html", {"resource": resource, "objects": model.objects.all()[:200], "description": RESOURCE_DESCRIPTIONS.get(resource, "Manage records for this section.")})
+    return render(request, "schedules/resource_list.html", {"resource": resource, "objects": model.objects.all()[:200],
+        "drafts": FormDraft.objects.filter(user=request.user, resource=resource),
+        "description": RESOURCE_DESCRIPTIONS.get(resource, "Manage records for this section.")})
 
 
 @login_required
@@ -376,14 +399,18 @@ def export_room_utilization_pdf(request):
 def resource_create(request, resource):
     resource_model(resource)
     form_class = MODEL_FORMS[resource]
-    form = form_class(request.POST or None)
+    draft = FormDraft.objects.filter(user=request.user, resource=resource, object_pk="").first()
+    form = form_class(request.POST or None, initial=draft.payload if draft and request.method == "GET" else None)
     if request.method == "POST" and form.is_valid():
         if resource == "assignments":
             return save_assignment_with_credential_check(request, form, resource)
         form.save()
+        FormDraft.objects.filter(user=request.user, resource=resource, object_pk="").delete()
         messages.success(request, "Record created.")
         return redirect("resource_list", resource=resource)
-    return render(request, "schedules/form.html", {"form": form, "title": f"New {resource.replace('-', ' ')}", "description": RESOURCE_DESCRIPTIONS.get(resource, "Create a new record."), "tooltip_context": resource})
+    return render(request, "schedules/form.html", {"form": form, "title": f"New {resource.replace('-', ' ')}",
+        "description": RESOURCE_DESCRIPTIONS.get(resource, "Create a new record."), "tooltip_context": resource,
+        "draft": draft, "draft_resource": resource, "draft_object_pk": ""})
 
 
 @login_required
@@ -391,14 +418,25 @@ def resource_create(request, resource):
 def resource_update(request, resource, pk):
     model = resource_model(resource)
     obj = get_object_or_404(model, pk=pk)
-    form = MODEL_FORMS[resource](request.POST or None, instance=obj)
+    draft = FormDraft.objects.filter(user=request.user, resource=resource, object_pk=str(pk)).first()
+    draft_conflict = bool(draft and draft.base_signature and draft.base_signature != object_signature(obj))
+    form = MODEL_FORMS[resource](request.POST or None, instance=obj,
+        initial=draft.payload if draft and request.method == "GET" else None)
     if request.method == "POST" and form.is_valid():
+        if draft_conflict and request.POST.get("draft_conflict_confirm") != "yes":
+            form.add_error(None, "This record changed after your draft was created. Review the latest record and confirm before updating.")
+            return render(request, "schedules/form.html", {"form": form, "title": f"Edit {obj}",
+                "description": RESOURCE_DESCRIPTIONS.get(resource, "Update this record."), "tooltip_context": resource,
+                "draft": draft, "draft_conflict": True, "draft_resource": resource, "draft_object_pk": str(pk)})
         if resource == "assignments":
             return save_assignment_with_credential_check(request, form, resource)
         form.save()
+        FormDraft.objects.filter(user=request.user, resource=resource, object_pk=str(pk)).delete()
         messages.success(request, "Record updated.")
         return redirect("resource_list", resource=resource)
-    return render(request, "schedules/form.html", {"form": form, "title": f"Edit {obj}", "description": RESOURCE_DESCRIPTIONS.get(resource, "Update this record."), "tooltip_context": resource})
+    return render(request, "schedules/form.html", {"form": form, "title": f"Edit {obj}",
+        "description": RESOURCE_DESCRIPTIONS.get(resource, "Update this record."), "tooltip_context": resource,
+        "draft": draft, "draft_conflict": draft_conflict, "draft_resource": resource, "draft_object_pk": str(pk)})
 
 
 def save_assignment_with_credential_check(request, form, resource):
@@ -407,6 +445,9 @@ def save_assignment_with_credential_check(request, form, resource):
     if result["qualified"]:
         assignment.save()
         form.save_m2m()
+        FormDraft.objects.filter(
+            user=request.user, resource=resource, object_pk__in=["", str(assignment.pk)]
+        ).delete()
         messages.success(request, "Teaching assignment saved.")
         return redirect("resource_list", resource=resource)
 
@@ -426,10 +467,61 @@ def save_assignment_with_credential_check(request, form, resource):
                 reason=reason,
                 missing_credentials=missing_credential_message(assignment.faculty, assignment.subject),
             )
+            FormDraft.objects.filter(
+                user=request.user, resource=resource, object_pk__in=["", str(assignment.pk)]
+            ).delete()
         messages.warning(request, "Teaching assignment saved with a credential override.")
         return redirect("resource_list", resource=resource)
 
     return render_credential_override_confirmation(request, form, result)
+
+
+@login_required
+@user_passes_test(admin_required)
+@require_POST
+def save_form_draft(request):
+    try:
+        body = json.loads(request.body or "{}")
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "The draft data was not valid JSON."}, status=400)
+
+    resource = str(body.get("resource", ""))
+    try:
+        model = resource_model(resource)
+        form_class = MODEL_FORMS[resource]
+    except (Http404, KeyError):
+        return JsonResponse({"error": "This form cannot be saved as a draft."}, status=400)
+
+    object_pk = str(body.get("object_pk") or "")
+    instance = get_object_or_404(model, pk=object_pk) if object_pk else None
+    payload = safe_draft_payload(form_class, body.get("payload") or {})
+    if not body.get("changed") or not payload:
+        return JsonResponse({"saved": False, "reason": "unchanged"})
+
+    draft, created = FormDraft.objects.get_or_create(
+        user=request.user,
+        resource=resource,
+        object_pk=object_pk,
+        defaults={"base_signature": object_signature(instance)},
+    )
+    draft.payload = payload
+    if created and instance and not draft.base_signature:
+        draft.base_signature = object_signature(instance)
+    draft.save()
+    return JsonResponse({"saved": True, "draft_id": draft.pk, "updated_at": draft.updated_at.isoformat()})
+
+
+@login_required
+@user_passes_test(admin_required)
+@require_POST
+def discard_form_draft(request, pk):
+    draft = get_object_or_404(FormDraft, pk=pk, user=request.user)
+    resource, object_pk = draft.resource, draft.object_pk
+    draft.delete()
+    messages.success(request, "Draft discarded. The saved record was not changed.")
+    if object_pk and resource in RESOURCE_MODELS and RESOURCE_MODELS[resource].objects.filter(pk=object_pk).exists():
+        return redirect("resource_update", resource=resource, pk=object_pk)
+    return redirect("resource_create", resource=resource)
 
 
 def render_credential_override_confirmation(request, form, result):
@@ -533,7 +625,7 @@ def generation_error_log(request):
         issues = issues.filter(
             Q(short_description__icontains=search) | Q(reason__icontains=search)
             | Q(assignment__subject__code__icontains=search) | Q(assignment__subject__title__icontains=search)
-            | Q(assignment__section__name__icontains=search) | Q(assignment__faculty__full_name__icontains=search)
+            | section_search_q("assignment__section__", search) | Q(assignment__faculty__full_name__icontains=search)
             | Q(room__name__icontains=search)
         )
     summary_source = issues
@@ -599,8 +691,7 @@ def schedule_detail(request, pk):
         search = values.get("q", "").strip()
         if search:
             entries = entries.filter(
-                Q(assignment__section__name__icontains=search)
-                | Q(assignment__section__program__code__icontains=search)
+                section_search_q("assignment__section__", search)
                 | Q(assignment__subject__code__icontains=search)
                 | Q(assignment__subject__title__icontains=search)
                 | Q(assignment__faculty__full_name__icontains=search)

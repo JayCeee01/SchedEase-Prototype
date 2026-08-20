@@ -1,3 +1,4 @@
+import json
 from datetime import date, time
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -5,7 +6,7 @@ from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
-from .models import AcademicTerm, Availability, AvailabilityKind, Credential, CredentialOverride, Department, Faculty, FacultyCredential, GASettings, GenerationIssue, GenerationRun, Profile, Program, Role, Room, RoomKind, Schedule, ScheduleEntry, ScheduleStatus, Section, Student, Subject, SubjectCredentialRequirement, TeachingAssignment, YearLevel
+from .models import AcademicTerm, Availability, AvailabilityKind, Credential, CredentialOverride, Department, Faculty, FacultyCredential, FormDraft, GASettings, GenerationIssue, GenerationRun, Profile, Program, Role, Room, RoomKind, Schedule, ScheduleEntry, ScheduleStatus, Section, Student, Subject, SubjectCredentialRequirement, TeachingAssignment, YearLevel
 from .services.credentials import faculty_qualification
 from .services.ga import GeneticScheduler, Gene
 from .services.generation_issues import record_generation_messages
@@ -504,3 +505,121 @@ class SchedulingTestCase(TestCase):
         response = self.client.get("/dashboard/")
         self.assertNotContains(response, 'data-nav-group="academic"')
         self.assertContains(response, "Browse Schedules")
+
+    def test_form_draft_is_created_updated_and_does_not_create_official_record(self):
+        self.client.login(username="admin", password="admin12345")
+        url = "/schedules/drafts/save/"
+        response = self.client.post(url, json.dumps({
+            "resource": "departments", "object_pk": "", "changed": True,
+            "payload": {"code": "ENG", "name": "Engineering", "not_allowed": "ignored"},
+        }), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        draft = FormDraft.objects.get(user=self.admin_user, resource="departments", object_pk="")
+        self.assertEqual(draft.payload, {"code": "ENG", "name": "Engineering"})
+        self.assertFalse(Department.objects.filter(code="ENG").exists())
+        self.client.post(url, json.dumps({
+            "resource": "departments", "object_pk": "", "changed": True,
+            "payload": {"code": "ENG", "name": "College of Engineering"},
+        }), content_type="application/json")
+        self.assertEqual(FormDraft.objects.filter(user=self.admin_user, resource="departments").count(), 1)
+        draft.refresh_from_db()
+        self.assertEqual(draft.payload["name"], "College of Engineering")
+
+    def test_unchanged_form_does_not_create_a_draft(self):
+        self.client.login(username="admin", password="admin12345")
+        response = self.client.post("/schedules/drafts/save/", json.dumps({
+            "resource": "departments", "object_pk": "", "changed": False,
+            "payload": {"code": "", "name": ""},
+        }), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(FormDraft.objects.exists())
+
+    def test_draft_restores_and_final_create_removes_it(self):
+        self.client.login(username="admin", password="admin12345")
+        FormDraft.objects.create(user=self.admin_user, resource="departments", payload={"code": "SCI", "name": "Science"})
+        response = self.client.get("/schedules/manage/departments/new/")
+        self.assertContains(response, "Draft restored")
+        self.assertContains(response, 'value="SCI"')
+        response = self.client.post("/schedules/manage/departments/new/", {"code": "SCI", "name": "Science"})
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Department.objects.filter(code="SCI").exists())
+        self.assertFalse(FormDraft.objects.filter(user=self.admin_user, resource="departments").exists())
+
+    def test_user_can_only_discard_their_own_draft(self):
+        other = User.objects.create_user(username="otheradmin", password="password123", is_staff=True)
+        Profile.objects.create(user=other, role=Role.ADMIN)
+        draft = FormDraft.objects.create(user=self.admin_user, resource="departments", payload={"code": "X"})
+        self.client.login(username="otheradmin", password="password123")
+        self.assertEqual(self.client.post(f"/schedules/drafts/{draft.pk}/discard/").status_code, 404)
+        self.assertTrue(FormDraft.objects.filter(pk=draft.pk).exists())
+        self.client.login(username="admin", password="admin12345")
+        self.assertEqual(self.client.post(f"/schedules/drafts/{draft.pk}/discard/").status_code, 302)
+        self.assertFalse(FormDraft.objects.filter(pk=draft.pk).exists())
+
+    def test_edit_draft_detects_newer_official_record(self):
+        self.client.login(username="admin", password="admin12345")
+        self.client.post("/schedules/drafts/save/", json.dumps({
+            "resource": "departments", "object_pk": str(self.department.pk), "changed": True,
+            "payload": {"code": "CCS", "name": "Draft name"},
+        }), content_type="application/json")
+        self.department.name = "Changed by another request"
+        self.department.save()
+        url = f"/schedules/manage/departments/{self.department.pk}/edit/"
+        self.assertContains(self.client.get(url), "changed after this draft began")
+        self.assertEqual(self.client.post(url, {"code": "CCS", "name": "Draft name"}).status_code, 200)
+        self.department.refresh_from_db()
+        self.assertEqual(self.department.name, "Changed by another request")
+        response = self.client.post(url, {
+            "code": "CCS", "name": "Draft name", "draft_conflict_confirm": "yes",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.department.refresh_from_db()
+        self.assertEqual(self.department.name, "Draft name")
+        self.assertFalse(FormDraft.objects.filter(user=self.admin_user, object_pk=str(self.department.pk)).exists())
+
+    def test_non_admin_cannot_save_drafts_and_invalid_json_is_safe(self):
+        student_user = User.objects.create_user(username="draftstudent", password="password123")
+        Profile.objects.create(user=student_user, role=Role.STUDENT)
+        self.client.login(username="draftstudent", password="password123")
+        self.assertEqual(self.client.post("/schedules/drafts/save/", "{}", content_type="application/json").status_code, 302)
+        self.client.login(username="admin", password="admin12345")
+        self.assertEqual(self.client.post("/schedules/drafts/save/", "not-json", content_type="application/json").status_code, 400)
+
+    def test_section_uses_standard_display_name_and_normalizes_full_input(self):
+        self.assertEqual(str(self.section), "BSIT 1-A")
+        parsed = Section(program=self.program, year_level=self.year, name="bsit 1-201", size=30)
+        parsed.save()
+        self.assertEqual(parsed.name, "201")
+        self.assertEqual(parsed.section_code, "201")
+        self.assertEqual(parsed.display_name, "BSIT 1-201")
+
+    def test_section_rejects_malformed_codes_and_duplicate_combination(self):
+        with self.assertRaises(ValidationError):
+            Section(program=self.program, year_level=self.year, name="1 201", size=30).save()
+        self.client.login(username="admin", password="admin12345")
+        response = self.client.post("/schedules/manage/sections/new/", {
+            "program": self.program.pk, "year_level": self.year.pk, "name": "a", "size": 30,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "This section already exists.")
+
+    def test_section_form_has_live_preview_and_restores_individual_draft_values(self):
+        self.client.login(username="admin", password="admin12345")
+        FormDraft.objects.create(user=self.admin_user, resource="sections", payload={
+            "program": str(self.program.pk), "year_level": str(self.year.pk), "name": "201", "size": "30",
+        })
+        response = self.client.get("/schedules/manage/sections/new/")
+        self.assertContains(response, "Section Name Preview")
+        self.assertContains(response, "Section Code")
+        self.assertContains(response, 'data-section-preview')
+        self.assertContains(response, 'value="201"')
+
+    def test_complete_section_name_search_finds_schedule_entry(self):
+        schedule = Schedule.objects.create(term=self.term, name="Searchable", status=ScheduleStatus.DRAFT)
+        schedule.entries.create(
+            assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11)
+        )
+        self.client.login(username="admin", password="admin12345")
+        response = self.client.get(f"/schedules/{schedule.pk}/", {"q": "BSIT 1-A"})
+        self.assertContains(response, "IT101")
+        self.assertContains(response, "BSIT 1-A")

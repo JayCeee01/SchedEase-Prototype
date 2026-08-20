@@ -1,3 +1,4 @@
+import re
 import uuid
 
 from django.conf import settings
@@ -101,8 +102,35 @@ class Section(models.Model):
         ordering = ["program__code", "year_level__level", "name"]
         constraints = [models.UniqueConstraint(fields=["program", "year_level", "name"], name="unique_section")]
 
+    @property
+    def section_code(self):
+        return self.name
+
+    @property
+    def display_name(self):
+        return f"{self.program.code.upper()} {self.year_level.level}-{self.name.upper()}"
+
+    def clean(self):
+        super().clean()
+        value = re.sub(r"\s+", " ", (self.name or "").strip().upper())
+        if self.program_id and self.year_level_id:
+            full_name = re.fullmatch(
+                rf"{re.escape(self.program.code)}\s+{self.year_level.level}-([A-Z0-9][A-Z0-9_-]*)",
+                value,
+                flags=re.IGNORECASE,
+            )
+            if full_name:
+                value = full_name.group(1).upper()
+        if not re.fullmatch(r"[A-Z0-9][A-Z0-9_-]*", value):
+            raise ValidationError({"name": "Enter only the section code, such as 201, 202, or A."})
+        self.name = value
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.program.code}-{self.year_level.level}{self.name}"
+        return self.display_name
 
 
 class Faculty(models.Model):
@@ -437,3 +465,27 @@ class GenerationIssue(models.Model):
 
     def __str__(self):
         return f"Issue {self.pk}: {self.get_category_display()}"
+
+
+class FormDraft(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="form_drafts")
+    resource = models.CharField(max_length=80)
+    object_pk = models.CharField(max_length=80, blank=True)
+    payload = models.JSONField(default=dict)
+    base_signature = models.CharField(max_length=64, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "resource", "object_pk"], name="unique_user_form_draft")
+        ]
+
+    @property
+    def is_edit(self):
+        return bool(self.object_pk)
+
+    def __str__(self):
+        target = f" record {self.object_pk}" if self.object_pk else " new record"
+        return f"{self.user}: {self.resource}{target}"
