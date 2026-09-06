@@ -17,14 +17,14 @@
 </div>
 
 <form method="get" class="panel error-log-filters" data-tooltip-context="error-log-filters" data-auto-tooltips="false">
-  <label><span class="field-label">Search</span><input type="search" name="q" value="{{ request.GET.q }}" placeholder="Subject, section, faculty, room, or problem"></label>
+  <label><span class="field-label">Search</span><input type="search" name="q" value="{{ request.GET.q }}" placeholder="Course, section, faculty, room, or problem"></label>
   <label><span class="field-label">Generation Run <span class="info-icon" tabindex="0" data-tooltip="The unique schedule-generation attempt that recorded the issue.">i</span></span><select name="run"><option value="">All runs</option>{% for run in runs %}<option value="{{ run.pk }}"{% if request.GET.run == run.pk|stringformat:'s' %} selected{% endif %}>{{ run.started_at|date:"M j, Y H:i" }} &middot; {{ run.pk|stringformat:"s"|slice:":8" }}</option>{% endfor %}</select></label>
   <label><span class="field-label">Academic Term</span><select name="term"><option value="">All terms</option>{% for term in terms %}<option value="{{ term.pk }}">{{ term }}</option>{% endfor %}</select></label>
   <label><span class="field-label">Date</span><input type="date" name="date" value="{{ request.GET.date }}"></label>
   <label><span class="field-label">Error Type</span><select name="category"><option value="">All types</option>{% for value,label in categories %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
   <label><span class="field-label">Severity <span class="info-icon" tabindex="0" data-tooltip="Shows how strongly an issue affected schedule generation.">i</span></span><select name="severity"><option value="">All severities</option>{% for value,label in severities %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
   <label><span class="field-label">Status <span class="info-icon" tabindex="0" data-tooltip="Tracks whether an administrator has reviewed or resolved the issue.">i</span></span><select name="status"><option value="">All statuses</option>{% for value,label in statuses %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
-  <label><span class="field-label">Subject</span><select name="subject"><option value="">All subjects</option>{% for item in subjects %}<option value="{{ item.pk }}">{{ item.code }}</option>{% endfor %}</select></label>
+  <label><span class="field-label">Course</span><select name="subject"><option value="">All courses</option>{% for item in subjects %}<option value="{{ item.pk }}">{{ item.code }}</option>{% endfor %}</select></label>
   <label><span class="field-label">Section</span><select name="section"><option value="">All sections</option>{% for item in sections %}<option value="{{ item.pk }}">{{ item }}</option>{% endfor %}</select></label>
   <label><span class="field-label">Faculty</span><select name="faculty"><option value="">All faculty</option>{% for item in faculty_list %}<option value="{{ item.pk }}">{{ item }}</option>{% endfor %}</select></label>
   <label><span class="field-label">Room</span><select name="room"><option value="">All rooms</option>{% for item in rooms %}<option value="{{ item.pk }}">{{ item.name }}</option>{% endfor %}</select></label>
@@ -40,7 +40,7 @@
       <td>#{{ issue.pk }}</td>
       <td><a href="?run={{ issue.run_id }}">{{ issue.run_id|stringformat:"s"|slice:":8" }}</a></td>
       <td>{{ issue.get_category_display }}</td>
-      <td>{% if issue.assignment %}<strong>{{ issue.assignment.subject.code }}</strong><small>{{ issue.assignment.section }} &middot; {{ issue.assignment.faculty }}</small>{% else %}<span class="subtle">Not applicable</span>{% endif %}</td>
+      <td>{% if issue.assignment %}<strong tabindex="0" data-tooltip="{{ issue.assignment.subject.title }}">{{ issue.assignment.subject.code }}</strong><small>{{ issue.assignment.section }} &middot; {{ issue.assignment.faculty }}</small>{% else %}<span class="subtle">Not applicable</span>{% endif %}</td>
       <td><span class="badge severity-{{ issue.severity|lower }}">{{ issue.get_severity_display }}</span></td>
       <td>{{ issue.short_description }}</td>
       <td><span class="badge status-{{ issue.status|lower }}">{{ issue.get_status_display }}</span></td>

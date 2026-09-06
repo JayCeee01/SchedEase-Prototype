@@ -21,14 +21,17 @@ def validate_entry(entry):
             errors.append(
                 f"Class duration must be {entry.assignment.required_duration_minutes} minutes; the selected time is {actual_minutes} minutes."
             )
-    if entry.room.capacity < entry.assignment.section.size:
+    if entry.room.capacity < entry.effective_section.size:
         errors.append("Room capacity is too small for the section.")
     if entry.room.room_type != entry.assignment.effective_room_type:
-        errors.append("Room type does not match the subject requirement.")
-    if not faculty_qualification(entry.assignment.faculty, entry.assignment.subject)["qualified"] and not entry.assignment.credential_overrides.exists():
-        errors.append(missing_credential_message(entry.assignment.faculty, entry.assignment.subject))
+        errors.append("Room type does not match the course requirement.")
+    valid_override = entry.assignment.credential_overrides.filter(
+        faculty=entry.effective_faculty, subject=entry.effective_subject
+    ).exists()
+    if not faculty_qualification(entry.effective_faculty, entry.effective_subject)["qualified"] and not valid_override:
+        errors.append(missing_credential_message(entry.effective_faculty, entry.effective_subject))
 
-    faculty_blocks = entry.assignment.faculty.availability_set.filter(day=entry.day, kind=AvailabilityKind.UNAVAILABLE)
+    faculty_blocks = entry.effective_faculty.availability_set.filter(day=entry.day, kind=AvailabilityKind.UNAVAILABLE)
     if any(overlaps(entry.start_time, entry.end_time, a.start_time, a.end_time) for a in faculty_blocks):
         errors.append("Faculty is unavailable during this time.")
 
@@ -44,20 +47,23 @@ def validate_entry(entry):
     for other in qs.select_related("assignment__faculty", "assignment__section", "room"):
         if not overlaps(entry.start_time, entry.end_time, other.start_time, other.end_time):
             continue
-        if other.assignment.faculty_id == entry.assignment.faculty_id:
-            errors.append(f"Faculty conflict with {other.assignment.subject.code} ({other.start_time}-{other.end_time}).")
+        if other.effective_faculty.pk == entry.effective_faculty.pk:
+            errors.append(f"Faculty conflict with {other.effective_subject.code} ({other.start_time}-{other.end_time}).")
         if other.room_id == entry.room_id:
-            errors.append(f"Room conflict in {entry.room.name} with {other.assignment.subject.code} ({other.start_time}-{other.end_time}).")
-        if other.assignment.section_id == entry.assignment.section_id:
-            errors.append(f"Section conflict with {other.assignment.subject.code} ({other.start_time}-{other.end_time}).")
+            errors.append(f"Room conflict in {entry.room.name} with {other.effective_subject.code} ({other.start_time}-{other.end_time}).")
+        if other.effective_section.pk == entry.effective_section.pk:
+            errors.append(f"Section conflict with {other.effective_subject.code} ({other.start_time}-{other.end_time}).")
 
     weekly_minutes = 0
-    faculty_entries = entry.schedule.entries.filter(assignment__faculty=entry.assignment.faculty).select_related("assignment")
+    faculty_entries = entry.schedule.entries.select_related("assignment__faculty", "faculty_override")
     for faculty_entry in faculty_entries:
-        weekly_minutes += faculty_entry.assignment.required_duration_minutes
+        if faculty_entry.pk != entry.pk and faculty_entry.effective_faculty.pk == entry.effective_faculty.pk:
+            weekly_minutes += faculty_entry.assignment.required_duration_minutes
     if entry.pk is None:
         weekly_minutes += entry.assignment.required_duration_minutes
-    if weekly_minutes > entry.assignment.faculty.max_weekly_hours * 60:
+    else:
+        weekly_minutes += entry.assignment.required_duration_minutes
+    if weekly_minutes > entry.effective_faculty.max_weekly_hours * 60:
         errors.append("Faculty exceeds maximum weekly teaching hours.")
 
     if errors:
@@ -70,12 +76,12 @@ def conflict_messages(entries):
         for other in entries[idx + 1 :]:
             if entry.day != other.day or not overlaps(entry.start_time, entry.end_time, other.start_time, other.end_time):
                 continue
-            if entry.assignment.faculty_id == other.assignment.faculty_id:
-                messages.append(f"Faculty conflict: {entry.assignment.faculty} teaches {entry.assignment.subject.code} and {other.assignment.subject.code} on {entry.get_day_display()} at {entry.start_time}-{entry.end_time} / {other.start_time}-{other.end_time}.")
+            if entry.effective_faculty.pk == other.effective_faculty.pk:
+                messages.append(f"Faculty conflict: {entry.effective_faculty} teaches {entry.effective_subject.code} and {other.effective_subject.code} on {entry.get_day_display()} at {entry.start_time}-{entry.end_time} / {other.start_time}-{other.end_time}.")
             if entry.room_id == other.room_id:
-                messages.append(f"Room conflict: {entry.room.name} is assigned to {entry.assignment.subject.code} and {other.assignment.subject.code} on {entry.get_day_display()} at {entry.start_time}-{entry.end_time} / {other.start_time}-{other.end_time}.")
-            if entry.assignment.section_id == other.assignment.section_id:
-                messages.append(f"Section conflict: {entry.assignment.section} has {entry.assignment.subject.code} and {other.assignment.subject.code} on {entry.get_day_display()} at {entry.start_time}-{entry.end_time} / {other.start_time}-{other.end_time}.")
+                messages.append(f"Room conflict: {entry.room.name} is assigned to {entry.effective_subject.code} and {other.effective_subject.code} on {entry.get_day_display()} at {entry.start_time}-{entry.end_time} / {other.start_time}-{other.end_time}.")
+            if entry.effective_section.pk == other.effective_section.pk:
+                messages.append(f"Section conflict: {entry.effective_section} has {entry.effective_subject.code} and {other.effective_subject.code} on {entry.get_day_display()} at {entry.start_time}-{entry.end_time} / {other.start_time}-{other.end_time}.")
     return messages
 
 
@@ -93,5 +99,5 @@ def schedule_validation_messages(schedule):
         try:
             entry.full_clean()
         except ValidationError as exc:
-            messages.extend(f"{entry.assignment.subject.code} / {entry.assignment.section}: {message}" for message in exc.messages)
+            messages.extend(f"{entry.effective_subject.code} / {entry.effective_section}: {message}" for message in exc.messages)
     return list(dict.fromkeys(messages))

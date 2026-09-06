@@ -8,5 +8,7 @@
   </div>
   <a class="button primary" href="{% url 'browse_schedules' %}">Search Published Schedules</a>
 </div>
-{% include "schedules/entry_table.html" with entries=entries %}
+<h2>Weekly Class Timetable</h2>
+{% include "schedules/personal_timetable.html" %}
+{% if entries %}<details class="panel schedule-list-disclosure"><summary>View schedule as a list</summary>{% include "schedules/entry_table.html" with entries=entries %}</details>{% endif %}
 {% endblock %}

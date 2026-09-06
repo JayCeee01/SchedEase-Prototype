@@ -195,6 +195,24 @@ def room_schedule_grid(room, schedule, slot_minutes=30):
     return rows
 
 
+def personal_schedule_grid(entries, slot_minutes=30):
+    """Build the same 7 AM–7 PM grid used by room schedules for a user queryset."""
+    entries = list(entries)
+    rows = []
+    current = datetime.combine(timezone.localdate(), SCHOOL_START)
+    finish = datetime.combine(timezone.localdate(), SCHOOL_END)
+    while current < finish:
+        next_time = current + timedelta(minutes=slot_minutes)
+        cells = []
+        for day in ALLOWED_DAYS:
+            matched = [entry for entry in entries if entry.day == day and
+                       overlaps(current.time(), next_time.time(), entry.start_time, entry.end_time)]
+            cells.append({"entries": matched})
+        rows.append({"start": current.time(), "end": next_time.time(), "cells": cells})
+        current = next_time
+    return rows
+
+
 def capacity_planning(term=None, assumptions=None):
     assumptions = assumptions or {}
     assignments = TeachingAssignment.objects.all()

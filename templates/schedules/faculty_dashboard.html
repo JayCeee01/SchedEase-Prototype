@@ -8,6 +8,7 @@
   </div>
   <a class="button primary" href="{% url 'my_availability' %}">Update Availability</a>
 </div>
-<h2>Assigned Teaching Schedule</h2>
-{% include "schedules/entry_table.html" with entries=entries %}
+<h2>Weekly Teaching Timetable</h2>
+{% include "schedules/personal_timetable.html" %}
+{% if entries %}<details class="panel schedule-list-disclosure"><summary>View schedule as a list</summary>{% include "schedules/entry_table.html" with entries=entries %}</details>{% endif %}
 {% endblock %}

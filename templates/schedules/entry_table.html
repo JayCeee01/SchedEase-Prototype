@@ -11,7 +11,7 @@
       <tr>
         <th data-sort>Day</th>
         <th data-sort>Time</th>
-        <th data-sort>Subject</th>
+        <th data-sort>Course</th>
         <th data-sort>Section</th>
         <th data-sort>Faculty</th>
         <th data-sort>Room</th>
@@ -23,9 +23,9 @@
       <tr>
         <td><span class="badge">{{ e.get_day_display }}</span></td>
         <td>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</td>
-        <td><span class="subject-chip">{{ e.assignment.subject.code }}</span></td>
-        <td>{{ e.assignment.section }}</td>
-        <td>{{ e.assignment.faculty }}</td>
+        <td><span class="subject-chip" tabindex="0" data-tooltip="{{ e.effective_subject.title }}">{{ e.effective_subject.code }}</span></td>
+        <td>{{ e.effective_section }}</td>
+        <td>{{ e.effective_faculty }}</td>
         <td>{{ e.room.name }}</td>
         <td class="actions-cell">{% if schedule and can_manage %}<a class="button" href="{% url 'entry_update' schedule.pk e.pk %}">Edit</a>{% endif %}</td>
       </tr>

@@ -1,10 +1,11 @@
 <h2 class="view-heading">Timetable View</h2>
+{% if not entries %}<div class="panel empty-state"><h2>No schedule entries found</h2><p>Try changing your schedule filters.</p></div>{% endif %}
 <section class="schedule-board">
   {% for day_number in "012345" %}
   <div class="day-column">
     <header>{% if day_number == "0" %}Monday{% elif day_number == "1" %}Tuesday{% elif day_number == "2" %}Wednesday{% elif day_number == "3" %}Thursday{% elif day_number == "4" %}Friday{% else %}Saturday{% endif %}</header>
     {% for e in entries %}{% if e.day|stringformat:"s" == day_number %}
-    <article class="schedule-block"><strong>{{ e.assignment.subject.code }} <small>{{ e.assignment.get_component_display }}</small></strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
+    <article class="schedule-block{% if e.manual_conflicts %} conflict-row{% endif %}"><strong><span tabindex="0" data-tooltip="{{ e.effective_subject.title }}">{{ e.effective_subject.code }}</span> <small>{{ e.effective_component_display }}</small></strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.effective_section }} | {{ e.room.name }} | {{ e.effective_faculty }}</span></article>
     {% endif %}{% endfor %}
   </div>
   {% endfor %}

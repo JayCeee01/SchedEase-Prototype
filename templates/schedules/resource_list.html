@@ -3,11 +3,12 @@
 <div class="page-hero">
   <div>
     <p class="eyebrow">Master Data</p>
-    <h1>{{ resource|title }}</h1>
+    <h1>{{ resource_label }}</h1>
     <p class="subtle">{{ description|default:"Search, sort, and maintain records used by the schedule generator." }}</p>
   </div>
-  <a class="button primary" href="{% url 'resource_create' resource %}">New</a>
+  {% if resource != 'schedules' %}<a class="button primary" href="{% url 'resource_create' resource %}">New</a>{% endif %}
 </div>
+{% if resource == 'schedules' %}<div class="view-switcher" role="navigation" aria-label="Schedule status"><a class="view-tab{% if schedule_tab == 'active' %} is-active{% endif %}" href="?tab=active">Active</a><a class="view-tab{% if schedule_tab == 'drafts' %} is-active{% endif %}" href="?tab=drafts">Drafts</a><a class="view-tab{% if schedule_tab == 'archived' %} is-active{% endif %}" href="?tab=archived">Archived</a></div>{% endif %}
 {% if drafts %}
 <section class="panel draft-list" aria-labelledby="draft-list-title">
   <div><h2 id="draft-list-title">Unfinished drafts</h2><p class="subtle">Resume your saved work or discard it without changing official records.</p></div>
@@ -29,21 +30,28 @@
       <input type="search" data-table-filter placeholder="Search {{ resource }}">
     </label>
     <span class="badge">{{ objects|length }} records</span>
+    <form method="get" class="inline-sort" data-auto-tooltips="false">{% if resource == 'schedules' %}<input type="hidden" name="tab" value="{{ schedule_tab }}">{% endif %}<label>Sort <select name="sort" onchange="this.form.submit()"><option value="modified_desc"{% if sort == 'modified_desc' %} selected{% endif %}>Recently Modified</option><option value="modified_asc"{% if sort == 'modified_asc' %} selected{% endif %}>Least Recently Modified</option><option value="added_desc"{% if sort == 'added_desc' %} selected{% endif %}>Recently Added</option><option value="added_asc"{% if sort == 'added_asc' %} selected{% endif %}>Oldest Added</option></select></label></form>
   </div>
   <table>
-    <thead><tr><th data-sort>Record</th><th>Actions</th></tr></thead>
+    <thead><tr>{% if resource == 'subjects' %}<th data-sort>Course Code</th><th data-sort>Course Description</th>{% elif resource == 'assignments' %}<th data-sort>Course</th><th data-sort>Section</th><th data-sort>Faculty</th><th data-sort>Term</th><th>Meetings</th>{% else %}<th data-sort>Record</th>{% endif %}{% if has_created_at %}<th>Date Added</th>{% endif %}{% if has_updated_at %}<th>Last Modified</th>{% endif %}<th>Actions</th></tr></thead>
     <tbody>
       {% for obj in objects %}
       <tr>
-        <td>{{ obj }}</td>
+        {% if resource == 'subjects' %}<td><strong>{{ obj.code }}</strong></td><td>{{ obj.title }}</td>{% elif resource == 'assignments' %}
+        <td class="assignment-course"><span class="subject-chip" tabindex="0" data-tooltip="{{ obj.subject.title }}">{{ obj.subject.code }}</span><small>{{ obj.subject.title }}</small></td>
+        <td><strong>{{ obj.section }}</strong></td>
+        <td>{{ obj.faculty }}</td>
+        <td><span class="assignment-term">{{ obj.term.name }}</span><small>{{ obj.term.school_year }}</small></td>
+        <td><div class="meeting-badges">{% for meeting in obj.meetings.all %}<span class="badge"><strong>{{ meeting.get_component_display }}</strong> · {{ meeting.required_duration_minutes }} min <small>#{{ meeting.meeting_index }}</small></span>{% empty %}<span class="badge danger">No meetings</span>{% endfor %}</div></td>
+        {% else %}<td>{{ obj }}</td>{% endif %}
+        {% if has_created_at %}<td>{% if resource == 'schedules' %}{{ obj.generated_at|date:"M j, Y g:i A" }}{% else %}{{ obj.created_at|date:"M j, Y g:i A" }}{% endif %}</td>{% endif %}{% if has_updated_at %}<td>{{ obj.updated_at|date:"M j, Y g:i A" }}</td>{% endif %}
         <td class="actions-cell">
-          {% if resource == "schedules" %}<a class="button" href="{% url 'schedule_detail' obj.pk %}">Open</a>{% endif %}
-          <a class="button" href="{% url 'resource_update' resource obj.pk %}">Edit</a>
+          {% if resource == "schedules" %}<a class="button primary" href="{% url 'schedule_detail' obj.pk %}">{% if obj.status == 'ARCHIVED' %}View Timetable{% else %}Edit Schedule{% endif %}</a><a class="button" href="{% url 'resource_update' resource obj.pk %}">Edit Details</a>{% else %}<a class="button" href="{% url 'resource_update' resource obj.pk %}">Edit</a>{% endif %}
           <a class="button" href="{% url 'resource_delete' resource obj.pk %}">Delete</a>
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="2" class="table-empty">No records yet.</td></tr>
+      <tr><td colspan="10" class="table-empty">No records in this view.</td></tr>
       {% endfor %}
     </tbody>
   </table>

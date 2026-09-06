@@ -1,4 +1,4 @@
-{% regroup entries by assignment.section as section_groups %}
+{% regroup entries by effective_section as section_groups %}
 {% if section_groups %}
 <div class="panel academic-schedule-panel">
   <div class="table-tools">
@@ -14,16 +14,16 @@
     <div class="table-wrap academic-table-wrap">
       <table class="academic-schedule-table">
         <thead><tr><th data-sort>Course Code</th><th data-sort>Course Description</th><th data-sort>Type</th><th data-sort>Units</th><th data-sort>Day</th><th data-sort>Time Start</th><th data-sort>Time End</th><th data-sort>Room</th><th data-sort>Instructor</th><th>Status</th>{% if can_manage %}<th>Actions</th>{% endif %}</tr></thead>
-        <tbody>{% for e in group.list %}<tr>
-          <td class="sticky-code"><span class="subject-chip">{{ e.assignment.subject.code }}</span></td>
-          <td class="course-description">{{ e.assignment.subject.title }}</td>
-          <td><span class="badge component-{{ e.assignment.component|lower }}">{{ e.assignment.get_component_display }}</span></td>
-          <td>{{ e.assignment.subject.units|floatformat:1 }}</td>
+        <tbody>{% for e in group.list %}<tr{% if e.manual_conflicts %} class="conflict-row"{% endif %}>
+          <td class="sticky-code"><span class="subject-chip" tabindex="0" data-tooltip="{{ e.effective_subject.title }}">{{ e.effective_subject.code }}</span></td>
+          <td class="course-description">{{ e.effective_subject.title }}</td>
+          <td><span class="badge component-{{ e.effective_component|lower }}">{{ e.effective_component_display }}</span></td>
+          <td>{{ e.effective_subject.units|floatformat:1 }}</td>
           <td><span class="badge">{{ e.get_day_display }}</span></td>
           <td>{{ e.start_time|time:"g:i A" }}</td><td>{{ e.end_time|time:"g:i A" }}</td>
-          <td>{{ e.room.name }}</td><td>{{ e.assignment.faculty }}</td>
-          <td><span class="badge {% if schedule.status == 'PUBLISHED' %}success{% elif schedule.status == 'DRAFT' %}warning{% endif %}">{{ schedule.get_status_display }}</span></td>
-          {% if can_manage %}<td class="actions-cell"><a class="button button-small" href="{% url 'entry_update' schedule.pk e.pk %}">Edit</a></td>{% endif %}
+          <td>{{ e.room.name }}</td><td>{{ e.effective_faculty }}</td>
+          <td>{% if e.manual_conflicts %}<span class="badge danger" data-tooltip="{{ e.manual_conflicts|join:' ' }}">Conflict</span>{% else %}<span class="badge success">Valid</span>{% endif %}</td>
+          {% if can_manage %}<td class="actions-cell">{% if schedule.status != 'PUBLISHED' and schedule.status != 'ARCHIVED' %}<a class="button button-small" href="{% url 'entry_update' schedule.pk e.pk %}">Edit Meeting</a>{% else %}<span class="subtle">Locked</span>{% endif %}</td>{% endif %}
         </tr>{% endfor %}</tbody>
       </table>
     </div>

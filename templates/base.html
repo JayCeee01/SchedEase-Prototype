@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260906-assignments">
 </head>
 <body>
   <div class="app-shell">
@@ -40,6 +40,18 @@
         <a href="{% url 'browse_schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'browse_schedules' %} class="is-active" aria-current="page"{% endif %}>Browse Schedules</a>
         {% endif %}
         {% if user.is_superuser or user.profile.role == "ADMIN" %}
+        <details class="nav-disclosure" data-nav-group="scheduling"{% if request.resolver_match.url_name == 'generate_schedule' or request.resolver_match.url_name == 'generation_error_log' or request.resolver_match.url_name == 'generation_error_detail' or request.resolver_match.url_name == 'browse_schedules' or request.resolver_match.url_name == 'schedule_detail' or request.resolver_match.kwargs.resource == 'schedules' or request.resolver_match.kwargs.resource == 'assignments' or request.resolver_match.kwargs.resource == 'ga-settings' %} open{% endif %}>
+          <summary data-tooltip="Scheduling"><span class="nav-category-icon" data-group-icon="scheduling"></span><span class="nav-category-label">Scheduling</span><span class="nav-chevron" aria-hidden="true"></span></summary>
+          <div class="nav-children">
+            <a href="{% url 'generate_schedule' %}" data-icon="spark">Generate Schedule</a>
+            <a href="{% url 'resource_list' 'schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'schedule_detail' or request.resolver_match.url_name == 'entry_create' or request.resolver_match.url_name == 'entry_update' %} class="is-active" aria-current="page"{% endif %}>Manage Schedules</a>
+            <a href="{% url 'resource_list' 'assignments' %}" data-icon="check">Assignments</a>
+            <a href="{% url 'generation_error_log' %}" data-icon="flag">Error Log</a>
+            <a href="{% url 'browse_schedules' %}" data-icon="calendar">Browse Published</a>
+            <a href="{% url 'resource_list' 'ga-settings' %}" data-icon="sliders">GA Settings</a>
+          </div>
+        </details>
+
         <details class="nav-disclosure" data-nav-group="academic"{% if request.resolver_match.kwargs.resource == 'departments' or request.resolver_match.kwargs.resource == 'programs' or request.resolver_match.kwargs.resource == 'year-levels' or request.resolver_match.kwargs.resource == 'sections' or request.resolver_match.kwargs.resource == 'subjects' or request.resolver_match.kwargs.resource == 'students' %} open{% endif %}>
           <summary data-tooltip="Academic Management"><span class="nav-category-icon" data-group-icon="academic"></span><span class="nav-category-label">Academic Management</span><span class="nav-chevron" aria-hidden="true"></span></summary>
           <div class="nav-children">
@@ -47,7 +59,7 @@
             <a href="{% url 'resource_list' 'programs' %}" data-icon="book">Programs</a>
             <a href="{% url 'resource_list' 'year-levels' %}" data-icon="layers">Year Levels</a>
             <a href="{% url 'resource_list' 'sections' %}" data-icon="layers">Sections</a>
-            <a href="{% url 'resource_list' 'subjects' %}" data-icon="file">Subjects</a>
+            <a href="{% url 'resource_list' 'subjects' %}" data-icon="file">Courses</a>
             <a href="{% url 'resource_list' 'students' %}" data-icon="users">Students</a>
           </div>
         </details>
@@ -58,7 +70,7 @@
             <a href="{% url 'resource_list' 'faculty' %}" data-icon="user">Faculty</a>
             <a href="{% url 'resource_list' 'credentials' %}" data-icon="check">Credentials</a>
             <a href="{% url 'resource_list' 'faculty-credentials' %}" data-icon="user">Faculty Credentials</a>
-            <a href="{% url 'resource_list' 'subject-credential-requirements' %}" data-icon="file">Subject Requirements</a>
+            <a href="{% url 'resource_list' 'subject-credential-requirements' %}" data-icon="file">Course Requirements</a>
             <a href="{% url 'resource_list' 'credential-overrides' %}" data-icon="flag">Credential Overrides</a>
             <a href="{% url 'resource_list' 'availability' %}" data-icon="clock">Availability</a>
           </div>
@@ -71,18 +83,6 @@
             <a href="{% url 'room_utilization' %}" data-icon="sliders">Room Utilization</a>
             <a href="{% url 'room_schedule' %}" data-icon="calendar">Room Schedule</a>
             <a href="{% url 'room_capacity_planning' %}" data-icon="layers">Capacity Planning</a>
-          </div>
-        </details>
-
-        <details class="nav-disclosure" data-nav-group="scheduling"{% if request.resolver_match.url_name == 'generate_schedule' or request.resolver_match.url_name == 'generation_error_log' or request.resolver_match.url_name == 'generation_error_detail' or request.resolver_match.url_name == 'browse_schedules' or request.resolver_match.url_name == 'schedule_detail' or request.resolver_match.kwargs.resource == 'schedules' or request.resolver_match.kwargs.resource == 'assignments' or request.resolver_match.kwargs.resource == 'ga-settings' %} open{% endif %}>
-          <summary data-tooltip="Scheduling"><span class="nav-category-icon" data-group-icon="scheduling"></span><span class="nav-category-label">Scheduling</span><span class="nav-chevron" aria-hidden="true"></span></summary>
-          <div class="nav-children">
-            <a href="{% url 'generate_schedule' %}" data-icon="spark">Generate Schedule</a>
-            <a href="{% url 'generation_error_log' %}" data-icon="flag">Error Log</a>
-            <a href="{% url 'resource_list' 'schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'schedule_detail' or request.resolver_match.url_name == 'entry_create' or request.resolver_match.url_name == 'entry_update' %} class="is-active" aria-current="page"{% endif %}>Manage Schedules</a>
-            <a href="{% url 'browse_schedules' %}" data-icon="calendar">Browse Published</a>
-            <a href="{% url 'resource_list' 'assignments' %}" data-icon="check">Assignments</a>
-            <a href="{% url 'resource_list' 'ga-settings' %}" data-icon="sliders">GA Settings</a>
           </div>
         </details>
 
@@ -121,7 +121,7 @@
             <span class="avatar">{{ user.username|slice:":1"|upper }}</span>
             <span>
               <strong>{{ user.get_full_name|default:user.username }}</strong>
-              <small>{{ user.profile.get_role_display|default:"Administrator" }}</small>
+              <small>{% if user.is_superuser or user.profile.role == "ADMIN" %}Administrator{% elif user.profile.role == "FACULTY" %}Faculty{% elif user.profile.role == "STUDENT" %}Student{% else %}User{% endif %}</small>
             </span>
           </div>
           <form method="post" action="{% url 'logout' %}">

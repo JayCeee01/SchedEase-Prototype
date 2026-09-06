@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
-from .models import AcademicTerm, Availability, AvailabilityKind, Credential, CredentialOverride, Department, Faculty, FacultyCredential, FormDraft, GASettings, GenerationIssue, GenerationRun, Profile, Program, Role, Room, RoomKind, Schedule, ScheduleEntry, ScheduleStatus, Section, Student, Subject, SubjectCredentialRequirement, TeachingAssignment, YearLevel
+from .models import AcademicTerm, Assignment, Availability, AvailabilityKind, Credential, CredentialOverride, Department, Faculty, FacultyCredential, FormDraft, GASettings, GenerationIssue, GenerationRun, Profile, Program, Role, Room, RoomKind, Schedule, ScheduleEntry, ScheduleEntryAudit, ScheduleStatus, Section, Student, Subject, SubjectCredentialRequirement, TeachingAssignment, YearLevel
 from .services.credentials import faculty_qualification
 from .services.ga import GeneticScheduler, Gene
 from .services.generation_issues import record_generation_messages
@@ -420,6 +420,29 @@ class SchedulingTestCase(TestCase):
         self.assertContains(response, "No schedule entries found")
         self.assertContains(response, '<option value="5" selected>Saturday</option>', html=True)
 
+    def test_schedule_filters_apply_to_timetable_and_effective_overrides(self):
+        schedule = Schedule.objects.create(term=self.term, name="Filtered Timetable")
+        schedule.entries.create(
+            assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11)
+        )
+        other_subject = Subject.objects.create(
+            code="IT202", title="Networks", department=self.department,
+            lecture_hours=3, lab_hours=0, required_room_type=RoomKind.COMPUTER_LAB,
+        )
+        other_assignment = TeachingAssignment.objects.create(
+            term=self.term, subject=other_subject, faculty=self.faculty, section=self.section,
+            component=TeachingAssignment.Component.LECTURE, duration_minutes=180,
+        )
+        schedule.entries.create(
+            assignment=other_assignment, subject_override=self.subject, room=self.room,
+            day=1, start_time=time(12), end_time=time(15),
+        )
+        self.client.login(username="admin", password="admin12345")
+
+        response = self.client.get(f"/schedules/{schedule.pk}/", {"q": "IT101"})
+        self.assertContains(response, 'class="schedule-block', count=2)
+        self.assertNotContains(response, ">IT202<")
+
     def test_manual_entry_requires_matching_term_and_duration(self):
         other_term = AcademicTerm.objects.create(name="Second", school_year="2026-2027", starts_on=date(2027, 1, 1), ends_on=date(2027, 5, 1))
         schedule = Schedule.objects.create(term=other_term, name="Wrong term")
@@ -474,6 +497,56 @@ class SchedulingTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(schedule.status, ScheduleStatus.PUBLISHED)
 
+    def test_publishing_replacement_requires_confirmation_and_archives_current(self):
+        self.client.login(username="admin", password="admin12345")
+        current = Schedule.objects.create(term=self.term, name="Current", status=ScheduleStatus.PUBLISHED)
+        current.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
+        candidate = Schedule.objects.create(term=self.term, name="Replacement")
+        candidate.entries.create(assignment=self.assignment, room=self.room, day=1, start_time=time(8), end_time=time(11))
+
+        response = self.client.post(f"/schedules/{candidate.id}/publish/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Archive Current")
+        current.refresh_from_db()
+        self.assertEqual(current.status, ScheduleStatus.PUBLISHED)
+
+        response = self.client.post(f"/schedules/{candidate.id}/publish/", {"replace_confirm": "yes"})
+        self.assertEqual(response.status_code, 302)
+        current.refresh_from_db()
+        candidate.refresh_from_db()
+        self.assertEqual(current.status, ScheduleStatus.ARCHIVED)
+        self.assertEqual(current.replaced_by, candidate)
+        self.assertEqual(candidate.status, ScheduleStatus.PUBLISHED)
+
+    def test_schedule_entry_override_is_version_only_and_audited(self):
+        self.client.login(username="admin", password="admin12345")
+        alternate = Faculty.objects.create(department=self.department, employee_id="F2", full_name="Grace")
+        schedule = Schedule.objects.create(term=self.term, name="Editable")
+        entry = schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
+        response = self.client.post(f"/schedules/{schedule.id}/entry/{entry.id}/edit/", {
+            "assignment": self.assignment.id, "subject_override": self.subject.id,
+            "section_override": self.section.id, "faculty_override": alternate.id,
+            "component_override": TeachingAssignment.Component.LECTURE,
+            "room": self.room.id, "day": 1, "start_time": "09:00", "end_time": "12:00",
+        })
+        self.assertEqual(response.status_code, 302)
+        entry.refresh_from_db()
+        self.assignment.refresh_from_db()
+        self.assertEqual(entry.effective_faculty, alternate)
+        self.assertEqual(self.assignment.faculty, self.faculty)
+        self.assertEqual(ScheduleEntryAudit.objects.filter(entry=entry, user=self.admin_user).count(), 1)
+
+    def test_legacy_meeting_creation_gets_shared_assignment(self):
+        self.assertIsNotNone(self.assignment.assignment)
+        self.assertEqual(Assignment.objects.count(), 1)
+
+    def test_assignment_management_list_renders_assignment_timestamps(self):
+        self.client.login(username="admin", password="admin12345")
+        response = self.client.get("/schedules/manage/assignments/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.subject.code)
+        self.assertContains(response, "Date Added")
+
     def test_non_admin_cannot_view_or_export_draft_schedule(self):
         student_user = User.objects.create_user(username="learner", password="password123")
         Profile.objects.create(user=student_user, role=Role.STUDENT)
@@ -497,6 +570,81 @@ class SchedulingTestCase(TestCase):
         self.assertContains(response, ">Academic Terms</a>", html=False)
         self.assertContains(response, ">Error Log</a>", html=False)
 
+    def test_faculty_dashboard_shows_weekly_personal_timetable(self):
+        faculty_user = User.objects.create_user(username="facultyview", password="password123")
+        Profile.objects.create(user=faculty_user, role=Role.FACULTY)
+        self.faculty.user = faculty_user
+        self.faculty.save(update_fields=["user"])
+        schedule = Schedule.objects.create(term=self.term, name="Official", status=ScheduleStatus.PUBLISHED)
+        schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
+        self.client.login(username="facultyview", password="password123")
+
+        response = self.client.get("/dashboard/")
+        self.assertContains(response, "Weekly Teaching Timetable")
+        self.assertContains(response, 'class="room-schedule-grid personal-timetable"')
+        self.assertContains(response, self.subject.code)
+        self.assertContains(response, self.room.name)
+
+    def test_student_dashboard_shows_section_timetable(self):
+        student_user = User.objects.create_user(username="studentview", password="password123")
+        Profile.objects.create(user=student_user, role=Role.STUDENT)
+        Student.objects.create(user=student_user, section=self.section, student_number="VIEW1", full_name="Student View")
+        schedule = Schedule.objects.create(term=self.term, name="Official", status=ScheduleStatus.PUBLISHED)
+        schedule.entries.create(assignment=self.assignment, room=self.room, day=2, start_time=time(9), end_time=time(12))
+        self.client.login(username="studentview", password="password123")
+
+        response = self.client.get("/dashboard/")
+        self.assertContains(response, "Weekly Class Timetable")
+        self.assertContains(response, 'class="room-schedule-grid personal-timetable"')
+        self.assertContains(response, self.subject.code)
+        self.assertContains(response, "Wednesday")
+
+    def test_student_browse_only_shows_entries_for_own_section(self):
+        student_user = User.objects.create_user(username="restrictedstudent", password="password123")
+        Profile.objects.create(user=student_user, role=Role.STUDENT)
+        Student.objects.create(user=student_user, section=self.section, student_number="RS1", full_name="Restricted Student")
+        other_section = Section.objects.create(program=self.program, year_level=self.year, name="B", size=25)
+        other_subject = Subject.objects.create(code="PRIVATE201", title="Other Section Course", department=self.department,
+                                               lecture_hours=3, required_room_type=RoomKind.COMPUTER_LAB)
+        other_assignment = TeachingAssignment.objects.create(term=self.term, subject=other_subject,
+                                                              faculty=self.faculty, section=other_section,
+                                                              duration_minutes=180)
+        schedule = Schedule.objects.create(term=self.term, name="Mixed Official", status=ScheduleStatus.PUBLISHED)
+        schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
+        schedule.entries.create(assignment=other_assignment, room=self.room, day=1, start_time=time(8), end_time=time(11))
+        self.client.login(username="restrictedstudent", password="password123")
+
+        browse = self.client.get("/schedules/browse/")
+        detail = self.client.get(f"/schedules/{schedule.id}/")
+        csv_export = self.client.get(f"/schedules/{schedule.id}/export/csv/")
+        self.assertContains(browse, f'<span class="subject-chip">{self.subject.code}</span>', html=True)
+        self.assertNotContains(browse, f'<span class="subject-chip">{other_subject.code}</span>', html=True)
+        self.assertContains(detail, self.subject.code)
+        self.assertNotContains(detail, other_subject.code)
+        self.assertContains(csv_export, self.subject.code)
+        self.assertNotContains(csv_export, other_subject.code)
+
+    def test_faculty_cannot_open_schedule_with_no_assigned_entries(self):
+        faculty_user = User.objects.create_user(username="restrictedfaculty", password="password123")
+        Profile.objects.create(user=faculty_user, role=Role.FACULTY)
+        self.faculty.user = faculty_user
+        self.faculty.save(update_fields=["user"])
+        other_faculty = Faculty.objects.create(department=self.department, employee_id="F9", full_name="Other Teacher")
+        other_term = AcademicTerm.objects.create(name="Second Semester", school_year="2026-2027",
+                                                 starts_on=date(2027, 1, 1), ends_on=date(2027, 5, 1))
+        other_assignment = TeachingAssignment.objects.create(term=other_term, subject=self.subject,
+                                                              faculty=other_faculty, section=self.section)
+        schedule = Schedule.objects.create(term=other_term, name="Other Faculty", status=ScheduleStatus.PUBLISHED)
+        schedule.entries.create(assignment=other_assignment, room=self.room, day=0,
+                                start_time=time(8), end_time=time(11))
+        self.client.login(username="restrictedfaculty", password="password123")
+
+        self.assertNotContains(self.client.get("/schedules/browse/"),
+                               f'<span class="subject-chip">{self.subject.code}</span>', html=True)
+        self.assertEqual(self.client.get(f"/schedules/{schedule.id}/").status_code, 404)
+        self.assertEqual(self.client.get(f"/schedules/{schedule.id}/export/csv/").status_code, 404)
+        self.assertEqual(self.client.get(f"/schedules/{schedule.id}/export/pdf/").status_code, 404)
+
     def test_student_sidebar_hides_admin_groups(self):
         student_user = User.objects.create_user(username="navstudent", password="password123")
         Profile.objects.create(user=student_user, role=Role.STUDENT)
@@ -505,6 +653,19 @@ class SchedulingTestCase(TestCase):
         response = self.client.get("/dashboard/")
         self.assertNotContains(response, 'data-nav-group="academic"')
         self.assertContains(response, "Browse Schedules")
+        self.assertContains(response, "<small>Student</small>", html=True)
+        self.assertNotContains(response, "<small>Administrator</small>", html=True)
+
+    def test_faculty_user_menu_displays_faculty_role(self):
+        faculty_user = User.objects.create_user(username="rolefaculty", password="password123")
+        Profile.objects.create(user=faculty_user, role=Role.FACULTY)
+        self.faculty.user = faculty_user
+        self.faculty.save(update_fields=["user"])
+        self.client.login(username="rolefaculty", password="password123")
+
+        response = self.client.get("/dashboard/")
+        self.assertContains(response, "<small>Faculty</small>", html=True)
+        self.assertNotContains(response, "<small>Administrator</small>", html=True)
 
     def test_form_draft_is_created_updated_and_does_not_create_official_record(self):
         self.client.login(username="admin", password="admin12345")

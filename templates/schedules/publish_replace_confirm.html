@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hero"><div><p class="eyebrow">Publication Confirmation</p><h1>A published schedule already exists</h1><p class="subtle">Publishing this schedule will archive the current official version for {{ schedule.term }}.</p></div></div>
+<div class="panel publish-comparison"><div><small>Current published schedule</small><h2>{{ current.name }}</h2><p>Published {{ current.published_at|date:"M j, Y g:i A" }}</p></div><div aria-hidden="true">→</div><div><small>New official schedule</small><h2>{{ schedule.name }}</h2><p>{{ schedule.entries.count }} meetings</p></div></div>
+<div class="toolbar"><a class="button" href="{% url 'schedule_detail' schedule.pk %}">Cancel</a><form method="post" action="{% url 'publish_schedule' schedule.pk %}">{% csrf_token %}<input type="hidden" name="replace_confirm" value="yes"><button class="primary" type="submit">Archive Current &amp; Publish New</button></form></div>
+{% endblock %}

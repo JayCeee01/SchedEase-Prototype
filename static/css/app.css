@@ -576,6 +576,15 @@ button:disabled, .button[aria-disabled="true"] {
 .section-name-preview small { color: var(--muted, #64748b); }
 .section-name-preview strong { font-size: 1.05rem; }
 
+.form-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; }
+.form-section-heading h2 { margin: 0; }
+.meeting-form-list { display: grid; gap: 1rem; margin: 1rem 0; }
+.meeting-form { border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; background: var(--surface-soft); }
+.meeting-form legend { padding: 0 0.4rem; font-weight: 800; }
+.conflict-row { background: color-mix(in srgb, var(--danger) 9%, var(--surface)); box-shadow: inset 3px 0 var(--danger); }
+.schedule-block.conflict-row { border-color: color-mix(in srgb, var(--danger) 55%, var(--line)); }
+.day-column.has-no-matches::after { content: "No matching classes"; display: block; padding: 1rem; color: var(--muted); font-size: 0.85rem; text-align: center; }
+
 @media (max-width: 640px) {
   .draft-banner,
   .draft-list-item { align-items: stretch; flex-direction: column; }
@@ -768,7 +777,25 @@ th[data-sort]::after { content: "  ^"; color: var(--line-strong); }
 tbody tr { transition: background 140ms ease; }
 tbody tr:hover { background: color-mix(in srgb, var(--primary-soft) 35%, transparent); }
 .table-empty { text-align: center; color: var(--muted); padding: 34px; }
-.actions-cell { text-align: right; }
+.actions-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+td.actions-cell .button,
+td.actions-cell button {
+  box-sizing: border-box;
+  width: 124px;
+  min-height: 36px;
+  padding: 7px 10px;
+  font-size: 13px;
+  line-height: 1.15;
+}
+td.actions-cell .button + .button,
+td.actions-cell .button + button,
+td.actions-cell button + .button,
+td.actions-cell button + button {
+  margin-left: 6px;
+}
 
 .badge {
   display: inline-flex;
@@ -786,6 +813,13 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary-soft) 35%, transpa
 .badge.success { background: #ecfdf3; color: var(--success); border-color: #abefc6; }
 .badge.warning { background: #fffaeb; color: var(--amber); border-color: #fedf89; }
 .badge.danger { background: #fef3f2; color: var(--danger); border-color: #fecdca; }
+.assignment-course { min-width: 210px; }
+.assignment-course small,
+.assignment-term + small { display: block; margin-top: 5px; color: var(--muted); line-height: 1.35; }
+.assignment-term { font-weight: 700; }
+.meeting-badges { display: grid; justify-items: start; gap: 6px; min-width: 175px; }
+.meeting-badges .badge { white-space: nowrap; }
+.meeting-badges .badge small { color: inherit; opacity: 0.72; }
 .severity-critical, .severity-error { background: #fef3f2; color: var(--danger); border-color: #fecdca; }
 .severity-warning, .status-reviewed { background: #fffaeb; color: var(--amber); border-color: #fedf89; }
 .severity-info, .status-open { background: var(--primary-soft); color: var(--primary-strong); border-color: color-mix(in srgb, var(--primary) 35%, transparent); }
@@ -856,6 +890,8 @@ tbody tr:hover { background: color-mix(in srgb, var(--primary-soft) 35%, transpa
 .room-slot { display: grid; gap: 2px; padding: 6px; border-left: 3px solid var(--primary); border-radius: 5px; background: var(--surface); font-size: 11px; }
 .room-slot span, .room-slot small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .planning-assumptions { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)) auto; gap: 16px; align-items: end; margin-bottom: 16px; }
+.planning-submit { display: flex; align-items: end; }
+.planning-submit button { width: 100%; min-height: 42px; }
 .planning-results { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 16px; }
 .utilization-summary .metric-icon {
   background: linear-gradient(135deg, var(--primary-soft), color-mix(in srgb, var(--primary) 18%, white));

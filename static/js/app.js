@@ -475,12 +475,20 @@
 
   document.querySelectorAll("[data-schedule-live-filter]").forEach((input) => {
     input.addEventListener("input", () => {
-      const panel = document.querySelector('[data-schedule-view-panel="table"]');
-      if (!panel) return;
-      filterTables(input.value, panel);
-      panel.querySelectorAll(".schedule-section-group").forEach((group) => {
+      const query = input.value.trim().toLowerCase();
+      const tablePanel = document.querySelector('[data-schedule-view-panel="table"]');
+      const timetablePanel = document.querySelector('[data-schedule-view-panel="timetable"]');
+      if (tablePanel) filterTables(input.value, tablePanel);
+      tablePanel?.querySelectorAll(".schedule-section-group").forEach((group) => {
         const rows = Array.from(group.querySelectorAll("tbody tr"));
         group.hidden = rows.length > 0 && rows.every((row) => row.hidden);
+      });
+      timetablePanel?.querySelectorAll(".schedule-block").forEach((block) => {
+        block.hidden = query.length > 0 && !block.textContent.toLowerCase().includes(query);
+      });
+      timetablePanel?.querySelectorAll(".day-column").forEach((column) => {
+        const blocks = Array.from(column.querySelectorAll(".schedule-block"));
+        column.classList.toggle("has-no-matches", query.length > 0 && blocks.length > 0 && blocks.every((block) => block.hidden));
       });
     });
   });
@@ -664,6 +672,18 @@
       field?.addEventListener("change", update);
     });
     update();
+  });
+
+  document.querySelectorAll("[data-assignment-editor]").forEach((form) => {
+    const list = form.querySelector("[data-meeting-list]");
+    const template = form.querySelector("[data-empty-meeting]");
+    const total = form.querySelector("[name='meetings-TOTAL_FORMS']");
+    form.querySelector("[data-add-meeting]")?.addEventListener("click", () => {
+      const index = Number(total.value);
+      const html = template.innerHTML.replaceAll("__prefix__", String(index)).replaceAll("__number__", String(index + 1));
+      list.insertAdjacentHTML("beforeend", html);
+      total.value = String(index + 1);
+    });
   });
 
   document.querySelectorAll("a.button, button").forEach((control) => {

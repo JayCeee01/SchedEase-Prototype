@@ -208,12 +208,21 @@ class Subject(models.Model):
     lecture_hours = models.PositiveSmallIntegerField(default=3)
     lab_hours = models.PositiveSmallIntegerField(default=0)
     required_room_type = models.CharField(max_length=30, choices=RoomKind.choices, default=RoomKind.LECTURE)
+    created_at = models.DateTimeField(null=True, blank=True, editable=False)
+    updated_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     class Meta:
         ordering = ["code"]
 
     def __str__(self):
-        return self.code
+        return f"{self.code} — {self.title}"
+
+    def save(self, *args, **kwargs):
+        from django.utils import timezone
+        now = timezone.now()
+        self.created_at = self.created_at or now
+        self.updated_at = now
+        return super().save(*args, **kwargs)
 
 
 class SubjectCredentialRequirement(models.Model):
@@ -228,6 +237,24 @@ class SubjectCredentialRequirement(models.Model):
 
     def __str__(self):
         return f"{self.subject.code} requires {self.required_credential.name}"
+
+
+class Assignment(models.Model):
+    term = models.ForeignKey(AcademicTerm, on_delete=models.CASCADE)
+    subject = models.ForeignKey(Subject, on_delete=models.PROTECT)
+    faculty = models.ForeignKey(Faculty, on_delete=models.PROTECT)
+    section = models.ForeignKey(Section, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["section", "subject__code"]
+        constraints = [models.UniqueConstraint(
+            fields=["term", "subject", "section", "faculty"], name="unique_parent_assignment"
+        )]
+
+    def __str__(self):
+        return f"{self.subject.code} — {self.subject.title} — {self.section} — {self.faculty}"
 
 
 class TeachingAssignment(models.Model):
@@ -247,6 +274,7 @@ class TeachingAssignment(models.Model):
     source_key = models.CharField(max_length=160, blank=True, db_index=True)
     source_sheet = models.CharField(max_length=120, blank=True)
     source_row = models.PositiveIntegerField(null=True, blank=True)
+    assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, related_name="meetings", null=True, blank=True)
 
     class Meta:
         ordering = ["section", "subject__code"]
@@ -260,18 +288,36 @@ class TeachingAssignment(models.Model):
     def required_duration_minutes(self):
         if self.duration_minutes:
             return self.duration_minutes
-        return int(self.subject.lecture_hours + self.subject.lab_hours) * 60
+        subject = self.subject if self.subject_id else getattr(self.assignment, "subject", None)
+        if subject is None:
+            return 0
+        return int(subject.lecture_hours + subject.lab_hours) * 60
 
     @property
     def effective_room_type(self):
         return self.required_room_type_override or self.subject.required_room_type
 
     def __str__(self):
-        return f"{self.section} {self.subject.code}"
+        return f"{self.subject.code} — {self.subject.title} — {self.section} — Meeting {self.meeting_index} ({self.get_component_display()})"
 
     def clean(self):
         if self.required_duration_minutes <= 0:
             raise ValidationError("Teaching assignment must require a positive class duration.")
+
+    def save(self, *args, **kwargs):
+        if not self.assignment_id and all((self.term_id, self.subject_id, self.faculty_id, self.section_id)):
+            self.assignment, _ = Assignment.objects.get_or_create(
+                term_id=self.term_id,
+                subject_id=self.subject_id,
+                faculty_id=self.faculty_id,
+                section_id=self.section_id,
+            )
+        if self.assignment_id:
+            self.term = self.assignment.term
+            self.subject = self.assignment.subject
+            self.faculty = self.assignment.faculty
+            self.section = self.assignment.section
+        return super().save(*args, **kwargs)
 
 
 class CredentialOverride(models.Model):
@@ -347,6 +393,7 @@ class ScheduleStatus(models.TextChoices):
     DRAFT = "DRAFT", "Draft"
     APPROVED = "APPROVED", "Approved"
     PUBLISHED = "PUBLISHED", "Published"
+    ARCHIVED = "ARCHIVED", "Archived"
 
 
 class Schedule(models.Model):
@@ -361,10 +408,16 @@ class Schedule(models.Model):
     fitness_score = models.FloatField(default=0)
     generated_at = models.DateTimeField(auto_now_add=True)
     published_at = models.DateTimeField(null=True, blank=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
+    replaced_by = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="replaced_schedules")
+    updated_at = models.DateTimeField(auto_now=True)
     origin = models.CharField(max_length=20, choices=Origin.choices, default=Origin.MANUAL)
 
     class Meta:
         ordering = ["-generated_at"]
+        constraints = [models.UniqueConstraint(
+            fields=["term"], condition=Q(status=ScheduleStatus.PUBLISHED), name="one_published_schedule_per_term"
+        )]
 
     def __str__(self):
         return self.name
@@ -377,6 +430,10 @@ class ScheduleEntry(models.Model):
     day = models.PositiveSmallIntegerField(choices=Weekday.choices)
     start_time = models.TimeField()
     end_time = models.TimeField()
+    subject_override = models.ForeignKey(Subject, on_delete=models.PROTECT, null=True, blank=True, related_name="schedule_entry_overrides")
+    section_override = models.ForeignKey(Section, on_delete=models.PROTECT, null=True, blank=True, related_name="schedule_entry_overrides")
+    faculty_override = models.ForeignKey(Faculty, on_delete=models.PROTECT, null=True, blank=True, related_name="schedule_entry_overrides")
+    component_override = models.CharField(max_length=20, choices=TeachingAssignment.Component.choices, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -388,8 +445,40 @@ class ScheduleEntry(models.Model):
 
         validate_entry(self)
 
+    @property
+    def effective_subject(self):
+        return self.subject_override or self.assignment.subject
+
+    @property
+    def effective_section(self):
+        return self.section_override or self.assignment.section
+
+    @property
+    def effective_faculty(self):
+        return self.faculty_override or self.assignment.faculty
+
+    @property
+    def effective_component(self):
+        return self.component_override or self.assignment.component
+
+    @property
+    def effective_component_display(self):
+        return dict(TeachingAssignment.Component.choices).get(self.effective_component, self.effective_component)
+
     def __str__(self):
         return f"{self.assignment} {self.get_day_display()} {self.start_time}-{self.end_time}"
+
+
+class ScheduleEntryAudit(models.Model):
+    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE, related_name="edit_audits")
+    entry = models.ForeignKey(ScheduleEntry, on_delete=models.SET_NULL, null=True, related_name="edit_audits")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    previous_values = models.JSONField(default=dict)
+    new_values = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
 
 
 class GenerationRun(models.Model):

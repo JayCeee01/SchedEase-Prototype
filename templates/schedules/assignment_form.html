@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hero"><div><p class="eyebrow">Scheduling Requirement</p><h1>{{ title }}</h1><p class="subtle">Set the shared course, section, and faculty once, then define every independently scheduled meeting.</p></div></div>
+<form method="post" class="panel form assignment-editor" data-assignment-editor>
+  {% csrf_token %}
+  {{ form.as_p }}
+  <div class="form-section-heading"><div><h2>Meetings</h2><p class="subtle">Lecture and laboratory time must match the selected course requirements.</p></div><button class="button" type="button" data-add-meeting>Add Meeting</button></div>
+  {{ meetings.management_form }}
+  {% if meetings.non_form_errors %}<div class="errorlist" role="alert">{{ meetings.non_form_errors }}</div>{% endif %}
+  <div class="meeting-form-list" data-meeting-list>
+    {% for meeting in meetings %}
+    <fieldset class="meeting-form" data-meeting-form><legend>Meeting <span data-meeting-number>{{ forloop.counter }}</span></legend>{{ meeting.id }}{{ meeting.as_p }}</fieldset>
+    {% endfor %}
+  </div>
+  <template data-empty-meeting><fieldset class="meeting-form" data-meeting-form><legend>Meeting <span data-meeting-number>__number__</span></legend>{{ meetings.empty_form.as_p }}</fieldset></template>
+  {% if credential_result and not credential_result.qualified %}
+  <div class="draft-conflict" role="alert"><strong>Unqualified faculty assignment</strong><small>The selected faculty does not satisfy this course's credential requirements. An authorized credential override is required.</small><label><input type="checkbox" name="credential_override_confirm" value="yes" required> Confirm authorized override</label><label>Override reason<textarea name="credential_override_reason" required></textarea></label></div>
+  {% endif %}
+  <div class="toolbar"><button class="primary" type="submit">Save Assignment</button><a class="button" href="{% url 'resource_list' 'assignments' %}">Cancel</a></div>
+</form>
+{% endblock %}

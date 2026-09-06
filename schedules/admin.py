@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import (
     AcademicTerm,
+    Assignment,
     Availability,
     Credential,
     CredentialOverride,
@@ -13,6 +14,7 @@ from .models import (
     Room,
     Schedule,
     ScheduleEntry,
+    ScheduleEntryAudit,
     Section,
     Student,
     Subject,
@@ -31,6 +33,7 @@ class ScheduleEntryAdmin(admin.ModelAdmin):
 
 for model in [
     AcademicTerm,
+    Assignment,
     Availability,
     Credential,
     CredentialOverride,
@@ -42,6 +45,7 @@ for model in [
     Profile,
     Room,
     Schedule,
+    ScheduleEntryAudit,
     Section,
     Student,
     Subject,
