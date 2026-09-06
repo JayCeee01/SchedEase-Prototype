@@ -67,10 +67,12 @@ Sample users:
 - Faculty: `f001` / `password123`
 - Student: `student` / `password123`
 
-## Worksheet sample
+## Worksheet 
+```powershell
 $env:SCHED_EASE_DATABASE_URL="sqlite:///tertiary_sample.sqlite3"
 python manage.py migrate
 python manage.py runserver
+```
 
 ## Tests
 
