@@ -1,0 +1,12 @@
+<fieldset class="meeting-form" data-meeting-form>
+  <legend>Meeting <span data-meeting-number>{{ number }}</span></legend>
+  {{ meeting.non_field_errors }}
+  {% for field in meeting.hidden_fields %}{{ field }}{{ field.errors }}{% endfor %}
+  {% for field in meeting.visible_fields %}
+  <p{% if field.name == 'DELETE' %} class="meeting-delete"{% endif %}>
+    {{ field.errors }}{{ field.label_tag }} {{ field }}
+    {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+  </p>
+  {% endfor %}
+  <button class="button" type="button" data-remove-meeting hidden>Remove Meeting</button>
+</fieldset>

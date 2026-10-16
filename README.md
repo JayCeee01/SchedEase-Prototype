@@ -74,6 +74,12 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+## Academic spreadsheet import
+
+Open **Generate Schedule → Import Spreadsheet** as an administrator. Download the sample, fill in your school’s information, upload the file, review it, then click **Import**. The page includes column examples and help. CSV and Excel (.xlsx) files are supported. Run `python manage.py migrate` before using this feature.
+
+See [Academic import guide](ACADEMIC_IMPORT.md) for supported columns, modules, validation rules and limits. Importing does not generate or publish a schedule.
+
 ## Tests
 
 ```powershell

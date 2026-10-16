@@ -1,7 +1,12 @@
 from django.urls import path
 from . import views
+from . import import_views
 
 urlpatterns = [
+    path("import/", import_views.academic_import, name="academic_import"),
+    path("import/template/<str:kind>/", import_views.academic_import_template, name="academic_import_template"),
+    path("import/<uuid:pk>/", import_views.academic_import_review, name="academic_import_review"),
+    path("import/<uuid:pk>/errors/", import_views.academic_import_errors, name="academic_import_errors"),
     path("browse/", views.browse_schedules, name="browse_schedules"),
     path("my-availability/", views.my_availability, name="my_availability"),
     path("my-availability/new/", views.my_availability_create, name="my_availability_create"),

@@ -678,12 +678,139 @@
     const list = form.querySelector("[data-meeting-list]");
     const template = form.querySelector("[data-empty-meeting]");
     const total = form.querySelector("[name='meetings-TOTAL_FORMS']");
-    form.querySelector("[data-add-meeting]")?.addEventListener("click", () => {
-      const index = Number(total.value);
-      const html = template.innerHTML.replaceAll("__prefix__", String(index)).replaceAll("__number__", String(index + 1));
-      list.insertAdjacentHTML("beforeend", html);
-      total.value = String(index + 1);
+    const tabs = form.querySelector("[data-meeting-tabs]");
+    const add = form.querySelector("[data-add-meeting]");
+    const status = form.querySelector("[data-meeting-status]");
+    const max = Number(form.querySelector("[name='meetings-MAX_NUM_FORMS']").value) || 1000;
+    let selected;
+    const panels = () => Array.from(list.querySelectorAll("[data-meeting-form]"));
+    const field = (panel, name) => panel.querySelector(`[name$="-${name}"]`);
+    const active = () => panels().filter((panel) => !field(panel, "DELETE").checked);
+    const changed = () => form.dispatchEvent(new Event("change", {bubbles: true}));
+    const summary = (panel) => {
+      const type = field(panel, "component").selectedOptions[0]?.textContent || "Choose class type";
+      const minutes = Number(field(panel, "duration_minutes").value);
+      const duration = minutes > 0 ? (minutes % 60 === 0 ? `${minutes / 60} ${minutes === 60 ? "hour" : "hours"}` : `${minutes} minutes`) : "Course default duration";
+      return `${type} \u00b7 ${duration}`;
+    };
+    const select = (panel, focus = false) => {
+      selected = panel;
+      panels().forEach((item) => { item.hidden = item !== panel; });
+      Array.from(tabs.children).forEach((tab) => {
+        const on = tab.getAttribute("aria-controls") === panel.id;
+        tab.setAttribute("aria-selected", String(on));
+        tab.tabIndex = on ? 0 : -1;
+        if (on && focus) { tab.focus(); tab.scrollIntoView({block: "nearest", inline: "nearest"}); }
+      });
+    };
+    const render = (target = selected, focus = false) => {
+      const visible = active();
+      tabs.replaceChildren();
+      panels().forEach((panel) => {
+        if (field(panel, "DELETE").checked) {
+          panel.hidden = true;
+          panel.querySelectorAll("[required]").forEach((input) => { input.required = false; });
+        }
+      });
+      visible.forEach((panel, index) => {
+        const prefix = field(panel, "meeting_index").name.replace(/-meeting_index$/, "");
+        panel.id = `${prefix}-panel`;
+        panel.setAttribute("role", "tabpanel");
+        panel.setAttribute("aria-labelledby", `${prefix}-tab`);
+        panel.querySelector("[data-meeting-number]").textContent = String(index + 1);
+        const remove = panel.querySelector("[data-remove-meeting]");
+        remove.hidden = false;
+        remove.disabled = visible.length === 1;
+        const tab = document.createElement("button");
+        tab.type = "button";
+        tab.className = "meeting-tab";
+        tab.id = `${prefix}-tab`;
+        tab.setAttribute("role", "tab");
+        tab.setAttribute("aria-controls", panel.id);
+        const title = document.createElement("strong");
+        title.textContent = `Meeting ${index + 1}`;
+        const detail = document.createElement("small");
+        detail.textContent = summary(panel);
+        tab.append(title, detail);
+        if (panel.querySelector(".errorlist") || panel.dataset.invalid === "true") {
+          const error = document.createElement("span");
+          error.className = "meeting-tab-error";
+          error.textContent = "Needs attention";
+          tab.append(error);
+        }
+        tab.addEventListener("click", () => select(panel, true));
+        tabs.append(tab);
+      });
+      add.disabled = Number(total.value) >= max;
+      if (visible.length) select(visible.includes(target) ? target : visible[0], focus);
+    };
+    tabs.addEventListener("keydown", (event) => {
+      const items = Array.from(tabs.children);
+      const index = items.indexOf(document.activeElement);
+      if (index < 0) return;
+      let next;
+      if (event.key === "ArrowRight") next = (index + 1) % items.length;
+      if (event.key === "ArrowLeft") next = (index - 1 + items.length) % items.length;
+      if (event.key === "Home") next = 0;
+      if (event.key === "End") next = items.length - 1;
+      if (next !== undefined) { event.preventDefault(); select(active()[next], true); }
     });
+    add.addEventListener("click", () => {
+      const index = Number(total.value);
+      if (index >= max) return;
+      const nextNumber = Math.max(0, ...panels().map((panel) => Number(field(panel, "meeting_index").value) || 0)) + 1;
+      list.insertAdjacentHTML("beforeend", template.innerHTML.replaceAll("__prefix__", String(index)).replaceAll("__number__", String(index + 1)));
+      total.value = String(index + 1);
+      const panel = panels().at(-1);
+      field(panel, "meeting_index").value = String(nextNumber);
+      render(panel, true);
+      status.textContent = `Meeting ${active().length} added.`;
+      changed();
+    });
+    list.addEventListener("click", (event) => {
+      const remove = event.target.closest("[data-remove-meeting]");
+      if (!remove || active().length <= 1) return;
+      const panel = remove.closest("[data-meeting-form]");
+      const hasInformation = field(panel, "id").value || Array.from(panel.querySelectorAll("input:not([type=hidden]), select, textarea")).some((input) => !input.name.endsWith("-DELETE") && !input.name.endsWith("-meeting_index") && input.value && input.value !== "0");
+      if (hasInformation && !window.confirm("Remove this meeting? Its information will be removed when you save the assignment.")) return;
+      const visible = active();
+      const index = visible.indexOf(panel);
+      field(panel, "DELETE").checked = true;
+      render(visible[index + 1] || visible[index - 1], true);
+      status.textContent = "Meeting removed. Save the assignment to apply this change.";
+      changed();
+    });
+    list.addEventListener("input", (event) => {
+      const panel = event.target.closest("[data-meeting-form]");
+      if (!panel) return;
+      const tab = document.getElementById(panel.getAttribute("aria-labelledby"));
+      if (tab) tab.querySelector("small").textContent = summary(panel);
+      if (panel.dataset.invalid === "true" && !panel.querySelector(":invalid")) {
+        delete panel.dataset.invalid;
+        if (!panel.querySelector(".errorlist")) tab?.querySelector(".meeting-tab-error")?.remove();
+      }
+    });
+    let firstInvalid = null;
+    form.addEventListener("invalid", (event) => {
+      const panel = event.target.closest("[data-meeting-form]");
+      if (panel && !field(panel, "DELETE").checked) {
+        event.preventDefault();
+        panel.dataset.invalid = "true";
+        if (!firstInvalid) {
+          firstInvalid = event.target;
+          queueMicrotask(() => {
+            const input = firstInvalid;
+            firstInvalid = null;
+            render(input.closest("[data-meeting-form]"));
+            input.focus();
+            status.textContent = input.validationMessage;
+          });
+        }
+      }
+    }, true);
+    form.classList.add("meeting-tabs-ready");
+    form.querySelector("[data-meeting-toolbar]").hidden = false;
+    render(active().find((panel) => panel.querySelector(".errorlist")) || active()[0]);
   });
 
   document.querySelectorAll("a.button, button").forEach((control) => {

@@ -4,6 +4,7 @@
   <div>
     <p class="eyebrow">Record Editor</p>
     <h1>{{ title }}</h1>
+    {% if tooltip_context == 'generate-schedule' %}<a class="button" href="{% url 'academic_import' %}">Import Spreadsheet</a>{% endif %}
     <p class="subtle">{{ description|default:"Required fields are validated before saving. Time fields use the school scheduling range configured in the backend." }}</p>
   </div>
 </div>

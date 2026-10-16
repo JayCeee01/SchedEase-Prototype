@@ -51,7 +51,7 @@ from .services.conflicts import conflict_messages, schedule_validation_messages
 from .services.credentials import faculty_qualification, missing_credential_message
 from .services.ga import GeneticScheduler
 from .services.generation_issues import record_generation_messages, record_unexpected_failure
-from .services.form_drafts import object_signature, safe_draft_payload
+from .services.form_drafts import object_signature, safe_draft_payload, safe_assignment_draft_payload
 from .services.room_utilization import capacity_planning, filtered_rows, latest_schedule, personal_schedule_grid, room_schedule_grid, utilization_rows, utilization_summary
 
 logger = logging.getLogger(__name__)
@@ -499,7 +499,11 @@ def resource_update(request, resource, pk):
 
 def assignment_editor(request, assignment=None):
     assignment = assignment or Assignment()
+    draft = FormDraft.objects.filter(user=request.user, resource="assignments", object_pk=str(assignment.pk) if assignment.pk else "").first()
+    draft_conflict = bool(draft and draft.base_signature and draft.base_signature != object_signature(assignment if assignment.pk else None))
     posted = request.POST.copy() if request.method == "POST" else None
+    if request.method == "GET" and draft:
+        posted = draft.payload.copy()
     if posted is not None and "meetings-TOTAL_FORMS" not in posted:
         legacy_subject = Subject.objects.filter(pk=posted.get("subject")).first()
         legacy_component = TeachingAssignment.Component.GENERAL
@@ -519,27 +523,42 @@ def assignment_editor(request, assignment=None):
                        "meetings-0-required_room_type_override": posted.get("required_room_type_override", "")})
     form = MODEL_FORMS["assignments"](posted, instance=assignment)
     meetings = AssignmentMeetingFormSetFactory(posted, instance=assignment, prefix="meetings")
+    meetings.extra = 0
     credential_result = None
     if request.method == "POST" and form.is_valid() and meetings.is_valid():
+        if draft_conflict and request.POST.get("draft_conflict_confirm") != "yes":
+            form.add_error(None, "This assignment or its meetings changed after your draft was saved. Review the changes and confirm before saving.")
+            return render(request, "schedules/assignment_form.html", {
+                "form": form, "meetings": meetings, "assignment": assignment,
+                "draft": draft, "draft_conflict": True, "title": "Edit Assignment" if assignment.pk else "New Assignment",
+            })
         credential_result = faculty_qualification(form.cleaned_data["faculty"], form.cleaned_data["subject"])
         confirmed = request.POST.get("credential_override_confirm") == "yes"
         reason = request.POST.get("credential_override_reason", "").strip()
         if credential_result["qualified"] or (confirmed and reason):
-            with transaction.atomic():
-                parent = form.save()
-                children = meetings.save(commit=False)
-                for removed in meetings.deleted_objects:
-                    removed.delete()
-                for meeting in children:
-                    meeting.assignment = parent
-                    meeting.save()
-                if not credential_result["qualified"]:
-                    for meeting in parent.meetings.all():
-                        CredentialOverride.objects.get_or_create(
-                            assignment=meeting, subject=parent.subject, faculty=parent.faculty,
-                            defaults={"admin_user": request.user, "reason": reason,
-                                      "missing_credentials": missing_credential_message(parent.faculty, parent.subject)},
-                        )
+            try:
+                with transaction.atomic():
+                    parent = form.save()
+                    children = meetings.save(commit=False)
+                    for removed in meetings.deleted_objects:
+                        removed.delete()
+                    for meeting in children:
+                        meeting.assignment = parent
+                        meeting.save()
+                    if not credential_result["qualified"]:
+                        for meeting in parent.meetings.all():
+                            CredentialOverride.objects.get_or_create(
+                                assignment=meeting, subject=parent.subject, faculty=parent.faculty,
+                                defaults={"admin_user": request.user, "reason": reason,
+                                          "missing_credentials": missing_credential_message(parent.faculty, parent.subject)},
+                            )
+            except ProtectedError:
+                form.add_error(None, "A meeting you removed is already used by a schedule. Remove it from that schedule before deleting it here.")
+                return render(request, "schedules/assignment_form.html", {
+                    "form": form, "meetings": meetings, "assignment": assignment,
+                    "draft": draft, "draft_conflict": draft_conflict,
+                    "title": "Edit Assignment" if assignment.pk else "New Assignment",
+                })
             FormDraft.objects.filter(user=request.user, resource="assignments", object_pk__in=["", str(parent.pk)]).delete()
             messages.success(request, "Assignment and its meetings were saved.")
             return redirect("resource_list", resource="assignments")
@@ -550,6 +569,7 @@ def assignment_editor(request, assignment=None):
     return render(request, "schedules/assignment_form.html", {
         "form": form, "meetings": meetings, "assignment": assignment,
         "credential_result": credential_result,
+        "draft": draft, "draft_conflict": draft_conflict,
         "title": "Edit Assignment" if assignment.pk else "New Assignment",
     })
 
@@ -609,7 +629,8 @@ def save_form_draft(request):
 
     object_pk = str(body.get("object_pk") or "")
     instance = get_object_or_404(model, pk=object_pk) if object_pk else None
-    payload = safe_draft_payload(form_class, body.get("payload") or {})
+    payload = (safe_assignment_draft_payload(body.get("payload") or {}) if resource == "assignments"
+               else safe_draft_payload(form_class, body.get("payload") or {}))
     if not body.get("changed") or not payload:
         return JsonResponse({"saved": False, "reason": "unchanged"})
 

@@ -1,21 +1,27 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="page-hero"><div><p class="eyebrow">Scheduling Requirement</p><h1>{{ title }}</h1><p class="subtle">Set the shared course, section, and faculty once, then define every independently scheduled meeting.</p></div></div>
-<form method="post" class="panel form assignment-editor" data-assignment-editor>
+{% if draft %}<div class="draft-banner" role="status"><div><strong>Draft restored</strong><small>Continue your saved assignment and meetings.</small></div><form method="post" action="{% url 'discard_form_draft' draft.pk %}">{% csrf_token %}<button type="submit" class="button">Discard draft</button></form></div>{% endif %}
+<form method="post" class="panel form assignment-editor" data-assignment-editor data-form-draft data-draft-save-url="{% url 'save_form_draft' %}" data-draft-resource="assignments" data-draft-object-pk="{{ assignment.pk|default_if_none:'' }}">
+  {% if draft_conflict %}<div class="draft-conflict" role="alert"><strong>This assignment or its meetings changed after this draft began.</strong><p>Review the saved assignment before replacing it with this draft.</p><label><input type="checkbox" name="draft_conflict_confirm" value="yes" required> I reviewed the changes and want to save this draft.</label></div>{% endif %}
   {% csrf_token %}
+  <h2>Assignment Information</h2>
   {{ form.as_p }}
-  <div class="form-section-heading"><div><h2>Meetings</h2><p class="subtle">Lecture and laboratory time must match the selected course requirements.</p></div><button class="button" type="button" data-add-meeting>Add Meeting</button></div>
+  <div class="form-section-heading"><div><h2>Meetings</h2><p class="subtle">Lecture and laboratory time must match the selected course requirements.</p></div></div>
   {{ meetings.management_form }}
   {% if meetings.non_form_errors %}<div class="errorlist" role="alert">{{ meetings.non_form_errors }}</div>{% endif %}
+  <div class="meeting-tab-toolbar" data-meeting-toolbar hidden><div class="meeting-tabs" role="tablist" aria-label="Assignment meetings" data-meeting-tabs></div><button class="button" type="button" data-add-meeting>+ Add Meeting</button></div>
+  <p class="subtle" data-meeting-status role="status" aria-live="polite"></p>
   <div class="meeting-form-list" data-meeting-list>
     {% for meeting in meetings %}
-    <fieldset class="meeting-form" data-meeting-form><legend>Meeting <span data-meeting-number>{{ forloop.counter }}</span></legend>{{ meeting.id }}{{ meeting.as_p }}</fieldset>
+    {% include "schedules/meeting_fields.html" with meeting=meeting number=forloop.counter %}
     {% endfor %}
   </div>
-  <template data-empty-meeting><fieldset class="meeting-form" data-meeting-form><legend>Meeting <span data-meeting-number>__number__</span></legend>{{ meetings.empty_form.as_p }}</fieldset></template>
+  <template data-empty-meeting>{% include "schedules/meeting_fields.html" with meeting=meetings.empty_form number="__number__" %}</template>
   {% if credential_result and not credential_result.qualified %}
   <div class="draft-conflict" role="alert"><strong>Unqualified faculty assignment</strong><small>The selected faculty does not satisfy this course's credential requirements. An authorized credential override is required.</small><label><input type="checkbox" name="credential_override_confirm" value="yes" required> Confirm authorized override</label><label>Override reason<textarea name="credential_override_reason" required></textarea></label></div>
   {% endif %}
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">{% if draft %}Draft saved{% endif %}</div>
   <div class="toolbar"><button class="primary" type="submit">Save Assignment</button><a class="button" href="{% url 'resource_list' 'assignments' %}">Cancel</a></div>
 </form>
 {% endblock %}

@@ -556,6 +556,16 @@ class GenerationIssue(models.Model):
         return f"Issue {self.pk}: {self.get_category_display()}"
 
 
+class AcademicImport(models.Model):
+    """Owner-bound, expiring review payload; never a schedule or timetable."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    payload = models.JSONField(default=dict)
+    preview_signature = models.CharField(max_length=64, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+
 class FormDraft(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="form_drafts")
     resource = models.CharField(max_length=80)

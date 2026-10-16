@@ -1,0 +1,7 @@
+<div class="import-stats" aria-label="Import summary">
+  <div><strong>{{ result.total }}</strong><span>Total Records</span><small>Spreadsheet rows</small></div>
+  <div><strong>{{ result.counts.created|default:0 }}</strong><span>New Records</span><small>Across all modules</small></div>
+  <div><strong>{{ result.existing_count }}</strong><span>Existing Records</span><small>{{ result.counts.updated|default:0 }} update · {{ result.counts.skipped|default:0 }} keep</small></div>
+  <div><strong>{{ attention_count }}</strong><span>Needing Attention</span><small>Rows with errors{% if global_issues %}; also check related records{% endif %}</small></div>
+  <div><strong>{{ ready_count }}</strong><span>Ready to Import</span><small>{% if result.errors %}Waiting for corrections{% else %}Validated rows{% endif %}</small></div>
+</div>
