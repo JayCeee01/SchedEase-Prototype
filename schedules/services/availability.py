@@ -50,9 +50,12 @@ class AvailabilityPolicy:
             intervals = remaining
         return intervals
 
+    def active_rejection_reason(self):
+        return "" if self.active else "is inactive. Choose an active resource."
+
     def rejection_reason(self, day, start, end):
-        if not self.active:
-            return "is inactive. Choose an active resource."
+        if self.active_rejection_reason():
+            return self.active_rejection_reason()
         if day not in self.allowed or start >= end or not contains(SCHOOL_START, SCHOOL_END, start, end):
             return "is not available outside the school's operating days and hours."
         if any(overlaps(start, end, left, right) for left, right in self.blocked[day]):

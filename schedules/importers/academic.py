@@ -16,7 +16,7 @@ from xml.sax.saxutils import escape
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from schedules import models as m
-from schedules.services.credentials import missing_credential_message
+from schedules.services.credentials import missing_credential_message, teaching_eligibility
 from .tertiary_workbook import MAIN_NS, REL_NS, _cell_value
 from .academic_sample import SAMPLE_ROWS
 
@@ -309,6 +309,10 @@ class Importer:
         room = None
         if val('room_name'):
             room = self.upsert(m.Room, {'name': r['room_name']}, {'room_type': val('room_type'), 'capacity': num('room_capacity', 1)}, ['room_type', 'capacity'])
+            from schedules.services.availability import AvailabilityPolicy
+            reason = AvailabilityPolicy.for_resource(room).active_rejection_reason()
+            if reason:
+                raise ValueError('room_name: Room ' + reason)
         elif val('room_type') or val('room_capacity'):
             raise ValueError('room_name: required when room attributes are supplied.')
         for column, model, owner in [('faculty_credentials', m.FacultyCredential, {'faculty': faculty}),
@@ -342,16 +346,17 @@ class Importer:
 
     def meeting(self, r, entities):
         section, subject, faculty = entities
-        problem = missing_credential_message(faculty, subject, self.term)
-        if problem:
-            raise ValueError('assigned_faculty_id: ' + problem)
         duration = self.integer(r['duration_minutes'], 'duration_minutes', 1)
-        if duration > 720:
-            raise ValueError('duration_minutes: exceeds the 12-hour school day.')
+        from schedules.services.meetings import duration_errors
+        errors = duration_errors(duration)
+        if errors:
+            raise ValueError("duration_minutes: " + "; ".join(errors))
         index = self.integer(r['meeting_index'], 'meeting_index', 1)
         keys = {'term': self.term, 'subject': subject, 'section': section,
                 'component': r['component'], 'meeting_index': index}
         existing = m.TeachingAssignment.objects.filter(**keys).first()
+        if not teaching_eligibility(faculty, subject, self.term, existing)['eligible']:
+            raise ValueError('assigned_faculty_id: ' + missing_credential_message(faculty, subject, self.term))
         if existing and self.policy == 'skip':
             parent = existing.assignment
         else:
@@ -374,19 +379,11 @@ class Importer:
         for parent in m.Assignment.objects.filter(subject_id__in=subject_ids).select_related('subject', 'faculty'):
             self.issue_rows = self.parent_rows.get(parent.pk, [None])
             meetings = list(parent.meetings.all())
-            if not meetings:
-                continue
-            indexes = [meeting.meeting_index for meeting in meetings]
-            if len(indexes) != len(set(indexes)):
-                self.error('meeting_index', f'{parent}: meeting indexes must be unique across components.')
-            for component, expected in [('LECTURE', parent.subject.lecture_hours * 60), ('LABORATORY', parent.subject.lab_hours * 60)]:
-                actual = sum(a.required_duration_minutes for a in meetings if a.component == component)
-                if actual != expected:
-                    self.error('duration_minutes', f'{parent}: {component} totals {actual} minutes; course requires {expected}.')
-            if (parent.subject.lecture_hours or parent.subject.lab_hours) and any(a.component == 'GENERAL' for a in meetings):
-                self.error('component', f'{parent}: use LECTURE/LABORATORY when the course specifies those hours.')
+            from schedules.services.meetings import meeting_requirement_errors, meeting_records
+            for column, message in meeting_requirement_errors(parent.subject, meeting_records(meetings)):
+                self.error(column, f'{parent}: {message}')
             problem = missing_credential_message(parent.faculty, parent.subject, parent.term)
-            if problem:
+            if problem and not all(teaching_eligibility(parent.faculty, parent.subject, parent.term, meeting)['eligible'] for meeting in meetings):
                 self.error('faculty_credentials', problem)
         self.issue_rows = [None]
         if self.updated:

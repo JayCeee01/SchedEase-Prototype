@@ -1,16 +1,13 @@
-"""Phase 2 contracts: H1 and H3 scheduling are fixed; H4 expiry remains a known defect.
+"""Phase 2 contracts: H1, H3 scheduling, and H4 expiry are fixed.
 
 The H3 reporting regression in test_availability.py also passes after Task 2.3.
 
-Remove each expectedFailure marker with its corresponding Phase 2 fix. An
-unexpected success is a failing suite, prompting review of the marker. Operations
+All original expectedFailure markers have been removed after their Phase 2 fixes. Operations
 and positive controls live in setUp (outside expectedFailure), so unexpected
-exceptions and broken prerequisites remain ordinary errors/failures. Only the
-final comparison of all observed outcomes is marked as an expected failure.
+exceptions and broken prerequisites remain ordinary errors/failures. The final comparison checks all intended outcomes together.
 """
 
 from datetime import date, time
-from unittest import expectedFailure
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -124,13 +121,13 @@ class H4ExpiredCredentialTests(SchedulingDefectFixture):
         held = m.FacultyCredential.objects.create(faculty=self.faculty, credential=credential,
                                                   issued_on=date(2024, 1, 1))
         # A matching credential without an expiry is a valid positive control.
-        self.assertTrue(faculty_qualification(self.faculty, self.subject)["qualified"])
+        self.assertTrue(faculty_qualification(self.faculty, self.subject, self.term)["qualified"])
         self.assertTrue(all(self.scheduler().qualification_cache.values()))
         held.expires_on = date(2025, 12, 31)
         held.save(update_fields=["expires_on"])
         self.assertLess(held.expires_on, self.term.starts_on)
         self.assertFalse(m.CredentialOverride.objects.exists())
-        qualification = faculty_qualification(self.faculty, self.subject)
+        qualification = faculty_qualification(self.faculty, self.subject, self.term)
         scheduler = self.scheduler()
         self.assertEqual(set(scheduler.assignment_map), {meeting.pk for meeting in self.meetings})
         self.observed = {
@@ -140,7 +137,6 @@ class H4ExpiredCredentialTests(SchedulingDefectFixture):
                                                               for issue in scheduler.preflight_issues()),
         }
 
-    @expectedFailure
     def test_H4_expired_credential_does_not_qualify_faculty_or_ga(self):
         """Phase 2 H4: a credential expired before the term cannot qualify."""
         self.assertEqual(self.observed, dict.fromkeys(self.observed, True),

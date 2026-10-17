@@ -3,11 +3,11 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import time
 
-from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from schedules.models import AvailabilityKind, Room, RoomKind, Schedule, ScheduleEntry, TeachingAssignment
 from .availability import AvailabilityPolicy
+from .meetings import duration_errors
 from .credentials import teaching_eligibility
 from .time import ALLOWED_DAYS, SCHOOL_END, SCHOOL_START, add_minutes, contains, slot_starts
 
@@ -101,18 +101,19 @@ class GeneticScheduler:
                 best = candidate
                 best_score = candidate_score
 
+        ids = [gene.assignment_id for gene in best]
+        if len(ids) != len(set(ids)):
+            raise ValueError("GA output contains duplicate meetings.")
+        if any(pk not in self.assignment_map for pk in ids) or any(gene.room_id not in self.room_map for gene in best):
+            raise ValueError("GA output references an unknown meeting or room.")
         with transaction.atomic():
             schedule = Schedule.objects.create(term=self.term, name=name, fitness_score=best_score, origin=Schedule.Origin.GENERATED)
             entries = [ScheduleEntry(schedule=schedule, assignment=self.assignment_map[gene.assignment_id],
                                      room=self.room_map[gene.room_id], day=gene.day,
                                      start_time=gene.start_time, end_time=gene.end_time) for gene in best]
             ScheduleEntry.objects.bulk_create(entries)
-            errors = []
-            for entry in schedule.entries.select_related("assignment__faculty", "assignment__subject", "assignment__section", "room"):
-                try:
-                    entry.full_clean()
-                except ValidationError as exc:
-                    errors.extend(exc.messages)
+            from .conflicts import schedule_validation_messages
+            errors = schedule_validation_messages(schedule)
             if errors:
                 raise ValueError("GA could not produce a feasible schedule: " + "; ".join(sorted(set(errors))))
         return schedule
@@ -128,8 +129,8 @@ class GeneticScheduler:
                 )
             if not self.qualification_cache[assignment.id]:
                 issues.append(f"{assignment.subject.code} / {assignment.section}: {assignment.faculty} lacks the required credential or override.")
-            if assignment.required_duration_minutes > 14 * 60:
-                issues.append(f"{assignment.subject.code} / {assignment.section}: required duration exceeds school operating hours.")
+            issues.extend(f"{assignment.subject.code} / {assignment.section}: {message}"
+                          for message in duration_errors(assignment.required_duration_minutes))
         faculty_by_id = {assignment.faculty_id: assignment.faculty for assignment in self.assignments}
         for faculty_id, minutes in faculty_minutes.items():
             faculty = faculty_by_id[faculty_id]
@@ -140,7 +141,10 @@ class GeneticScheduler:
     def _random_gene(self, assignment):
         valid_rooms = self.valid_rooms_by_assignment[assignment.id]
         room = self._choose_room_for_assignment(assignment, valid_rooms or self.rooms)
-        duration = max(30, assignment.required_duration_minutes)
+        duration = assignment.required_duration_minutes
+        errors = duration_errors(duration)
+        if errors:
+            raise ValueError("; ".join(errors))
         day = self.random.choice(list(ALLOWED_DAYS))
         start = self.random.choice(list(slot_starts(duration)))
         return Gene(assignment.id, room.id, day, start, add_minutes(start, duration))

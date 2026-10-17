@@ -1,12 +1,13 @@
 from django.core.exceptions import ValidationError
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from .availability import AvailabilityPolicy
 from .credentials import missing_credential_message, teaching_eligibility
 from .time import ALLOWED_DAYS, SCHOOL_END, SCHOOL_START, contains, overlaps
 
 
 def validate_entry(entry):
-    errors = []
+    from .meetings import entry_requirement_errors
+    errors = entry_requirement_errors(entry)
     if entry.assignment.term_id != entry.schedule.term_id:
         errors.append("The teaching assignment belongs to a different academic term.")
     if entry.day not in ALLOWED_DAYS:
@@ -16,8 +17,11 @@ def validate_entry(entry):
     if entry.start_time >= entry.end_time:
         errors.append("Start time must be earlier than end time.")
     else:
-        actual_minutes = int((datetime.combine(date.today(), entry.end_time) - datetime.combine(date.today(), entry.start_time)).total_seconds() / 60)
-        if actual_minutes != entry.assignment.required_duration_minutes:
+        elapsed = datetime.combine(date.today(), entry.end_time) - datetime.combine(date.today(), entry.start_time)
+        actual_minutes, remainder = divmod(elapsed, timedelta(minutes=1))
+        if remainder:
+            errors.append("Class duration must use whole minutes; remove seconds from the start and end times.")
+        if remainder or actual_minutes != entry.assignment.required_duration_minutes:
             errors.append(
                 f"Class duration must be {entry.assignment.required_duration_minutes} minutes; the selected time is {actual_minutes} minutes."
             )
@@ -26,7 +30,7 @@ def validate_entry(entry):
     if entry.room.room_type != entry.assignment.effective_room_type:
         errors.append("Room type does not match the course requirement.")
     if not teaching_eligibility(entry.effective_faculty, entry.effective_subject, entry.schedule.term, entry.assignment)["eligible"]:
-        errors.append(missing_credential_message(entry.effective_faculty, entry.effective_subject, entry.schedule.term))
+        errors.append(ValidationError(missing_credential_message(entry.effective_faculty, entry.effective_subject, entry.schedule.term), code="credential_qualification"))
 
     for label, resource in (("Faculty", entry.effective_faculty), ("Room", entry.room)):
         reason = AvailabilityPolicy.for_resource(resource).rejection_reason(entry.day, entry.start_time, entry.end_time)
@@ -90,4 +94,6 @@ def schedule_validation_messages(schedule):
             entry.full_clean()
         except ValidationError as exc:
             messages.extend(f"{entry.effective_subject.code} / {entry.effective_section}: {message}" for message in exc.messages)
+    from .meetings import scheduled_requirement_errors
+    messages.extend(scheduled_requirement_errors(schedule, entries))
     return list(dict.fromkeys(messages))

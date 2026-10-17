@@ -1,6 +1,7 @@
 import re
 
 from django import forms
+from django.core.exceptions import ValidationError
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import get_user_model
 from django.forms import BaseInlineFormSet, inlineformset_factory, modelform_factory
@@ -120,33 +121,11 @@ class AssignmentMeetingFormSet(BaseInlineFormSet):
         super().clean()
         if any(self.errors) or not self.instance.subject_id:
             return
-        totals = {TeachingAssignment.Component.LECTURE: 0, TeachingAssignment.Component.LABORATORY: 0}
-        active = 0
-        indexes = set()
-        for form in self.forms:
-            data = form.cleaned_data
-            if not data or data.get("DELETE"):
-                continue
-            active += 1
-            index = data.get("meeting_index")
-            if index in indexes:
-                raise forms.ValidationError("Meeting indexes must be unique within an assignment.")
-            indexes.add(index)
-            component = data.get("component")
-            if component in totals:
-                totals[component] += data.get("duration_minutes") or 0
-        if not active:
-            raise forms.ValidationError("Add at least one meeting.")
-        expected = {
-            TeachingAssignment.Component.LECTURE: self.instance.subject.lecture_hours * 60,
-            TeachingAssignment.Component.LABORATORY: self.instance.subject.lab_hours * 60,
-        }
-        for component, minutes in expected.items():
-            if minutes and totals[component] != minutes:
-                label = dict(TeachingAssignment.Component.choices)[component]
-                raise forms.ValidationError(
-                    f"{label} meetings total {totals[component]} minutes; the course requires {minutes} minutes."
-                )
+        from .services.meetings import meeting_requirement_errors, meeting_records
+        active = [form.instance for form in self.forms if form.cleaned_data and not form.cleaned_data.get("DELETE")]
+        errors = meeting_requirement_errors(self.instance.subject, meeting_records(active))
+        if errors:
+            raise forms.ValidationError([message for _, message in errors])
 
 
 AssignmentMeetingFormSetFactory = inlineformset_factory(
@@ -178,13 +157,27 @@ class ScheduleEntryForm(forms.ModelForm):
             "end_time": forms.TimeInput(attrs={"type": "time"}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, defer_credential_review=False, **kwargs):
+        self.defer_credential_review = defer_credential_review
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk and not self.is_bound:
             self.initial.setdefault("subject_override", self.instance.effective_subject)
             self.initial.setdefault("section_override", self.instance.effective_section)
             self.initial.setdefault("faculty_override", self.instance.effective_faculty)
             self.initial.setdefault("component_override", self.instance.effective_component)
+
+    def _update_errors(self, errors):
+        # Admin views review qualification explicitly, then run full validation
+        # again inside the save transaction. All other model errors stay visible.
+        if self.defer_credential_review:
+            error_dict = errors.error_dict if hasattr(errors, "error_dict") else {"__all__": errors.error_list}
+            retained = {key: [error for error in values if error.code != "credential_qualification"]
+                        for key, values in error_dict.items()}
+            retained = {key: values for key, values in retained.items() if values}
+            if not retained:
+                return
+            errors = ValidationError(retained)
+        super()._update_errors(errors)
 
 
 class ScheduleSearchForm(forms.Form):

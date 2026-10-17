@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import Q
+from .protection import ProtectedContentMixin
 
 
 class Role(models.TextChoices):
@@ -38,7 +39,7 @@ class Profile(models.Model):
         return f"{self.user.get_full_name() or self.user.username} ({self.get_role_display()})"
 
 
-class Department(models.Model):
+class Department(ProtectedContentMixin, models.Model):
     code = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=120)
 
@@ -49,7 +50,7 @@ class Department(models.Model):
         return self.code
 
 
-class Program(models.Model):
+class Program(ProtectedContentMixin, models.Model):
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     code = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=160)
@@ -61,7 +62,7 @@ class Program(models.Model):
         return self.code
 
 
-class YearLevel(models.Model):
+class YearLevel(ProtectedContentMixin, models.Model):
     level = models.PositiveSmallIntegerField(unique=True)
     label = models.CharField(max_length=40)
 
@@ -91,7 +92,7 @@ class AcademicTerm(models.Model):
             raise ValidationError("Academic term end date must be after its start date.")
 
 
-class Section(models.Model):
+class Section(ProtectedContentMixin, models.Model):
     program = models.ForeignKey(Program, on_delete=models.CASCADE)
     year_level = models.ForeignKey(YearLevel, on_delete=models.PROTECT)
     name = models.CharField(max_length=30)
@@ -133,7 +134,7 @@ class Section(models.Model):
         return self.display_name
 
 
-class Faculty(models.Model):
+class Faculty(ProtectedContentMixin, models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     department = models.ForeignKey(Department, on_delete=models.PROTECT)
     employee_id = models.CharField(max_length=40, unique=True)
@@ -187,7 +188,7 @@ class Student(models.Model):
         return self.full_name
 
 
-class Room(models.Model):
+class Room(ProtectedContentMixin, models.Model):
     name = models.CharField(max_length=80, unique=True)
     room_type = models.CharField(max_length=30, choices=RoomKind.choices)
     capacity = models.PositiveIntegerField()
@@ -200,7 +201,7 @@ class Room(models.Model):
         return f"{self.name} ({self.get_room_type_display()})"
 
 
-class Subject(models.Model):
+class Subject(ProtectedContentMixin, models.Model):
     code = models.CharField(max_length=30, unique=True)
     title = models.CharField(max_length=180)
     department = models.ForeignKey(Department, on_delete=models.PROTECT)
@@ -239,7 +240,7 @@ class SubjectCredentialRequirement(models.Model):
         return f"{self.subject.code} requires {self.required_credential.name}"
 
 
-class Assignment(models.Model):
+class Assignment(ProtectedContentMixin, models.Model):
     SHARED_FIELDS = ("term", "subject", "faculty", "section")
 
     term = models.ForeignKey(AcademicTerm, on_delete=models.CASCADE)
@@ -272,7 +273,6 @@ class Assignment(models.Model):
             )
 
     def clean(self):
-        super().clean()
         if self.pk:
             previous = type(self).objects.filter(pk=self.pk).first()
             if previous:
@@ -286,6 +286,7 @@ class Assignment(models.Model):
                             meeting.full_clean()
                         except ValidationError as exc:
                             raise ValidationError("Assignment was not saved. " + " ".join(exc.messages)) from exc
+        super().clean()
 
     def save(self, *args, **kwargs):
         # Keep normal model/admin saves consistent as well as the assignment editor.
@@ -306,7 +307,7 @@ class Assignment(models.Model):
             return result
 
 
-class TeachingAssignment(models.Model):
+class TeachingAssignment(ProtectedContentMixin, models.Model):
     class Component(models.TextChoices):
         GENERAL = "GENERAL", "General"
         LECTURE = "LECTURE", "Lecture"
@@ -340,7 +341,8 @@ class TeachingAssignment(models.Model):
         subject = self.subject if self.subject_id else getattr(self.assignment, "subject", None)
         if subject is None:
             return 0
-        return int(subject.lecture_hours + subject.lab_hours) * 60
+        hours = {self.Component.LECTURE: subject.lecture_hours, self.Component.LABORATORY: subject.lab_hours}
+        return int(hours.get(self.component, subject.lecture_hours + subject.lab_hours)) * 60
 
     @property
     def effective_room_type(self):
@@ -350,9 +352,13 @@ class TeachingAssignment(models.Model):
         return f"{self.subject.code} — {self.subject.title} — {self.section} — Meeting {self.meeting_index} ({self.get_component_display()})"
 
     def clean(self):
-        if self.required_duration_minutes <= 0:
-            raise ValidationError("Teaching assignment must require a positive class duration.")
+        super().clean()
+        from .services.meetings import duration_errors
+        errors = duration_errors(self.required_duration_minutes)
+        if errors:
+            raise ValidationError({"duration_minutes": errors})
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         if not self.assignment_id and all((self.term_id, self.subject_id, self.faculty_id, self.section_id)):
             self.assignment, _ = Assignment.objects.get_or_create(
@@ -369,7 +375,7 @@ class TeachingAssignment(models.Model):
         return super().save(*args, **kwargs)
 
 
-class CredentialOverride(models.Model):
+class CredentialOverride(ProtectedContentMixin, models.Model):
     assignment = models.ForeignKey(TeachingAssignment, on_delete=models.SET_NULL, null=True, blank=True, related_name="credential_overrides")
     subject = models.ForeignKey(Subject, on_delete=models.PROTECT)
     faculty = models.ForeignKey(Faculty, on_delete=models.PROTECT)
@@ -445,7 +451,7 @@ class ScheduleStatus(models.TextChoices):
     ARCHIVED = "ARCHIVED", "Archived"
 
 
-class Schedule(models.Model):
+class Schedule(ProtectedContentMixin, models.Model):
     class Origin(models.TextChoices):
         MANUAL = "MANUAL", "Manual"
         IMPORTED = "IMPORTED", "Imported Original"
@@ -472,7 +478,7 @@ class Schedule(models.Model):
         return self.name
 
 
-class ScheduleEntry(models.Model):
+class ScheduleEntry(ProtectedContentMixin, models.Model):
     schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE, related_name="entries")
     assignment = models.ForeignKey(TeachingAssignment, on_delete=models.PROTECT)
     room = models.ForeignKey(Room, on_delete=models.PROTECT)
@@ -490,6 +496,7 @@ class ScheduleEntry(models.Model):
         constraints = [models.UniqueConstraint(fields=["schedule", "assignment"], name="unique_schedule_assignment")]
 
     def clean(self):
+        super().clean()
         from .services.conflicts import validate_entry
 
         validate_entry(self)
@@ -518,7 +525,7 @@ class ScheduleEntry(models.Model):
         return f"{self.assignment} {self.get_day_display()} {self.start_time}-{self.end_time}"
 
 
-class ScheduleEntryAudit(models.Model):
+class ScheduleEntryAudit(ProtectedContentMixin, models.Model):
     schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE, related_name="edit_audits")
     entry = models.ForeignKey(ScheduleEntry, on_delete=models.SET_NULL, null=True, related_name="edit_audits")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)

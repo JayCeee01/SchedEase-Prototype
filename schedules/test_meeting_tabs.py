@@ -149,7 +149,9 @@ class MeetingEditorTests(TestCase):
         for status in (m.ScheduleStatus.DRAFT, m.ScheduleStatus.PUBLISHED, m.ScheduleStatus.ARCHIVED):
             with self.subTest(status=status):
                 schedule.status = status
-                schedule.save(update_fields=['status'])
+                from .protection import archive_transition
+                with archive_transition():
+                    schedule.save(update_fields=['status'])
                 data = self.payload()
                 data['faculty'] = str(replacement.pk)
                 self.assertContains(self.client.post(self.url, data), 'meetings used by a schedule')
@@ -174,9 +176,11 @@ class MeetingEditorTests(TestCase):
         # Reproduce data left behind by H1 before this fix.
         m.Assignment.objects.filter(pk=self.parent.pk).update(faculty=replacement)
         room = m.Room.objects.create(name='Legacy Room', room_type='LECTURE', capacity=30)
-        schedule = m.Schedule.objects.create(term=self.term, name='Legacy Published', status=m.ScheduleStatus.PUBLISHED)
+        schedule = m.Schedule.objects.create(term=self.term, name='Legacy Published')
         m.ScheduleEntry.objects.create(schedule=schedule, assignment=self.lecture, room=room,
                                         day=0, start_time=time(8), end_time=time(10))
+        schedule.status = m.ScheduleStatus.PUBLISHED
+        schedule.save(update_fields=["status"])
         data = self.payload()
         data['faculty'] = str(replacement.pk)
         self.assertContains(self.client.post(self.url, data), 'meetings used by a schedule')

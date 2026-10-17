@@ -564,11 +564,12 @@ def assignment_editor(request, assignment=None):
                         meeting.save()
                     if not credential_result["qualified"] and not covered:
                         for meeting in parent.meetings.all():
-                            CredentialOverride.objects.get_or_create(
-                                assignment=meeting, subject=parent.subject, faculty=parent.faculty,
-                                defaults={"admin_user": request.user, "reason": reason,
-                                          "missing_credentials": missing_credential_message(parent.faculty, parent.subject, parent.term)},
-                            )
+                            if not valid_credential_override(meeting, parent.faculty, parent.subject):
+                                CredentialOverride.objects.create(
+                                    assignment=meeting, subject=parent.subject, faculty=parent.faculty,
+                                    admin_user=request.user, reason=reason,
+                                    missing_credentials=missing_credential_message(parent.faculty, parent.subject, parent.term),
+                                )
             except (ProtectedError, ValidationError, IntegrityError) as exc:
                 if isinstance(exc, ProtectedError):
                     error = "A meeting you removed is already used by a schedule. Remove it from that schedule before deleting it here."
@@ -685,7 +686,9 @@ def discard_form_draft(request, pk):
 
 def render_credential_override_confirmation(request, form, result):
     obj = form.save(commit=False)
-    assignment = obj if hasattr(obj, "subject") else obj.assignment
+    assignment = obj if hasattr(obj, "subject") else {
+        "faculty": obj.effective_faculty, "subject": obj.effective_subject,
+    }
     return render(
         request,
         "schedules/credential_override_confirm.html",
@@ -890,7 +893,7 @@ def schedule_detail(request, pk):
             entry.manual_conflicts = []
         except ValidationError as exc:
             entry.manual_conflicts = exc.messages
-    if request.GET.get("check") == "1":
+    if admin_required(request.user) and request.GET.get("check") == "1":
         count = len(schedule_validation_messages(schedule))
         if count:
             messages.error(request, f"{count} conflicts require attention.")
@@ -898,7 +901,7 @@ def schedule_detail(request, pk):
             messages.success(request, "No conflicts detected.")
     return render(request, "schedules/schedule_detail.html", {
         "schedule": schedule, "entries": entries, "filter_form": filter_form,
-        "conflicts": schedule_validation_messages(schedule), "can_manage": admin_required(request.user),
+        "conflicts": schedule_validation_messages(schedule) if admin_required(request.user) else [], "can_manage": admin_required(request.user),
     })
 
 
@@ -909,7 +912,7 @@ def entry_create(request, pk):
     if schedule.status in {ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED}:
         messages.error(request, "Published and archived schedules are locked. Create or regenerate a draft version before making changes.")
         return redirect("schedule_detail", pk=pk)
-    form = ScheduleEntryForm(request.POST or None)
+    form = ScheduleEntryForm(request.POST or None, instance=ScheduleEntry(schedule=schedule), defer_credential_review=True)
     form.fields["assignment"].queryset = TeachingAssignment.objects.filter(term=schedule.term)
     if request.method == "POST" and form.is_valid():
         return save_entry_with_credential_check(request, form, schedule)
@@ -923,7 +926,7 @@ def entry_update(request, pk, entry_pk):
     if entry.schedule.status in {ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED}:
         messages.error(request, "Published and archived schedules are locked. Create or regenerate a draft version before making changes.")
         return redirect("schedule_detail", pk=pk)
-    form = ScheduleEntryForm(request.POST or None, instance=entry)
+    form = ScheduleEntryForm(request.POST or None, instance=entry, defer_credential_review=True)
     form.fields["assignment"].queryset = TeachingAssignment.objects.filter(term=entry.schedule.term)
     if request.method == "POST" and form.is_valid():
         return save_entry_with_credential_check(request, form, entry.schedule)
@@ -941,6 +944,7 @@ def save_entry_with_credential_check(request, form, schedule):
             "component_override", "room_id", "day", "start_time", "end_time")}
     result = faculty_qualification(entry.effective_faculty, entry.effective_subject, schedule.term)
     valid_override = valid_credential_override(entry.assignment, entry.effective_faculty, entry.effective_subject)
+    override_values = None
     if not result["qualified"] and not valid_override:
         if request.POST.get("credential_override_confirm") != "yes":
             return render_credential_override_confirmation(request, form, result)
@@ -948,27 +952,27 @@ def save_entry_with_credential_check(request, form, schedule):
         if not reason:
             messages.error(request, "Override reason is required.")
             return render_credential_override_confirmation(request, form, result)
-        CredentialOverride.objects.create(
-            assignment=entry.assignment,
-            subject=entry.effective_subject,
-            faculty=entry.effective_faculty,
-            admin_user=request.user,
-            reason=reason,
+        override_values = dict(
+            assignment=entry.assignment, subject=entry.effective_subject, faculty=entry.effective_faculty,
+            admin_user=request.user, reason=reason,
             missing_credentials=missing_credential_message(entry.effective_faculty, entry.effective_subject, schedule.term),
         )
     try:
-        entry.full_clean()
+        with transaction.atomic():
+            if override_values:
+                CredentialOverride.objects.create(**override_values)
+            entry.full_clean()
+            entry.save()
+            new_values = {field: str(getattr(entry, field)) for field in (
+                "assignment_id", "subject_override_id", "section_override_id", "faculty_override_id",
+                "component_override", "room_id", "day", "start_time", "end_time")}
+            if previous and previous != new_values:
+                ScheduleEntryAudit.objects.create(schedule=schedule, entry=entry, user=request.user,
+                                                  previous_values=previous, new_values=new_values)
+            schedule.save(update_fields=["updated_at"])
     except ValidationError as exc:
         form.add_error(None, exc)
         return render(request, "schedules/form.html", {"form": form, "title": "Edit Schedule Entry", "description": "Resolve the validation issues before saving this schedule entry.", "tooltip_context": "schedule-entry"})
-    entry.save()
-    new_values = {field: str(getattr(entry, field)) for field in (
-        "assignment_id", "subject_override_id", "section_override_id", "faculty_override_id",
-        "component_override", "room_id", "day", "start_time", "end_time")}
-    if previous and previous != new_values:
-        ScheduleEntryAudit.objects.create(schedule=schedule, entry=entry, user=request.user,
-                                          previous_values=previous, new_values=new_values)
-    schedule.save(update_fields=["updated_at"])
     messages.success(request, "Schedule entry saved.")
     return redirect("schedule_detail", pk=schedule.pk)
 
@@ -978,6 +982,9 @@ def save_entry_with_credential_check(request, form, schedule):
 @require_POST
 def publish_schedule(request, pk):
     schedule = get_object_or_404(Schedule, pk=pk)
+    if schedule.status in {ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED}:
+        messages.error(request, "Published and archived schedules are locked.")
+        return redirect("schedule_detail", pk=pk)
     conflicts = schedule_validation_messages(schedule)
     if conflicts:
         messages.error(request, "Resolve conflicts before publishing.")
@@ -997,7 +1004,9 @@ def publish_schedule(request, pk):
             current.status = ScheduleStatus.ARCHIVED
             current.archived_at = now
             current.replaced_by = locked
-            current.save(update_fields=["status", "archived_at", "replaced_by", "updated_at"])
+            from .protection import archive_transition
+            with archive_transition():
+                current.save(update_fields=["status", "archived_at", "replaced_by", "updated_at"])
         locked.status = ScheduleStatus.PUBLISHED
         locked.published_at = now
         locked.archived_at = None

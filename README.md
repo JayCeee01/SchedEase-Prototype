@@ -150,9 +150,8 @@ The suite deliberately logs a mocked `RuntimeError: private technical detail` in
 | H3: shared room availability rules | `test_H3_unlisted_day_is_closed_for_ga_manual_validation_and_reports` | Tuesday has zero available hours in reporting but is accepted by GA room checks and manual validation. |
 | H4: credential expiry validation | `test_H4_expired_credential_does_not_qualify_faculty_or_ga` | A credential expired before the fixed academic term still qualifies in the service and GA preflight. |
 
-Run just these contracts with `python manage.py test schedules.test_known_defects --verbosity 2`. H1 and the original H3 test now pass normally after Tasks 2.1 and 2.2. H4 retains its temporary `unittest.expectedFailure` marker. The H3 reporting test in `schedules/test_availability.py` now passes normally after Task 2.3; H4 is the only expected failure and none is skipped. Setup, workflow operations, and positive controls run outside the marker so unexpected exceptions and failed prerequisites remain visible. Only the final comparison of the intended outcomes is marked. The GA checks use a fixed seed and inspect deterministic inputs/constraints rather than relying on a random generation result.
+Run these contracts with `python manage.py test schedules.test_known_defects --verbosity 2`. H1, H3 scheduling/reporting, and H4 now pass normally after Tasks 2.1-2.4. No expected-failure markers remain. H4 passes the academic term explicitly to the shared credential service. The historical verification results below record the baseline at the end of each earlier task.
 
-Remove each marker when its corresponding Phase 2 defect is fixed and rerun the focused and full suites. An unexpected success fails the suite and requires investigation; it must not be silently accepted. These tests do not implement the fixes. H4 currently exercises the existing qualification API, which has no term argument; if Phase 2 adds term-aware qualification, pass the fixture's term explicitly in that regression test.
 
 Task 1.3 completion verification (Python 3.12.10 / Django 5.0.6): `python manage.py test` ran **103 tests: 100 passed, 3 expected failures, 0 unexpected failures/errors, and 0 unexpected successes**. The expected failures are H1, H3, and H4 above. Their assertion differences were also inspected with the markers temporarily disabled in memory, confirming the specific defects rather than unrelated errors. `python manage.py check` passed and `python manage.py makemigrations --check --dry-run` reported no changes. No application logic was modified; Phase 2 fixes remain pending.
 
@@ -191,10 +190,42 @@ Examples verified by tests:
 | No availability restrictions | 72 weekly | 0 | 0% |
 | Fully blocked or inactive room | 0 | 1 historical hour | 0% (zero-denominator convention) |
 
-Existing scheduled hours remain visible even if later availability changes make them invalid; reporting does not delete entries or repair schedules. The existing zero-denominator convention is retained to avoid division errors. H3 reporting now passes without an expected-failure marker; H4 credential expiry remains deferred. Run `python manage.py test schedules.test_room_availability_reporting schedules.test_availability schedules.test_known_defects` for focused coverage, including CSV output.
+Existing scheduled hours remain visible even if later availability changes make them invalid; reporting does not delete entries or repair schedules. The existing zero-denominator convention is retained to avoid division errors. H3 reporting now passes without an expected-failure marker; H4 was deferred at this stage and is now resolved in Task 2.4. Run `python manage.py test schedules.test_room_availability_reporting schedules.test_availability schedules.test_known_defects` for focused coverage, including CSV output.
 
 Task 2.3 verification: **121 tests: 120 passed, 1 expected failure (H4), no unexpected failures/errors or successes**. All 16 focused tests completed with only H4 expected to fail. Django system checks passed and migration checks reported no changes.
+
+### Task 2.4: faculty credentials and administrator overrides
+
+Qualification uses the academic term's actual dates, never today's date. A required credential (or an explicitly accepted equivalent) must have an issue date on or before the term starts and an expiry date on or after the term ends. Both boundaries are inclusive. A blank expiry date means no expiry restriction. Missing issue dates, missing term dates, or invalid term date order cannot establish qualification; correct the data or obtain an explicit administrator override. Courses with no credential requirements do not require a credential.
+
+Overrides are scoped to their linked meeting and the exact faculty/course being scheduled, including schedule-entry faculty/course overrides. They must retain an administrator reference, a nonblank reason, and the recorded missing-credential justification. Old overrides remain in the audit history but do not authorize a different teacher or course. Valid matching overrides can be reused without duplicate approval records. Manual override creation, final entry validation, entry saving, and edit auditing commit or roll back together. Non-administrators cannot approve overrides.
+
+The shared service is used by GA eligibility/preflight, manual validation, assignment editing, spreadsheet validation, and schedule comparison qualification metrics. GA weights, room availability, and assignment synchronization are unchanged.
+
+**Existing data and spreadsheet limitation:** no dates are invented or backfilled. Review undated Faculty Credentials before generating schedules. The current academic spreadsheet format imports credential names, not issue/expiry dates: create the dated faculty credential records first when required, then import assignments. Matching pre-existing administrator overrides remain valid; imports cannot create new approvals. Existing tests now use explicit issue dates for fixtures intended to qualify, and new tests ensure undated credentials are rejected.
+
+Run `python manage.py test schedules.test_credentials schedules.test_known_defects schedules.test_academic_import` for focused checks.
+
+Task 2.4 verification: **132 tests passed, 0 failures/errors, 0 expected failures, and 0 unexpected successes**. All 42 focused credential, import, and original regression tests passed. Django system checks passed and `makemigrations --check --dry-run` reported no changes. H1, H3, and H4 all run normally without expected-failure markers.
 
 ## Deployment Notes
 
 Set `SCHED_EASE_DEBUG=False`, provide a strong `SCHED_EASE_SECRET_KEY`, set `SCHED_EASE_ALLOWED_HOSTS`, collect static files with `python manage.py collectstatic`, and run behind a production WSGI server. For PostgreSQL deployment, replace the simple `SCHED_EASE_DATABASE_URL` handling in `sched_ease/settings.py` with `dj-database-url` or explicit Django database settings.
+
+
+### Lecture and laboratory requirements (Task 2.5)
+
+Assignment forms, spreadsheet imports, generated schedules, and publication use the same component totals. Each course's lecture and laboratory hours are checked separately in integer minutes. Meetings may split a component across several sessions; meeting numbers must be unique within the assignment. No separate meeting-count policy is configured.
+
+Use explicit **LECTURE** and **LABORATORY** meetings. A zero duration uses only that component's course hours. A course with no laboratory hours must not contain laboratory meetings. Legacy **GENERAL** meetings must be reviewed and classified before scheduling or publication; existing records are not automatically rewritten.
+
+Manual entries may be added incrementally, but their course and component must match the assigned meeting. Complete coverage and actual scheduled durations are checked before GA output is saved or a schedule is published. Course/component changes should be made through the assignment workflow, respecting existing schedule locks. Administrators can review validation details; global diagnostics are not shown to students.
+
+
+### Meeting duration and active rooms (Task 2.6)
+
+Effective meeting durations must be whole minutes from 1 to 720, derived from the configured 07:00-19:00 school day in `schedules/services/time.py`. There is no separate academic minimum or duration increment beyond one minute. The GA's 30-minute start grid does not impose a 30-minute minimum duration. GA preflight rejects invalid durations; generation never extends or shortens them.
+
+The existing stored zero value still means use the course component's hours (Task 2.5); that resolved duration must pass the same limits. Spreadsheet durations remain explicit positive integers. Opening and closing boundaries are inclusive. Actual scheduled durations must match the meeting requirement exactly, without rounding seconds.
+
+Inactive rooms are rejected by imports, manual scheduling, GA generation, and publication using the shared availability policy. Imports do not reactivate rooms automatically. Invalid manual edits remain unsaved and produce no edit audit record.

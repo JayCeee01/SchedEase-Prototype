@@ -1,4 +1,5 @@
 from django.contrib import admin
+from .protection import protected
 from .models import (
     AcademicTerm,
     Assignment,
@@ -24,8 +25,13 @@ from .models import (
 )
 
 
+class ProtectedScheduleAdmin(admin.ModelAdmin):
+    def has_delete_permission(self, request, obj=None):
+        return super().has_delete_permission(request, obj) and (obj is None or not protected(obj))
+
+
 @admin.register(ScheduleEntry)
-class ScheduleEntryAdmin(admin.ModelAdmin):
+class ScheduleEntryAdmin(ProtectedScheduleAdmin):
     list_display = ("assignment", "room", "day", "start_time", "end_time", "schedule")
     list_filter = ("schedule", "day", "room")
     search_fields = ("assignment__subject__code", "assignment__section__name", "room__name")
@@ -53,4 +59,4 @@ for model in [
     TeachingAssignment,
     YearLevel,
 ]:
-    admin.site.register(model)
+    admin.site.register(model, ProtectedScheduleAdmin)

@@ -25,6 +25,12 @@ class AcademicImportTests(TestCase):
             assigned_faculty_id='F001', faculty_name='Ada Teacher', faculty_max_hours='12',
             faculty_credentials='Computing', course_credentials='Computing', room_name='R101', room_type='LECTURE', room_capacity='30',
             component='LECTURE', meeting_index='1', duration_minutes='60', meeting_room_type='LECTURE')
+        # Qualification now requires a documented issue date. The spreadsheet
+        # format supplies credential names only; dated records are prepared first.
+        department = m.Department.objects.create(code='CS', name='Computing')
+        faculty = m.Faculty.objects.create(department=department, employee_id='F001', full_name='Ada Teacher', max_weekly_hours=12)
+        credential = m.Credential.objects.create(name='Computing')
+        m.FacultyCredential.objects.create(faculty=faculty, credential=credential, issued_on=date(2025, 1, 1))
         self.rows = [self.row, {**self.row, 'room_name': 'Lab', 'room_type': 'COMPUTER_LAB',
                               'component': 'LABORATORY', 'meeting_index': '2', 'meeting_room_type': 'COMPUTER_LAB'}]
 
@@ -91,8 +97,25 @@ class AcademicImportTests(TestCase):
                 result = self.preview([{**row, key: value} for row in self.rows])
                 self.assertTrue(result['errors'])
                 self.assertFalse(m.Subject.objects.exists())
+        m.FacultyCredential.objects.all().delete()
         result = self.preview([{**row, 'faculty_credentials': ''} for row in self.rows])
         self.assertTrue(any('missing required credential' in e for e in result['errors']))
+
+    def test_import_does_not_invent_dates_or_approve_undated_credentials(self):
+        m.FacultyCredential.objects.all().delete()
+        result = self.preview()
+        self.assertTrue(any('missing issue date' in error for error in result['errors']))
+        self.assertFalse(m.FacultyCredential.objects.exists())
+        self.assertFalse(m.Subject.objects.exists())
+
+    def test_repeat_import_preserves_matching_administrator_overrides(self):
+        self.commit()
+        m.FacultyCredential.objects.update(expires_on=date(2025, 12, 31))
+        for meeting in m.TeachingAssignment.objects.all():
+            m.CredentialOverride.objects.create(assignment=meeting, subject=meeting.subject, faculty=meeting.faculty,
+                admin_user=self.admin, reason='Explicit term exception', missing_credentials='Expired credential')
+        self.commit()
+        self.assertEqual(m.CredentialOverride.objects.count(), 2)
 
     def test_meeting_totals_and_indexes(self):
         result = self.preview([self.row])
@@ -109,7 +132,7 @@ class AcademicImportTests(TestCase):
 
     def test_stale_confirmation_rolls_back(self):
         result = self.preview()
-        m.Department.objects.create(code='CS', name='Changed elsewhere')
+        m.Department.objects.filter(code='CS').update(name='Changed elsewhere')
         with self.assertRaisesMessage(ValueError, 'changed since preview'):
             run_import(self.payload(), list(COLUMNS), self.term, commit=True, expected_signature=result['signature'])
         self.assertEqual(m.Department.objects.get().name, 'Changed elsewhere')
@@ -372,3 +395,38 @@ class AcademicImportTests(TestCase):
         self.assertTrue(response.context['mapping_needs_review'])
         self.assertEqual(response.context['unmatched_columns'], 1)
         self.assertContains(response, 'data-column-choices open')
+
+    def test_H5_extra_component_is_rejected_with_source_row(self):
+        rows = [{**row, 'lab_hours': '0'} for row in self.rows]
+        result = self.preview(rows)
+        self.assertTrue(any('LABORATORY totals 60' in error and 'Row' in error for error in result['errors']))
+        self.assertFalse(m.Assignment.objects.exists())
+
+    def test_H7_invalid_durations_rollback(self):
+        for duration in ('0', '-1', '0.5', '721'):
+            with self.subTest(duration=duration):
+                result = self.preview([{**self.row, 'duration_minutes': duration}])
+                self.assertTrue(any('duration_minutes' in e for e in result['errors']))
+                self.assertFalse(m.Assignment.objects.exists())
+
+    def test_H7_inactive_room_rejected_without_changes(self):
+        room = m.Room.objects.create(name='R101', room_type='LECTURE', capacity=30, is_active=False)
+        result = self.preview(policy='update')
+        self.assertTrue(any('room_name' in e and 'inactive' in e for e in result['errors']))
+        self.assertFalse(m.Subject.objects.exists())
+        room.refresh_from_db()
+        self.assertFalse(room.is_active)
+
+    def test_H2_import_cannot_change_finalized_course_information(self):
+        self.commit()
+        schedule = m.Schedule.objects.create(term=self.term, name='Official')
+        for i, meeting in enumerate(m.TeachingAssignment.objects.all()):
+            from datetime import time
+            schedule.entries.create(assignment=meeting, room=m.Room.objects.get(room_type=meeting.effective_room_type),
+                                    day=i, start_time=time(8), end_time=time(9))
+        schedule.status = m.ScheduleStatus.PUBLISHED
+        schedule.save(update_fields=['status'])
+        result = self.preview([{**row, 'course_description': 'Changed'} for row in self.rows], policy='update')
+        self.assertTrue(any('published or archived' in e for e in result['errors']))
+        self.assertEqual(m.Subject.objects.get().title, 'Programming')
+        self.assertEqual(schedule.entries.count(), 2)

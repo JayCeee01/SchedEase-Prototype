@@ -26,9 +26,9 @@ class SchedulingTestCase(TestCase):
         self.section = Section.objects.create(program=self.program, year_level=self.year, name="A", size=30)
         self.faculty = Faculty.objects.create(department=self.department, employee_id="F1", full_name="Ada")
         self.room = Room.objects.create(name="Lab 1", room_type=RoomKind.COMPUTER_LAB, capacity=35)
-        self.subject = Subject.objects.create(code="IT101", title="Programming", department=self.department, lecture_hours=2, lab_hours=1, required_room_type=RoomKind.COMPUTER_LAB)
+        self.subject = Subject.objects.create(code="IT101", title="Programming", department=self.department, lecture_hours=3, lab_hours=0, required_room_type=RoomKind.COMPUTER_LAB)
         self.term = AcademicTerm.objects.create(name="First Semester", school_year="2026-2027", starts_on=date(2026, 8, 1), ends_on=date(2026, 12, 1), is_active=True)
-        self.assignment = TeachingAssignment.objects.create(term=self.term, subject=self.subject, faculty=self.faculty, section=self.section)
+        self.assignment = TeachingAssignment.objects.create(term=self.term, subject=self.subject, faculty=self.faculty, section=self.section, component=TeachingAssignment.Component.LECTURE)
         self.settings = GASettings.objects.create(name="Fast", population_size=12, generations=8, mutation_rate=0.1, crossover_rate=0.8, elitism=2)
 
     def test_manual_entry_detects_room_capacity(self):
@@ -278,19 +278,19 @@ class SchedulingTestCase(TestCase):
     def test_credential_exact_match_qualifies_faculty(self):
         credential = Credential.objects.create(name="Programming")
         SubjectCredentialRequirement.objects.create(subject=self.subject, required_credential=credential)
-        FacultyCredential.objects.create(faculty=self.faculty, credential=credential)
+        FacultyCredential.objects.create(faculty=self.faculty, credential=credential, issued_on=self.term.starts_on)
 
-        self.assertTrue(faculty_qualification(self.faculty, self.subject)["qualified"])
+        self.assertTrue(faculty_qualification(self.faculty, self.subject, self.term)["qualified"])
 
     def test_related_credentials_only_work_when_explicitly_allowed(self):
         required = Credential.objects.create(name="Programming")
         related = Credential.objects.create(name="Software Development")
         requirement = SubjectCredentialRequirement.objects.create(subject=self.subject, required_credential=required)
-        FacultyCredential.objects.create(faculty=self.faculty, credential=related)
+        FacultyCredential.objects.create(faculty=self.faculty, credential=related, issued_on=self.term.starts_on)
 
-        self.assertFalse(faculty_qualification(self.faculty, self.subject)["qualified"])
+        self.assertFalse(faculty_qualification(self.faculty, self.subject, self.term)["qualified"])
         requirement.acceptable_equivalents.add(related)
-        self.assertTrue(faculty_qualification(self.faculty, self.subject)["qualified"])
+        self.assertTrue(faculty_qualification(self.faculty, self.subject, self.term)["qualified"])
 
     def test_ga_penalizes_missing_credentials_as_hard_constraint(self):
         required = Credential.objects.create(name="Programming")
@@ -298,7 +298,7 @@ class SchedulingTestCase(TestCase):
         scheduler = GeneticScheduler(self.term, self.settings, seed=3)
         chromosome = [Gene(self.assignment.id, self.room.id, 1, time(8), time(11))]
         unqualified_score = scheduler.fitness(chromosome)
-        FacultyCredential.objects.create(faculty=self.faculty, credential=required)
+        FacultyCredential.objects.create(faculty=self.faculty, credential=required, issued_on=self.term.starts_on)
         qualified_scheduler = GeneticScheduler(self.term, self.settings, seed=3)
         self.assertLess(unqualified_score, qualified_scheduler.fitness(chromosome))
 
@@ -499,8 +499,10 @@ class SchedulingTestCase(TestCase):
 
     def test_publishing_replacement_requires_confirmation_and_archives_current(self):
         self.client.login(username="admin", password="admin12345")
-        current = Schedule.objects.create(term=self.term, name="Current", status=ScheduleStatus.PUBLISHED)
+        current = Schedule.objects.create(term=self.term, name="Current")
         current.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
+        current.status = ScheduleStatus.PUBLISHED
+        current.save(update_fields=["status"])
         candidate = Schedule.objects.create(term=self.term, name="Replacement")
         candidate.entries.create(assignment=self.assignment, room=self.room, day=1, start_time=time(8), end_time=time(11))
 
@@ -575,8 +577,10 @@ class SchedulingTestCase(TestCase):
         Profile.objects.create(user=faculty_user, role=Role.FACULTY)
         self.faculty.user = faculty_user
         self.faculty.save(update_fields=["user"])
-        schedule = Schedule.objects.create(term=self.term, name="Official", status=ScheduleStatus.PUBLISHED)
+        schedule = Schedule.objects.create(term=self.term, name="Official")
         schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
+        schedule.status = ScheduleStatus.PUBLISHED
+        schedule.save(update_fields=["status"])
         self.client.login(username="facultyview", password="password123")
 
         response = self.client.get("/dashboard/")
@@ -589,8 +593,10 @@ class SchedulingTestCase(TestCase):
         student_user = User.objects.create_user(username="studentview", password="password123")
         Profile.objects.create(user=student_user, role=Role.STUDENT)
         Student.objects.create(user=student_user, section=self.section, student_number="VIEW1", full_name="Student View")
-        schedule = Schedule.objects.create(term=self.term, name="Official", status=ScheduleStatus.PUBLISHED)
+        schedule = Schedule.objects.create(term=self.term, name="Official")
         schedule.entries.create(assignment=self.assignment, room=self.room, day=2, start_time=time(9), end_time=time(12))
+        schedule.status = ScheduleStatus.PUBLISHED
+        schedule.save(update_fields=["status"])
         self.client.login(username="studentview", password="password123")
 
         response = self.client.get("/dashboard/")
@@ -609,9 +615,11 @@ class SchedulingTestCase(TestCase):
         other_assignment = TeachingAssignment.objects.create(term=self.term, subject=other_subject,
                                                               faculty=self.faculty, section=other_section,
                                                               duration_minutes=180)
-        schedule = Schedule.objects.create(term=self.term, name="Mixed Official", status=ScheduleStatus.PUBLISHED)
+        schedule = Schedule.objects.create(term=self.term, name="Mixed Official")
         own_entry = schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
         schedule.entries.create(assignment=other_assignment, room=self.room, day=1, start_time=time(8), end_time=time(11))
+        schedule.status = ScheduleStatus.PUBLISHED
+        schedule.save(update_fields=["status"])
         self.client.login(username="restrictedstudent", password="password123")
 
         browse = self.client.get("/schedules/browse/")
@@ -638,9 +646,11 @@ class SchedulingTestCase(TestCase):
         other_section = Section.objects.create(program=self.program, year_level=self.year, name="B", size=25)
         other_assignment = TeachingAssignment.objects.create(term=self.term, subject=self.subject,
                                                               faculty=self.faculty, section=other_section)
-        schedule = Schedule.objects.create(term=self.term, name="Other Section", status=ScheduleStatus.PUBLISHED)
+        schedule = Schedule.objects.create(term=self.term, name="Other Section")
         schedule.entries.create(assignment=other_assignment, room=self.room, day=0,
                                 start_time=time(8), end_time=time(11))
+        schedule.status = ScheduleStatus.PUBLISHED
+        schedule.save(update_fields=["status"])
         self.client.force_login(student_user)
 
         browse = self.client.get("/schedules/browse/")
@@ -663,11 +673,13 @@ class SchedulingTestCase(TestCase):
                                                lecture_hours=3, required_room_type=RoomKind.COMPUTER_LAB)
         other_assignment = TeachingAssignment.objects.create(term=self.term, subject=other_subject,
                                                               faculty=self.faculty, section=other_section)
-        schedule = Schedule.objects.create(term=self.term, name="Section Overrides", status=ScheduleStatus.PUBLISHED)
+        schedule = Schedule.objects.create(term=self.term, name="Section Overrides")
         schedule.entries.create(assignment=self.assignment, section_override=other_section, room=self.room,
                                 day=0, start_time=time(8), end_time=time(11))
         own_entry = schedule.entries.create(assignment=other_assignment, section_override=self.section, room=self.room,
                                             day=1, start_time=time(8), end_time=time(11))
+        schedule.status = ScheduleStatus.PUBLISHED
+        schedule.save(update_fields=["status"])
         self.client.force_login(student_user)
 
         browse = self.client.get("/schedules/browse/")
@@ -690,9 +702,11 @@ class SchedulingTestCase(TestCase):
                                                  starts_on=date(2027, 1, 1), ends_on=date(2027, 5, 1))
         other_assignment = TeachingAssignment.objects.create(term=other_term, subject=self.subject,
                                                               faculty=other_faculty, section=self.section)
-        schedule = Schedule.objects.create(term=other_term, name="Other Faculty", status=ScheduleStatus.PUBLISHED)
+        schedule = Schedule.objects.create(term=other_term, name="Other Faculty")
         schedule.entries.create(assignment=other_assignment, room=self.room, day=0,
                                 start_time=time(8), end_time=time(11))
+        schedule.status = ScheduleStatus.PUBLISHED
+        schedule.save(update_fields=["status"])
         self.client.login(username="restrictedfaculty", password="password123")
 
         self.assertNotContains(self.client.get("/schedules/browse/"),
