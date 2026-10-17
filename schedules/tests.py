@@ -610,19 +610,75 @@ class SchedulingTestCase(TestCase):
                                                               faculty=self.faculty, section=other_section,
                                                               duration_minutes=180)
         schedule = Schedule.objects.create(term=self.term, name="Mixed Official", status=ScheduleStatus.PUBLISHED)
-        schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
+        own_entry = schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
         schedule.entries.create(assignment=other_assignment, room=self.room, day=1, start_time=time(8), end_time=time(11))
         self.client.login(username="restrictedstudent", password="password123")
 
         browse = self.client.get("/schedules/browse/")
         detail = self.client.get(f"/schedules/{schedule.id}/")
         csv_export = self.client.get(f"/schedules/{schedule.id}/export/csv/")
-        self.assertContains(browse, f'<span class="subject-chip">{self.subject.code}</span>', html=True)
-        self.assertNotContains(browse, f'<span class="subject-chip">{other_subject.code}</span>', html=True)
+        self.assertContains(browse, f'<span class="subject-chip" tabindex="0" data-tooltip="{self.subject.title}">{self.subject.code}</span>', count=1, html=True)
+        self.assertNotContains(browse, f'<span class="subject-chip" tabindex="0" data-tooltip="{other_subject.title}">{other_subject.code}</span>', html=True)
+        # Course names also occur in filter options; verify the actual table data.
+        self.assertEqual(list(browse.context["entries"]), [own_entry])
+        self.assertEqual(list(detail.context["entries"]), [own_entry])
         self.assertContains(detail, self.subject.code)
         self.assertNotContains(detail, other_subject.code)
         self.assertContains(csv_export, self.subject.code)
         self.assertNotContains(csv_export, other_subject.code)
+
+        filtered = self.client.get("/schedules/browse/", {"section": other_section.pk})
+        self.assertEqual(list(filtered.context["entries"]), [])
+        self.assertContains(filtered, "No schedule entries.")
+
+    def test_student_empty_timetable_and_other_section_schedule_access(self):
+        student_user = User.objects.create_user(username="empty_student", password="password123")
+        Profile.objects.create(user=student_user, role=Role.STUDENT)
+        Student.objects.create(user=student_user, section=self.section, student_number="EMPTY1", full_name="Empty Student")
+        other_section = Section.objects.create(program=self.program, year_level=self.year, name="B", size=25)
+        other_assignment = TeachingAssignment.objects.create(term=self.term, subject=self.subject,
+                                                              faculty=self.faculty, section=other_section)
+        schedule = Schedule.objects.create(term=self.term, name="Other Section", status=ScheduleStatus.PUBLISHED)
+        schedule.entries.create(assignment=other_assignment, room=self.room, day=0,
+                                start_time=time(8), end_time=time(11))
+        self.client.force_login(student_user)
+
+        browse = self.client.get("/schedules/browse/")
+        self.assertEqual(list(browse.context["entries"]), [])
+        self.assertContains(browse, '<td colspan="7" class="table-empty">No schedule entries.</td>', html=True)
+        self.assertNotContains(browse, 'class="subject-chip"')
+        dashboard = self.client.get("/dashboard/")
+        self.assertContains(dashboard, "No published classes yet")
+        self.assertNotContains(dashboard, 'class="room-slot personal-class-slot"')
+        for suffix in ("", "export/csv/", "export/pdf/"):
+            with self.subTest(suffix=suffix):
+                self.assertEqual(self.client.get(f"/schedules/{schedule.pk}/{suffix}").status_code, 404)
+
+    def test_student_browse_respects_effective_section_overrides(self):
+        student_user = User.objects.create_user(username="override_student", password="password123")
+        Profile.objects.create(user=student_user, role=Role.STUDENT)
+        Student.objects.create(user=student_user, section=self.section, student_number="OVERRIDE1", full_name="Override Student")
+        other_section = Section.objects.create(program=self.program, year_level=self.year, name="B", size=25)
+        other_subject = Subject.objects.create(code="VISIBLE201", title="Reassigned Course", department=self.department,
+                                               lecture_hours=3, required_room_type=RoomKind.COMPUTER_LAB)
+        other_assignment = TeachingAssignment.objects.create(term=self.term, subject=other_subject,
+                                                              faculty=self.faculty, section=other_section)
+        schedule = Schedule.objects.create(term=self.term, name="Section Overrides", status=ScheduleStatus.PUBLISHED)
+        schedule.entries.create(assignment=self.assignment, section_override=other_section, room=self.room,
+                                day=0, start_time=time(8), end_time=time(11))
+        own_entry = schedule.entries.create(assignment=other_assignment, section_override=self.section, room=self.room,
+                                            day=1, start_time=time(8), end_time=time(11))
+        self.client.force_login(student_user)
+
+        browse = self.client.get("/schedules/browse/")
+        self.assertEqual(list(browse.context["entries"]), [own_entry])
+        self.assertContains(browse, f'<span class="subject-chip" tabindex="0" data-tooltip="{other_subject.title}">{other_subject.code}</span>', count=1, html=True)
+        self.assertNotContains(browse, f'<span class="subject-chip" tabindex="0" data-tooltip="{self.subject.title}">{self.subject.code}</span>', html=True)
+        detail = self.client.get(f"/schedules/{schedule.pk}/")
+        self.assertEqual(list(detail.context["entries"]), [own_entry])
+        csv_export = self.client.get(f"/schedules/{schedule.pk}/export/csv/")
+        self.assertContains(csv_export, other_subject.code)
+        self.assertNotContains(csv_export, self.subject.code)
 
     def test_faculty_cannot_open_schedule_with_no_assigned_entries(self):
         faculty_user = User.objects.create_user(username="restrictedfaculty", password="password123")

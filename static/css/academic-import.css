@@ -1,5 +1,7 @@
 .import-workspace { max-width: 1160px; width: 100%; min-width: 0; margin: 0 auto; }
 .import-workspace [hidden] { display: none !important; }
+.import-workspace .form { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.import-workspace .form > *, .import-guide-tools > * { min-width: 0; }
 .import-heading, .import-footer, .import-review-tools, .import-pagination { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .import-heading h1 { margin-bottom: 6px; }
 .import-heading { margin-bottom: 24px; }
@@ -7,6 +9,8 @@
 .import-stepper li { display: flex; gap: 10px; align-items: center; border-bottom: 3px solid var(--line); padding: 12px 8px; color: var(--muted); font-size: 13px; }
 .import-stepper li > span { display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; flex: 0 0 28px; height: 28px; }
 .import-stepper .is-current { color: var(--primary); border-color: var(--primary); }
+.import-stepper a { color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.import-stepper a:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; border-radius: 2px; }
 .import-stepper .is-current > span, .import-stepper .is-done > span { background: var(--primary-soft); color: var(--ink); border-color: var(--primary); }
 .import-card { padding: 24px; margin-bottom: 16px; min-width: 0; }
 .import-card h2 { margin: 0 0 12px; }

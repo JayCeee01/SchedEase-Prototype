@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="{% static 'css/academic-import.css' %}">
 <div class="import-workspace">
 <header class="import-heading"><div><p class="eyebrow">Academic Data</p><h1>Import Spreadsheet</h1><p class="subtle">Prepare your file, check the records, and import when you are ready.</p></div><a class="button" href="{% url 'generate_schedule' %}">Back to Generate Schedule</a></header>
-<ol class="import-stepper" aria-label="Import progress">{% for step in steps %}<li class="{% if step.current %}is-current{% elif step.done %}is-done{% endif %}"{% if step.current %} aria-current="step"{% endif %}><span>{{ step.number }}</span><strong>{{ step.label }}</strong></li>{% endfor %}</ol>
+<ol class="import-stepper" aria-label="Import progress">{% for step in steps %}<li class="{% if step.current %}is-current{% elif step.done %}is-done{% endif %}"{% if step.current %} aria-current="step"{% endif %}><span>{{ step.number }}</span>{% if step.url %}<a href="{{ step.url }}">{{ step.label }}</a>{% else %}<strong>{{ step.label }}</strong>{% endif %}</li>{% endfor %}</ol>
 {% if error_message %}<div class="import-notice import-error" role="alert">{{ error_message }}</div>{% endif %}
 {% if stage == 'template' %}
 <section class="panel import-card"><p class="eyebrow">Step 1 of 4</p><h2>Start with a template</h2><p>Use one row for each class meeting. Both templates include a lecture and a lab example.</p>
@@ -22,8 +22,12 @@
 {% elif stage == 'mapping' %}
 <section class="panel import-card"><p class="eyebrow">Step 3 of 4 &middot; Match columns</p><h2>Check how your columns will be used</h2><p class="subtle">{{ batch.payload.filename|default:'Uploaded spreadsheet' }} &middot; {{ batch.payload.rows|length }} rows &middot; {{ term }}</p>
 <form method="post" class="form" data-import-form>{% csrf_token %}<input type="hidden" name="action" value="preview">{{ form.non_field_errors }}
-<p>We matched familiar headings for you. Check the choices below, especially the assigned teacher.</p>
-<div class="import-scroll"><table class="import-mapping"><thead><tr><th>Your spreadsheet column</th><th>Information to import</th></tr></thead><tbody>{% for field in mapping_fields %}<tr><td><label for="{{ field.id_for_label }}">{{ field.help_text }}</label></td><td>{{ field }}{{ field.errors }}</td></tr>{% endfor %}</tbody></table></div>
+<div class="import-notice" data-mapping-summary role="status" aria-live="polite"><strong>{{ matched_columns }} of {{ column_count }} columns matched.</strong><p>{% if unmatched_columns %}{{ unmatched_columns }} column{{ unmatched_columns|pluralize }} will be left out unless you choose where to import {{ unmatched_columns|pluralize:'it,them' }}.{% else %}All headings have a match. Check the choices if this file uses different names.{% endif %}</p></div>
+{% if missing_columns %}<p class="import-file-error" role="alert">Choose a column for: {{ missing_columns|join:', ' }}.</p>{% endif %}
+{% if duplicate_columns %}<p class="import-file-error" role="alert">These choices are used more than once. Keep only one column for each: {{ duplicate_columns|join:', ' }}.</p>{% endif %}
+<details class="import-notes" data-column-choices{% if mapping_needs_review %} open{% endif %}><summary>Review or change column matches</summary>
+<div class="import-guide-tools"><label>Find a column<input type="search" data-mapping-search placeholder="Search your column headings"></label><label>Show<select data-mapping-filter><option value="">All columns</option><option value="unmatched">Unmatched columns</option></select></label></div>
+<div class="import-scroll"><table class="import-mapping"><thead><tr><th>Your spreadsheet column</th><th>Information to import</th></tr></thead><tbody>{% for field in mapping_fields %}<tr data-mapping-row><td><label for="{{ field.id_for_label }}">{{ field.help_text }}</label></td><td>{{ field }}{{ field.errors }}</td></tr>{% endfor %}</tbody></table></div><p data-mapping-empty hidden>No columns match this filter.</p></details>
 <div class="import-policy"><h3>When a record already exists</h3>{{ form.policy }}{{ form.policy.errors }}<p class="subtle">Keep existing records unchanged is the safest choice. Updates use filled-in cells only and need your approval at the final step.</p></div>
 <p class="import-check">{{ form.faculty_confirm }}<label for="{{ form.faculty_confirm.id_for_label }}">{{ form.faculty_confirm.label }}</label></p>{{ form.faculty_confirm.errors }}
 <div class="import-footer"><a class="button" href="{% url 'academic_import' %}?step=upload">Replace File</a><button class="primary" type="submit">Review Information</button></div>{% include 'schedules/import_progress.html' %}</form></section>

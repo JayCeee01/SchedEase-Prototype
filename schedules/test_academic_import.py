@@ -309,7 +309,7 @@ class AcademicImportTests(TestCase):
         payload = read_spreadsheet(SimpleUploadedFile('large.csv', stream.getvalue().encode()))
         payload.update(term_id=self.term.pk, mapping=list(COLUMNS), policy='skip', preview={
             'total': 1000, 'actions': [], 'errors': [], 'issues': [], 'warnings': [], 'counts': {}, 'signature': 'example'})
-        batch = m.AcademicImport.objects.create(user=self.admin, payload=payload)
+        batch = m.AcademicImport.objects.create(user=self.admin, payload=payload, preview_signature='example')
         response = self.client.get(reverse('academic_import_review', args=[batch.pk]) + '?page=20')
         self.assertEqual(response.context['page_count'], 20)
         self.assertEqual(len(response.context['preview_rows']), 50)
@@ -327,3 +327,48 @@ class AcademicImportTests(TestCase):
         other = get_user_model().objects.create_superuser('report-admin', password='test')
         self.client.force_login(other)
         self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_revoked_preview_cannot_appear_ready_after_reload(self):
+        result = self.preview()
+        payload = {**self.payload(), 'term_id': self.term.pk, 'mapping': list(COLUMNS),
+                   'policy': 'skip', 'preview': result}
+        batch = m.AcademicImport.objects.create(user=self.admin, payload=payload, preview_signature=result['signature'])
+        url = reverse('academic_import_review', args=[batch.pk])
+        fields = {f'column_{i}': 'course_code' for i in range(len(COLUMNS))}
+        self.client.post(url, {**fields, 'action': 'preview', 'policy': 'skip', 'faculty_confirm': 'on'})
+        response = self.client.get(url + '?step=confirm')
+        self.assertEqual(response.context['stage'], 'mapping')
+        self.assertNotContains(response, 'Continue to Confirm')
+        self.assertFalse(m.Subject.objects.exists())
+
+    def test_missing_update_approval_stays_on_confirmation(self):
+        self.commit()
+        result = self.preview(policy='update')
+        payload = {**self.payload(), 'term_id': self.term.pk, 'mapping': list(COLUMNS),
+                   'policy': 'update', 'preview': result}
+        batch = m.AcademicImport.objects.create(user=self.admin, payload=payload, preview_signature=result['signature'])
+        url = reverse('academic_import_review', args=[batch.pk])
+        response = self.client.post(url, {'action': 'confirm', 'signature': result['signature']})
+        self.assertEqual(response.context['stage'], 'confirm')
+        self.assertContains(response, 'Tick the approval box')
+        self.assertContains(response, 'Saving your records.')
+        batch.refresh_from_db()
+        self.assertFalse(batch.completed_at)
+        self.assertTrue(batch.preview_signature)
+
+    def test_mapping_summary_and_stage_specific_feedback(self):
+        batch = m.AcademicImport.objects.create(user=self.admin, payload={**self.payload(), 'term_id': self.term.pk})
+        response = self.client.get(reverse('academic_import_review', args=[batch.pk]))
+        self.assertEqual(response.context['matched_columns'], len(COLUMNS))
+        self.assertFalse(response.context['mapping_needs_review'])
+        self.assertContains(response, 'No records are being saved yet.')
+        self.assertContains(response, 'data-mapping-search')
+        self.assertNotContains(response, 'data-column-choices open')
+        payload = self.payload()
+        payload['headers'][0] = 'Unfamiliar heading'
+        batch.payload = {**payload, 'term_id': self.term.pk}
+        batch.save()
+        response = self.client.get(reverse('academic_import_review', args=[batch.pk]))
+        self.assertTrue(response.context['mapping_needs_review'])
+        self.assertEqual(response.context['unmatched_columns'], 1)
+        self.assertContains(response, 'data-column-choices open')

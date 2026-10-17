@@ -13,7 +13,7 @@ from django.views.decorators.http import require_http_methods, require_GET
 
 from .models import AcademicImport, AcademicTerm, Role
 from .import_workflow import GROUPS, guide, issues_for, review_context
-from .import_presentation import LABELS, HELP, message, preview_display
+from .import_presentation import LABELS, message
 from .importers.academic import COLUMNS, REQUIRED, read_spreadsheet, suggested_mapping, template_bytes, run_import
 
 
@@ -39,6 +39,18 @@ def mapping_form(payload, data=None):
     return form
 
 
+def mapping_summary(form):
+    fields = [field for field in form if field.name.startswith('column_')]
+    choices = [field.value() for field in fields if field.value() in COLUMNS]
+    missing = sorted(REQUIRED - set(choices))
+    duplicates = sorted({choice for choice in choices if choices.count(choice) > 1})
+    return {'mapping_fields': fields, 'matched_columns': len(choices), 'column_count': len(fields),
+            'unmatched_columns': len(fields) - len(choices),
+            'missing_columns': [LABELS[key] for key in missing],
+            'duplicate_columns': [LABELS[key] for key in duplicates],
+            'mapping_needs_review': bool(missing or duplicates or form.errors)}
+
+
 @login_required
 @require_http_methods(['GET', 'POST'])
 def academic_import(request):
@@ -61,8 +73,14 @@ def academic_import(request):
 def import_page(request, context):
     steps = [('template', 'Download Template'), ('upload', 'Upload File'), ('review', 'Review Data'), ('confirm', 'Confirm Import')]
     current = {'template': 1, 'upload': 2, 'mapping': 3, 'review': 3, 'confirm': 4, 'complete': 4}[context['stage']]
+    from django.urls import reverse
+    batch = context.get('batch')
+    links = {1: reverse('academic_import'), 2: reverse('academic_import') + '?step=upload'}
+    if batch and not batch.completed_at:
+        links[3] = reverse('academic_import_review', args=[batch.pk]) + '?step=review'
     context.update(guide=guide(), groups=GROUPS, steps=[{'number': i, 'label': name, 'current': i == current,
-                   'done': i < current} for i, (_, name) in enumerate(steps, 1)])
+                   'done': i < current, 'url': links.get(i) if i < current else None}
+                   for i, (_, name) in enumerate(steps, 1)])
     return render(request, 'schedules/academic_import.html', context)
 
 
@@ -96,9 +114,12 @@ def academic_import_review(request, pk):
         return redirect('academic_import')
     term = get_object_or_404(AcademicTerm, pk=batch.payload['term_id'])
     result = batch.payload.get('preview')
+    if result and not result['errors'] and not batch.preview_signature:
+        result = None  # An earlier valid preview was revoked; require a fresh review.
     error_message = ''
     is_preview = request.method == 'POST' and request.POST.get('action') == 'preview'
     form = mapping_form(batch.payload, request.POST if is_preview else None)
+    approval_missing = False
     if request.method == 'POST':
         try:
             with transaction.atomic():
@@ -109,6 +130,7 @@ def academic_import_review(request, pk):
                     if not batch.preview_signature or request.POST.get('signature') != batch.preview_signature:
                         raise ValueError('Click Review Information before importing.')
                     if batch.payload['policy'] == 'update' and request.POST.get('approve_updates') != 'yes':
+                        approval_missing = True
                         raise ValueError('Tick the approval box to allow changes to existing records.')
                     result = run_import(batch.payload, batch.payload['mapping'], term, batch.payload['policy'],
                                         commit=True, expected_signature=batch.preview_signature)
@@ -130,21 +152,21 @@ def academic_import_review(request, pk):
                     batch.save(update_fields=['payload', 'preview_signature'])
         except (ValueError, IntegrityError, OperationalError) as exc:
             error_message = message(str(exc)) if isinstance(exc, ValueError) else 'We could not save the records right now. Nothing was imported. Click Review Information and try again.'
-            result = None
+            result = batch.payload.get('preview') if approval_missing else None
             # Invalidate the old confirmation even when the attempted new preview failed.
-            if is_preview:
+            if not approval_missing:
                 AcademicImport.objects.filter(pk=batch.pk, completed_at__isnull=True).update(preview_signature='')
     stage = 'review' if result else 'mapping'
     if request.GET.get('step') == 'mapping':
         stage = 'mapping'
-    if result and not result['errors'] and batch.preview_signature and request.GET.get('step') == 'confirm':
+    if result and not result['errors'] and batch.preview_signature and (request.GET.get('step') == 'confirm' or approval_missing):
         stage = 'confirm'
     try:
         page = int(request.GET.get('page', 1))
     except ValueError:
         page = 1
     context = {'form': form, 'stage': stage, 'batch': batch, 'term': term, 'error_message': error_message,
-               'update': batch.payload.get('policy') == 'update', 'mapping_fields': [field for field in form if field.name.startswith('column_')]}
+               'update': batch.payload.get('policy') == 'update', **mapping_summary(form)}
     if result:
         context.update(review_context(batch, result, page, request.GET.get('filter') == 'errors'))
     return import_page(request, context)

@@ -61,4 +61,31 @@
     search.addEventListener('input', filter);
     category.addEventListener('change', filter);
   }
+  const mappingSearch = document.querySelector('[data-mapping-search]');
+  const mappingFilter = document.querySelector('[data-mapping-filter]');
+  if (mappingSearch && mappingFilter) {
+    const rows = [...document.querySelectorAll('[data-mapping-row]')];
+    const updateSummary = () => {
+      const matched = rows.filter((row) => !!row.querySelector('select').value).length;
+      const summary = document.querySelector('[data-mapping-summary]');
+      summary.querySelector('strong').textContent = `${matched} of ${rows.length} columns matched.`;
+      summary.querySelector('p').textContent = matched === rows.length
+        ? 'All headings have a match. Check the choices if this file uses different names.'
+        : `${rows.length - matched} columns will be left out unless you choose where to import them.`;
+    };
+    const filter = () => {
+      let visible = 0;
+      const query = mappingSearch.value.trim().toLowerCase();
+      rows.forEach((row) => {
+        const select = row.querySelector('select');
+        const text = `${row.querySelector('label').textContent} ${select.selectedOptions[0]?.textContent || ''}`;
+        row.hidden = !text.toLowerCase().includes(query) || (mappingFilter.value === 'unmatched' && !!select.value);
+        if (!row.hidden) visible += 1;
+      });
+      document.querySelector('[data-mapping-empty]').hidden = visible > 0;
+    };
+    mappingSearch.addEventListener('input', filter);
+    mappingFilter.addEventListener('change', filter);
+    rows.forEach((row) => row.querySelector('select').addEventListener('change', () => { updateSummary(); filter(); }));
+  }
 })();

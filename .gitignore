@@ -5,6 +5,7 @@ __pycache__/
 *.pyd
 .Python
 .venv/
+.venv-python314-backup/
 venv/
 env/
 
