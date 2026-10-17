@@ -1,6 +1,7 @@
 import json
 from datetime import date, time
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from . import models as m
 from .services.form_drafts import object_signature
@@ -104,6 +105,83 @@ class MeetingEditorTests(TestCase):
         response = self.client.post(self.url, data)
         self.assertTrue(response.context['meetings'].non_form_errors())
         self.assertEqual(self.parent.meetings.count(), 2)
+
+    def test_shared_fields_sync_preserves_meeting_settings(self):
+        replacement = m.Faculty.objects.create(department=self.faculty.department, employee_id='T2', full_name='Replacement')
+        section = m.Section.objects.create(program=self.section.program, year_level=self.section.year_level, name='B', size=20)
+        subject = m.Subject.objects.create(department=self.subject.department, code='CS2', title='Next Course', lecture_hours=2, lab_hours=1)
+        term = m.AcademicTerm.objects.create(name='Next Term', school_year='2027', starts_on=date(2027,1,1), ends_on=date(2027,6,1))
+        before = list(self.parent.meetings.order_by('pk').values_list('pk', 'component', 'meeting_index', 'duration_minutes', 'required_room_type_override'))
+        data = self.payload()
+        data.update(faculty=str(replacement.pk), section=str(section.pk), subject=str(subject.pk), term=str(term.pk))
+        self.assertEqual(self.client.post(self.url, data).status_code, 302)
+        self.parent.refresh_from_db()
+        self.assertEqual(list(self.parent.meetings.order_by('pk').values_list('pk', 'component', 'meeting_index', 'duration_minutes', 'required_room_type_override')), before)
+        for meeting in self.parent.meetings.all():
+            self.assertEqual((meeting.faculty_id, meeting.section_id, meeting.subject_id, meeting.term_id),
+                             (replacement.pk, section.pk, subject.pk, term.pk))
+        self.assertEqual({a.faculty_id for a in GeneticScheduler(term, m.GASettings(), seed=1).assignments}, {replacement.pk})
+
+    def test_shared_edit_validation_failure_rolls_back_parent_and_all_meetings(self):
+        subject = m.Subject.objects.create(department=self.subject.department, code='CS2', title='Conflicting Course', lecture_hours=2, lab_hours=1)
+        other_faculty = m.Faculty.objects.create(department=self.faculty.department, employee_id='T2', full_name='Other Teacher')
+        other = m.Assignment.objects.create(term=self.term, subject=subject, section=self.section, faculty=other_faculty)
+        m.TeachingAssignment.objects.create(assignment=other, component='LABORATORY', meeting_index=2, duration_minutes=60)
+        data = self.payload()
+        data['subject'] = str(subject.pk)
+        response = self.client.post(self.url, data)
+        self.assertContains(response, 'Assignment was not saved')
+        # Model saves also roll back, even without the form's early validation.
+        self.parent.subject = subject
+        with self.assertRaises(ValidationError):
+            self.parent.save()
+        self.parent.refresh_from_db()
+        self.assertEqual(self.parent.subject_id, self.subject.pk)
+        self.assertEqual(list(self.parent.meetings.values_list('subject_id', flat=True)), [self.subject.pk, self.subject.pk])
+        self.assertEqual(m.TeachingAssignment.objects.count(), 3)
+
+    def test_shared_edits_rejected_for_draft_published_and_archived_references(self):
+        replacement = m.Faculty.objects.create(department=self.faculty.department, employee_id='T2', full_name='Replacement')
+        room = m.Room.objects.create(name='Protected Room', room_type='LECTURE', capacity=30)
+        schedule = m.Schedule.objects.create(term=self.term, name='Protected Schedule')
+        entry = m.ScheduleEntry.objects.create(schedule=schedule, assignment=self.lecture, room=room,
+                                               day=0, start_time=time(8), end_time=time(10), faculty_override=self.faculty)
+        for status in (m.ScheduleStatus.DRAFT, m.ScheduleStatus.PUBLISHED, m.ScheduleStatus.ARCHIVED):
+            with self.subTest(status=status):
+                schedule.status = status
+                schedule.save(update_fields=['status'])
+                data = self.payload()
+                data['faculty'] = str(replacement.pk)
+                self.assertContains(self.client.post(self.url, data), 'meetings used by a schedule')
+                self.parent.refresh_from_db()
+                entry.refresh_from_db()
+                self.assertEqual(self.parent.faculty_id, self.faculty.pk)
+                self.assertEqual(set(self.parent.meetings.values_list('faculty_id', flat=True)), {self.faculty.pk})
+                self.assertEqual(entry.faculty_override_id, self.faculty.pk)
+                self.assertEqual(entry.assignment_id, self.lecture.pk)
+
+    def test_admin_parent_save_synchronizes_unchanged_meetings(self):
+        replacement = m.Faculty.objects.create(department=self.faculty.department, employee_id='T2', full_name='Replacement')
+        response = self.client.post(f'/admin/schedules/assignment/{self.parent.pk}/change/', {
+            'term': self.term.pk, 'subject': self.subject.pk, 'section': self.section.pk, 'faculty': replacement.pk,
+            '_save': 'Save',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(list(self.parent.meetings.values_list('faculty_id', flat=True)), [replacement.pk, replacement.pk])
+
+    def test_legacy_mismatch_cannot_silently_change_a_scheduled_meeting(self):
+        replacement = m.Faculty.objects.create(department=self.faculty.department, employee_id='T2', full_name='Replacement')
+        # Reproduce data left behind by H1 before this fix.
+        m.Assignment.objects.filter(pk=self.parent.pk).update(faculty=replacement)
+        room = m.Room.objects.create(name='Legacy Room', room_type='LECTURE', capacity=30)
+        schedule = m.Schedule.objects.create(term=self.term, name='Legacy Published', status=m.ScheduleStatus.PUBLISHED)
+        m.ScheduleEntry.objects.create(schedule=schedule, assignment=self.lecture, room=room,
+                                        day=0, start_time=time(8), end_time=time(10))
+        data = self.payload()
+        data['faculty'] = str(replacement.pk)
+        self.assertContains(self.client.post(self.url, data), 'meetings used by a schedule')
+        self.lecture.refresh_from_db()
+        self.assertEqual(self.lecture.faculty_id, self.faculty.pk)
 
     def test_scheduled_meeting_cannot_be_removed(self):
         room = m.Room.objects.create(name='R', room_type='LECTURE', capacity=30)

@@ -7,8 +7,9 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from schedules.models import AvailabilityKind, Room, RoomKind, Schedule, ScheduleEntry, TeachingAssignment
-from .credentials import faculty_qualification
-from .time import ALLOWED_DAYS, SCHOOL_END, SCHOOL_START, add_minutes, contains, overlaps, slot_starts
+from .availability import AvailabilityPolicy
+from .credentials import teaching_eligibility
+from .time import ALLOWED_DAYS, SCHOOL_END, SCHOOL_START, add_minutes, contains, slot_starts
 
 
 @dataclass(frozen=True)
@@ -39,7 +40,7 @@ class GeneticScheduler:
             )
             .order_by("id")
         )
-        self.rooms = list(Room.objects.filter(is_active=True).order_by("id"))
+        self.rooms = list(Room.objects.filter(is_active=True).prefetch_related("availability_set").order_by("id"))
         self.assignment_map = {a.id: a for a in self.assignments}
         self.room_map = {r.id: r for r in self.rooms}
         self.valid_rooms_by_assignment = {
@@ -51,14 +52,13 @@ class GeneticScheduler:
             for assignment in self.assignments
         }
         self.qualification_cache = {
-            assignment.id: (faculty_qualification(assignment.faculty, assignment.subject)["qualified"]
-                            or bool(assignment.credential_overrides.all()))
+            assignment.id: teaching_eligibility(assignment.faculty, assignment.subject, self.term, assignment)["eligible"]
             for assignment in self.assignments
         }
-        self.faculty_unavailable = self._availability_map(AvailabilityKind.UNAVAILABLE)
+        faculty = {a.faculty_id: a.faculty for a in self.assignments}
+        self.faculty_policies = {pk: AvailabilityPolicy.for_resource(item) for pk, item in faculty.items()}
+        self.room_policies = {room.pk: AvailabilityPolicy.for_resource(room) for room in self.rooms}
         self.faculty_preferred = self._availability_map(AvailabilityKind.PREFERRED)
-        self.room_available = self._room_availability_map(AvailabilityKind.AVAILABLE)
-        self.room_unavailable = self._room_availability_map(AvailabilityKind.UNAVAILABLE)
         self._fitness_cache = {}
 
     def _availability_map(self, kind):
@@ -68,14 +68,6 @@ class GeneticScheduler:
                 if item.kind != kind:
                     continue
                 data[assignment.faculty_id].append(item)
-        return data
-
-    def _room_availability_map(self, kind):
-        data = defaultdict(list)
-        for room in self.rooms:
-            for item in room.availability_set.all():
-                if item.kind == kind:
-                    data[room.id].append(item)
         return data
 
     def generate(self, name="Generated Schedule"):
@@ -239,16 +231,14 @@ class GeneticScheduler:
         return fitness_score
 
     def _blocked(self, faculty_id, gene):
-        return any(overlaps(gene.start_time, gene.end_time, a.start_time, a.end_time) for a in self.faculty_unavailable[faculty_id] if a.day == gene.day)
+        return bool(self.faculty_policies[faculty_id].rejection_reason(gene.day, gene.start_time, gene.end_time))
 
     def _preferred(self, faculty_id, gene):
         return any(contains(a.start_time, a.end_time, gene.start_time, gene.end_time) for a in self.faculty_preferred[faculty_id] if a.day == gene.day)
 
     def _room_blocked(self, room_id, gene):
-        available = [a for a in self.room_available[room_id] if a.day == gene.day]
-        if available and not any(contains(a.start_time, a.end_time, gene.start_time, gene.end_time) for a in available):
-            return True
-        return any(overlaps(gene.start_time, gene.end_time, a.start_time, a.end_time) for a in self.room_unavailable[room_id] if a.day == gene.day)
+        policy = self.room_policies.get(room_id)
+        return policy is None or bool(policy.rejection_reason(gene.day, gene.start_time, gene.end_time))
 
     def _distribution_penalty(self, chromosome):
         by_faculty_day = defaultdict(list)

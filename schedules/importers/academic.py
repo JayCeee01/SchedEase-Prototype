@@ -342,7 +342,7 @@ class Importer:
 
     def meeting(self, r, entities):
         section, subject, faculty = entities
-        problem = missing_credential_message(faculty, subject)
+        problem = missing_credential_message(faculty, subject, self.term)
         if problem:
             raise ValueError('assigned_faculty_id: ' + problem)
         duration = self.integer(r['duration_minutes'], 'duration_minutes', 1)
@@ -385,7 +385,7 @@ class Importer:
                     self.error('duration_minutes', f'{parent}: {component} totals {actual} minutes; course requires {expected}.')
             if (parent.subject.lecture_hours or parent.subject.lab_hours) and any(a.component == 'GENERAL' for a in meetings):
                 self.error('component', f'{parent}: use LECTURE/LABORATORY when the course specifies those hours.')
-            problem = missing_credential_message(parent.faculty, parent.subject)
+            problem = missing_credential_message(parent.faculty, parent.subject, parent.term)
             if problem:
                 self.error('faculty_credentials', problem)
         self.issue_rows = [None]

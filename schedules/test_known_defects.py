@@ -1,4 +1,6 @@
-"""Phase 2 regression contracts: H1 synchronization, H3 availability, H4 expiry.
+"""Phase 2 contracts: H1 and H3 scheduling are fixed; H4 expiry remains a known defect.
+
+The H3 reporting regression in test_availability.py also passes after Task 2.3.
 
 Remove each expectedFailure marker with its corresponding Phase 2 fix. An
 unexpected success is a failing suite, prompting review of the marker. Operations
@@ -72,9 +74,8 @@ class H1AssignmentSynchronizationTests(SchedulingDefectFixture):
         }
         self.expected = {key: [replacement.pk, replacement.pk] for key in self.observed}
 
-    @expectedFailure
     def test_H1_parent_faculty_edit_updates_all_meetings_and_ga(self):
-        """Phase 2 H1: unchanged meeting forms must inherit the new faculty."""
+        """H1 fixed in Task 2.1: unchanged meeting forms inherit the new faculty."""
         self.assertEqual(self.observed, self.expected, "H1: saved meetings and GA inputs must match their parent's faculty")
 
 
@@ -110,9 +111,8 @@ class H3RoomAvailabilityTests(SchedulingDefectFixture):
             "manual validation rejects Tuesday": manual_rejected,
         }
 
-    @expectedFailure
     def test_H3_unlisted_day_is_closed_for_ga_manual_validation_and_reports(self):
-        """Phase 2 H3: explicit availability must have one shared meaning."""
+        """H3 scheduling fixed in Task 2.2; retain the original closed-day report check."""
         self.assertEqual(self.observed, dict.fromkeys(self.observed, True),
                          "H3: Tuesday has no available interval and must not be schedulable")
 

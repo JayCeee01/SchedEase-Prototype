@@ -7,7 +7,7 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.cache import cache
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.db.models import Count, Q
 from django.http import Http404, HttpResponse, JsonResponse
@@ -48,7 +48,7 @@ from .models import (
     YearLevel,
 )
 from .services.conflicts import conflict_messages, schedule_validation_messages
-from .services.credentials import faculty_qualification, missing_credential_message
+from .services.credentials import faculty_qualification, missing_credential_message, valid_credential_override
 from .services.ga import GeneticScheduler
 from .services.generation_issues import record_generation_messages, record_unexpected_failure
 from .services.form_drafts import object_signature, safe_draft_payload, safe_assignment_draft_payload
@@ -532,28 +532,51 @@ def assignment_editor(request, assignment=None):
                 "form": form, "meetings": meetings, "assignment": assignment,
                 "draft": draft, "draft_conflict": True, "title": "Edit Assignment" if assignment.pk else "New Assignment",
             })
-        credential_result = faculty_qualification(form.cleaned_data["faculty"], form.cleaned_data["subject"])
+        credential_result = faculty_qualification(form.cleaned_data["faculty"], form.cleaned_data["subject"], form.cleaned_data["term"])
         confirmed = request.POST.get("credential_override_confirm") == "yes"
         reason = request.POST.get("credential_override_reason", "").strip()
-        if credential_result["qualified"] or (confirmed and reason):
+        covered = bool(assignment.pk and assignment.meetings.exists()) and all(
+            valid_credential_override(item.instance, form.cleaned_data["faculty"], form.cleaned_data["subject"])
+            for item in meetings.forms if item.cleaned_data and not item.cleaned_data.get("DELETE")
+        )
+        if credential_result["qualified"] or covered or (confirmed and reason):
             try:
                 with transaction.atomic():
                     parent = form.save()
-                    children = meetings.save(commit=False)
+                    meetings.save(commit=False)
                     for removed in meetings.deleted_objects:
                         removed.delete()
-                    for meeting in children:
+                    for meeting_form in meetings.forms:
+                        if not meeting_form.cleaned_data or meeting_form.cleaned_data.get("DELETE"):
+                            continue
+                        meeting = meeting_form.instance
+                        # Legacy inconsistent meetings must not silently change a schedule
+                        # even when the parent fields themselves were left unchanged.
+                        if meeting.pk:
+                            parent._check_schedule_references([
+                                field for field in Assignment.SHARED_FIELDS
+                                if getattr(meeting, field + "_id") != getattr(parent, field + "_id")
+                            ])
                         meeting.assignment = parent
+                        for field in Assignment.SHARED_FIELDS:
+                            setattr(meeting, field, getattr(parent, field))
+                        meeting.full_clean()
                         meeting.save()
-                    if not credential_result["qualified"]:
+                    if not credential_result["qualified"] and not covered:
                         for meeting in parent.meetings.all():
                             CredentialOverride.objects.get_or_create(
                                 assignment=meeting, subject=parent.subject, faculty=parent.faculty,
                                 defaults={"admin_user": request.user, "reason": reason,
-                                          "missing_credentials": missing_credential_message(parent.faculty, parent.subject)},
+                                          "missing_credentials": missing_credential_message(parent.faculty, parent.subject, parent.term)},
                             )
-            except ProtectedError:
-                form.add_error(None, "A meeting you removed is already used by a schedule. Remove it from that schedule before deleting it here.")
+            except (ProtectedError, ValidationError, IntegrityError) as exc:
+                if isinstance(exc, ProtectedError):
+                    error = "A meeting you removed is already used by a schedule. Remove it from that schedule before deleting it here."
+                elif isinstance(exc, ValidationError):
+                    error = "Assignment was not saved. " + " ".join(exc.messages)
+                else:
+                    error = "Assignment was not saved because its meetings conflict with existing records. Review the course, section, term, and meeting numbers."
+                form.add_error(None, error)
                 return render(request, "schedules/assignment_form.html", {
                     "form": form, "meetings": meetings, "assignment": assignment,
                     "draft": draft, "draft_conflict": draft_conflict,
@@ -576,7 +599,7 @@ def assignment_editor(request, assignment=None):
 
 def save_assignment_with_credential_check(request, form, resource):
     assignment = form.save(commit=False)
-    result = faculty_qualification(assignment.faculty, assignment.subject)
+    result = faculty_qualification(assignment.faculty, assignment.subject, assignment.term)
     if result["qualified"]:
         assignment.save()
         form.save_m2m()
@@ -600,7 +623,7 @@ def save_assignment_with_credential_check(request, form, resource):
                 faculty=assignment.faculty,
                 admin_user=request.user,
                 reason=reason,
-                missing_credentials=missing_credential_message(assignment.faculty, assignment.subject),
+                missing_credentials=missing_credential_message(assignment.faculty, assignment.subject, assignment.term),
             )
             FormDraft.objects.filter(
                 user=request.user, resource=resource, object_pk__in=["", str(assignment.pk)]
@@ -916,10 +939,8 @@ def save_entry_with_credential_check(request, form, schedule):
         previous = {field: str(getattr(old, field)) for field in (
             "assignment_id", "subject_override_id", "section_override_id", "faculty_override_id",
             "component_override", "room_id", "day", "start_time", "end_time")}
-    result = faculty_qualification(entry.effective_faculty, entry.effective_subject)
-    valid_override = entry.assignment.credential_overrides.filter(
-        faculty=entry.effective_faculty, subject=entry.effective_subject
-    ).exists()
+    result = faculty_qualification(entry.effective_faculty, entry.effective_subject, schedule.term)
+    valid_override = valid_credential_override(entry.assignment, entry.effective_faculty, entry.effective_subject)
     if not result["qualified"] and not valid_override:
         if request.POST.get("credential_override_confirm") != "yes":
             return render_credential_override_confirmation(request, form, result)
@@ -933,7 +954,7 @@ def save_entry_with_credential_check(request, form, schedule):
             faculty=entry.effective_faculty,
             admin_user=request.user,
             reason=reason,
-            missing_credentials=missing_credential_message(entry.effective_faculty, entry.effective_subject),
+            missing_credentials=missing_credential_message(entry.effective_faculty, entry.effective_subject, schedule.term),
         )
     try:
         entry.full_clean()

@@ -3,7 +3,7 @@ import uuid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
 
 
@@ -240,6 +240,8 @@ class SubjectCredentialRequirement(models.Model):
 
 
 class Assignment(models.Model):
+    SHARED_FIELDS = ("term", "subject", "faculty", "section")
+
     term = models.ForeignKey(AcademicTerm, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.PROTECT)
     faculty = models.ForeignKey(Faculty, on_delete=models.PROTECT)
@@ -255,6 +257,53 @@ class Assignment(models.Model):
 
     def __str__(self):
         return f"{self.subject.code} — {self.subject.title} — {self.section} — {self.faculty}"
+
+    def _shared_changes(self, previous, update_fields=None):
+        return [field for field in self.SHARED_FIELDS
+                if (update_fields is None or field in update_fields or field + "_id" in update_fields)
+                and getattr(previous, field + "_id") != getattr(self, field + "_id")]
+
+    def _check_schedule_references(self, changes):
+        if changes and ScheduleEntry.objects.filter(assignment__assignment_id=self.pk).exists():
+            raise ValidationError(
+                "This assignment has meetings used by a schedule. Its term, course, section, and faculty "
+                "cannot be changed here, including for draft schedules. Keep this assignment unchanged "
+                "and use the schedule review workflow to plan a separate revision."
+            )
+
+    def clean(self):
+        super().clean()
+        if self.pk:
+            previous = type(self).objects.filter(pk=self.pk).first()
+            if previous:
+                changes = self._shared_changes(previous)
+                self._check_schedule_references(changes)
+                if changes:
+                    for meeting in self.meetings.all():
+                        for field in self.SHARED_FIELDS:
+                            setattr(meeting, field, getattr(self, field))
+                        try:
+                            meeting.full_clean()
+                        except ValidationError as exc:
+                            raise ValidationError("Assignment was not saved. " + " ".join(exc.messages)) from exc
+
+    def save(self, *args, **kwargs):
+        # Keep normal model/admin saves consistent as well as the assignment editor.
+        with transaction.atomic():
+            previous = type(self).objects.select_for_update().filter(pk=self.pk).first() if self.pk else None
+            changes = self._shared_changes(previous, kwargs.get("update_fields")) if previous else []
+            self._check_schedule_references(changes)
+            result = super().save(*args, **kwargs)
+            if changes:
+                parent = type(self).objects.get(pk=self.pk)
+                parent.full_clean()
+                for meeting in self.meetings.select_for_update().all():
+                    meeting.assignment = parent
+                    for field in self.SHARED_FIELDS:
+                        setattr(meeting, field, getattr(parent, field))
+                    meeting.full_clean()
+                    meeting.save(update_fields=list(self.SHARED_FIELDS))
+            return result
 
 
 class TeachingAssignment(models.Model):

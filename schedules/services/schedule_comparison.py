@@ -3,7 +3,7 @@ from datetime import datetime, date
 
 from schedules.models import AvailabilityKind
 from .conflicts import conflict_messages
-from .credentials import faculty_qualification
+from .credentials import teaching_eligibility
 from .room_utilization import utilization_rows, utilization_summary
 from .time import contains
 
@@ -36,8 +36,7 @@ def schedule_metrics(schedule):
     preferred = 0
     for entry in entries:
         assignment = entry.assignment
-        if (not faculty_qualification(assignment.faculty, assignment.subject)["qualified"]
-                and not assignment.credential_overrides.exists()):
+        if not teaching_eligibility(entry.effective_faculty, entry.effective_subject, schedule.term, assignment)["eligible"]:
             credential_violations += 1
         slots = assignment.faculty.availability_set.filter(day=entry.day, kind=AvailabilityKind.PREFERRED)
         if any(contains(slot.start_time, slot.end_time, entry.start_time, entry.end_time) for slot in slots):

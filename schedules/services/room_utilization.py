@@ -5,8 +5,9 @@ from datetime import datetime, timedelta
 from django.db.models import Max
 from django.utils import timezone
 
-from schedules.models import Availability, AvailabilityKind, Room, RoomKind, Schedule, ScheduleEntry, Section, TeachingAssignment
-from .time import ALLOWED_DAYS, SCHOOL_END, SCHOOL_START, contains, overlaps
+from schedules.models import Room, RoomKind, Schedule, ScheduleEntry, Section, TeachingAssignment
+from .availability import AvailabilityPolicy
+from .time import ALLOWED_DAYS, SCHOOL_END, SCHOOL_START, overlaps
 
 
 UTILIZATION_THRESHOLDS = {"moderate": 35, "well": 60, "high": 80, "full": 95}
@@ -24,6 +25,8 @@ class RoomUtilizationRow:
     status: str
     badge_class: str
     last_updated: object
+    exact_available_hours: float | None = None
+    exact_scheduled_hours: float | None = None
 
     @property
     def is_laboratory(self):
@@ -45,22 +48,9 @@ def default_weekly_hours():
 
 
 def room_available_hours_by_day(room):
-    result = []
-    slots = Availability.objects.filter(room=room)
-    has_explicit_availability = slots.filter(kind=AvailabilityKind.AVAILABLE).exists()
-    for day in ALLOWED_DAYS:
-        daily = slots.filter(day=day)
-        available = daily.filter(kind=AvailabilityKind.AVAILABLE)
-        if available.exists():
-            hours = sum(hours_between(slot.start_time, slot.end_time) for slot in available)
-        elif has_explicit_availability:
-            hours = 0
-        else:
-            unavailable = sum(hours_between(slot.start_time, slot.end_time)
-                              for slot in daily.filter(kind=AvailabilityKind.UNAVAILABLE))
-            hours = max(0, default_daily_hours() - unavailable)
-        result.append(round(hours, 2))
-    return result
+    policy = AvailabilityPolicy.for_resource(room)
+    return [sum(hours_between(start, end) for start, end in policy.effective_intervals(day))
+            for day in ALLOWED_DAYS]
 
 
 def room_available_hours(room):
@@ -94,7 +84,7 @@ def latest_schedule(term=None):
 
 def utilization_rows(schedule=None, department=None):
     schedule = schedule or latest_schedule()
-    rooms = Room.objects.all().order_by("name")
+    rooms = Room.objects.all().prefetch_related("availability_set").order_by("name")
     entries = ScheduleEntry.objects.none()
     if schedule:
         entries = schedule.entries.select_related("room", "assignment__section", "assignment__subject")
@@ -109,10 +99,11 @@ def utilization_rows(schedule=None, department=None):
         for day in ALLOWED_DAYS:
             scheduled = sum(entry_hours(entry) for entry in room_entries if entry.day == day)
             available = available_by_day[day]
-            daily.append({"day": day, "available": available, "scheduled": round(scheduled, 2),
+            daily.append({"day": day, "available": round(available, 2), "scheduled": round(scheduled, 2),
                           "percentage": round(scheduled / available * 100, 1) if available else 0})
-        scheduled_hours = sum(item["scheduled"] for item in daily)
-        available_hours = sum(item["available"] for item in daily)
+        # Round display values only, not the denominator used by percentages.
+        scheduled_hours = sum(entry_hours(entry) for entry in room_entries if entry.day in ALLOWED_DAYS)
+        available_hours = sum(available_by_day)
         percentage = scheduled_hours / available_hours * 100 if available_hours else 0
         seat_values = [min(100, entry.assignment.section.size / room.capacity * 100)
                        for entry in room_entries if room.capacity]
@@ -126,13 +117,14 @@ def utilization_rows(schedule=None, department=None):
             capacity_utilization=round(seat_percentage, 1), assigned_classes=len(room_entries),
             status=status, badge_class=badge_class,
             last_updated=last_updated or getattr(schedule, "generated_at", None),
+            exact_available_hours=available_hours, exact_scheduled_hours=scheduled_hours,
         ))
     return rows
 
 
 def utilization_summary(rows):
-    total_available = sum(row.available_hours for row in rows)
-    total_scheduled = sum(row.scheduled_hours for row in rows)
+    total_available = sum(row.exact_available_hours if row.exact_available_hours is not None else row.available_hours for row in rows)
+    total_scheduled = sum(row.exact_scheduled_hours if row.exact_scheduled_hours is not None else row.scheduled_hours for row in rows)
     average = round(total_scheduled / total_available * 100, 1) if total_available else 0
     most = max(rows, key=lambda row: row.utilization_percentage, default=None)
     least = min(rows, key=lambda row: row.utilization_percentage, default=None)
@@ -171,8 +163,7 @@ def room_schedule_grid(room, schedule, slot_minutes=30):
     entries = list(schedule.entries.filter(room=room).select_related(
         "assignment__subject", "assignment__section", "assignment__faculty"
     )) if schedule else []
-    availability = list(room.availability_set.all())
-    explicit = any(slot.kind == AvailabilityKind.AVAILABLE for slot in availability)
+    policy = AvailabilityPolicy.for_resource(room)
     rows = []
     current = datetime.combine(timezone.localdate(), SCHOOL_START)
     finish = datetime.combine(timezone.localdate(), SCHOOL_END)
@@ -182,13 +173,7 @@ def room_schedule_grid(room, schedule, slot_minutes=30):
         for day in ALLOWED_DAYS:
             matched = [entry for entry in entries if entry.day == day and
                        overlaps(current.time(), next_time.time(), entry.start_time, entry.end_time)]
-            slots = [slot for slot in availability if slot.day == day]
-            available_slots = [slot for slot in slots if slot.kind == AvailabilityKind.AVAILABLE]
-            unavailable_slots = [slot for slot in slots if slot.kind == AvailabilityKind.UNAVAILABLE]
-            available = (not explicit or any(contains(slot.start_time, slot.end_time, current.time(), next_time.time())
-                                             for slot in available_slots))
-            if any(overlaps(current.time(), next_time.time(), slot.start_time, slot.end_time) for slot in unavailable_slots):
-                available = False
+            available = not policy.rejection_reason(day, current.time(), next_time.time())
             cells.append({"entries": matched, "available": available})
         rows.append({"start": current.time(), "end": next_time.time(), "cells": cells})
         current = next_time

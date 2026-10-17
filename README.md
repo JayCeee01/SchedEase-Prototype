@@ -150,9 +150,50 @@ The suite deliberately logs a mocked `RuntimeError: private technical detail` in
 | H3: shared room availability rules | `test_H3_unlisted_day_is_closed_for_ga_manual_validation_and_reports` | Tuesday has zero available hours in reporting but is accepted by GA room checks and manual validation. |
 | H4: credential expiry validation | `test_H4_expired_credential_does_not_qualify_faculty_or_ga` | A credential expired before the fixed academic term still qualifies in the service and GA preflight. |
 
-Run just these contracts with `python manage.py test schedules.test_known_defects --verbosity 2`. Each uses a temporary `unittest.expectedFailure` marker; none is skipped. Setup, workflow operations, and positive controls run outside the marker so unexpected exceptions and failed prerequisites remain visible. Only the final comparison of the intended outcomes is marked. The GA checks use a fixed seed and inspect deterministic inputs/constraints rather than relying on a random generation result.
+Run just these contracts with `python manage.py test schedules.test_known_defects --verbosity 2`. H1 and the original H3 test now pass normally after Tasks 2.1 and 2.2. H4 retains its temporary `unittest.expectedFailure` marker. The H3 reporting test in `schedules/test_availability.py` now passes normally after Task 2.3; H4 is the only expected failure and none is skipped. Setup, workflow operations, and positive controls run outside the marker so unexpected exceptions and failed prerequisites remain visible. Only the final comparison of the intended outcomes is marked. The GA checks use a fixed seed and inspect deterministic inputs/constraints rather than relying on a random generation result.
 
 Remove each marker when its corresponding Phase 2 defect is fixed and rerun the focused and full suites. An unexpected success fails the suite and requires investigation; it must not be silently accepted. These tests do not implement the fixes. H4 currently exercises the existing qualification API, which has no term argument; if Phase 2 adds term-aware qualification, pass the fixture's term explicitly in that regression test.
+
+Task 1.3 completion verification (Python 3.12.10 / Django 5.0.6): `python manage.py test` ran **103 tests: 100 passed, 3 expected failures, 0 unexpected failures/errors, and 0 unexpected successes**. The expected failures are H1, H3, and H4 above. Their assertion differences were also inspected with the markers temporarily disabled in memory, confirming the specific defects rather than unrelated errors. `python manage.py check` passed and `python manage.py makemigrations --check --dry-run` reported no changes. No application logic was modified; Phase 2 fixes remain pending.
+
+### Task 2.1: assignment synchronization
+
+Parent assignment saves now synchronize term, course, section, and faculty to every meeting, including unchanged meeting forms. Meeting duration, type, room requirement, and source metadata remain independent. The assignment editor validates and saves the complete meeting set in one transaction; validation failures roll back parent and meeting changes. Normal parent model saves (including Django admin) also synchronize and validate affected meetings.
+
+Shared-field edits are rejected when any meeting is referenced by a schedule, including a draft. This deliberately conservative H1 safeguard prevents silent changes to existing timetables; it does not create a schedule revision workflow. Existing schedule-entry overrides are preserved. Bulk `QuerySet.update()` bypasses model save hooks and must not be used to edit shared assignment fields. Existing inconsistent records are not automatically rewritten by a migration.
+
+Task 2.1 verification: **108 tests: 106 passed, 2 expected failures (H3/H4), no unexpected failures or successes**. H1 passes normally. Added coverage includes all shared fields, unchanged lecture/lab settings, admin saves, validation rollback, draft/published/archived references, and protection of pre-existing inconsistent scheduled meetings. Django system checks pass; migration checks report no changes.
+
+### Task 2.2: shared scheduling availability
+
+Faculty and room placements now use `schedules/services/availability.py` in both GA evaluation and manual validation:
+
+- If any explicit Available periods exist for a resource, only those periods permit meetings; unlisted days are closed.
+- Without any explicit Available periods, the default is the existing school window: Monday-Saturday, 07:00-19:00.
+- Overlapping or adjacent Available periods merge. A meeting must fit completely in one resulting interval. Unavailable periods always block overlapping meetings, even inside Available periods.
+- A meeting can end exactly when an unavailable period starts, or start exactly when it ends. School-day/hour restrictions always apply; inactive rooms are rejected.
+- Preferred periods remain soft preferences and do not restrict otherwise permitted placements. Faculty has no separate active-status field.
+
+Run focused checks with `python manage.py test schedules.test_availability schedules.test_known_defects`. The original H3 test retains its closed-day utilization assertion and now passes without a marker. `test_H3_reporting_counts_merged_availability_minus_unavailable` documented the Task 2.3 reporting defect: 08:00-12:00 plus 10:00-14:00, minus a 10:00-11:00 block, should report five hours; at the end of Task 2.2 the report still returned eight; Task 2.3 corrects this to five. GA weights, optimization strategies, and room reporting calculations were not changed.
+
+Task 2.2 verification: **117 tests: 115 passed, 2 expected failures (H4 expiry and H3 reporting), no unexpected failures/errors or successes**. All previously passing tests remain passing. Django system checks pass and migration checks report no changes.
+
+### Task 2.3: accurate room availability reporting
+
+Room reports now use the shared policy's effective intervals: merged available periods, clipped to school hours, minus the union of unavailable periods. Closed days and inactive rooms contribute zero hours. The room timetable grid uses the same policy for open/closed cells. Daily, weekly, and summary percentages use unrounded hours; displayed hours retain two decimal places.
+
+Examples verified by tests:
+
+| Configuration | Available hours | Scheduled hours | Utilization |
+| --- | --- | --- | --- |
+| Monday 08-12 and 10-14, blocked 10-11 | 5 | 2 | 40% |
+| Monday 08:00-08:20 | 0.3333... | 0.1666... | 50% |
+| No availability restrictions | 72 weekly | 0 | 0% |
+| Fully blocked or inactive room | 0 | 1 historical hour | 0% (zero-denominator convention) |
+
+Existing scheduled hours remain visible even if later availability changes make them invalid; reporting does not delete entries or repair schedules. The existing zero-denominator convention is retained to avoid division errors. H3 reporting now passes without an expected-failure marker; H4 credential expiry remains deferred. Run `python manage.py test schedules.test_room_availability_reporting schedules.test_availability schedules.test_known_defects` for focused coverage, including CSV output.
+
+Task 2.3 verification: **121 tests: 120 passed, 1 expected failure (H4), no unexpected failures/errors or successes**. All 16 focused tests completed with only H4 expected to fail. Django system checks passed and migration checks reported no changes.
 
 ## Deployment Notes
 

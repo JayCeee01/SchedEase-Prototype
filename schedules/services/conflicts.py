@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from datetime import datetime, date
-from schedules.models import AvailabilityKind
-from .credentials import missing_credential_message, faculty_qualification
+from .availability import AvailabilityPolicy
+from .credentials import missing_credential_message, teaching_eligibility
 from .time import ALLOWED_DAYS, SCHOOL_END, SCHOOL_START, contains, overlaps
 
 
@@ -25,23 +25,13 @@ def validate_entry(entry):
         errors.append("Room capacity is too small for the section.")
     if entry.room.room_type != entry.assignment.effective_room_type:
         errors.append("Room type does not match the course requirement.")
-    valid_override = entry.assignment.credential_overrides.filter(
-        faculty=entry.effective_faculty, subject=entry.effective_subject
-    ).exists()
-    if not faculty_qualification(entry.effective_faculty, entry.effective_subject)["qualified"] and not valid_override:
-        errors.append(missing_credential_message(entry.effective_faculty, entry.effective_subject))
+    if not teaching_eligibility(entry.effective_faculty, entry.effective_subject, entry.schedule.term, entry.assignment)["eligible"]:
+        errors.append(missing_credential_message(entry.effective_faculty, entry.effective_subject, entry.schedule.term))
 
-    faculty_blocks = entry.effective_faculty.availability_set.filter(day=entry.day, kind=AvailabilityKind.UNAVAILABLE)
-    if any(overlaps(entry.start_time, entry.end_time, a.start_time, a.end_time) for a in faculty_blocks):
-        errors.append("Faculty is unavailable during this time.")
-
-    room_slots = entry.room.availability_set.filter(day=entry.day)
-    available = room_slots.filter(kind=AvailabilityKind.AVAILABLE)
-    unavailable = room_slots.filter(kind=AvailabilityKind.UNAVAILABLE)
-    if available.exists() and not any(contains(a.start_time, a.end_time, entry.start_time, entry.end_time) for a in available):
-        errors.append("Room is not available during this time.")
-    if any(overlaps(entry.start_time, entry.end_time, a.start_time, a.end_time) for a in unavailable):
-        errors.append("Room is unavailable during this time.")
+    for label, resource in (("Faculty", entry.effective_faculty), ("Room", entry.room)):
+        reason = AvailabilityPolicy.for_resource(resource).rejection_reason(entry.day, entry.start_time, entry.end_time)
+        if reason:
+            errors.append(f"{label} {reason}")
 
     qs = entry.schedule.entries.exclude(pk=entry.pk).filter(day=entry.day)
     for other in qs.select_related("assignment__faculty", "assignment__section", "room"):
