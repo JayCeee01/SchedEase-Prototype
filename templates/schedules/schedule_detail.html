@@ -4,7 +4,7 @@
   <div>
     <p class="eyebrow">Schedule Review</p>
     <h1>{{ schedule.name }}</h1>
-    <p class="subtle">{{ schedule.term }} | {{ schedule.status }} | score {{ schedule.fitness_score|floatformat:2 }}</p>
+    <p class="subtle">{{ historical_term|default:schedule.term }} | {{ schedule.status }} | score {{ schedule.fitness_score|floatformat:2 }}</p>
   </div>
   <div class="actions">
     {% if can_manage %}
@@ -27,12 +27,21 @@
   </div>
 </div>
 
-{% if conflicts %}
+{% if historical %}
+<div class="panel"><strong>Read-only historical schedule</strong>
+<p>{% if snapshot_reconstructed %}Reconstructed from records available on {{ snapshot_captured_at|date:"Y-m-d H:i" }}. Original publication values cannot be independently verified.{% else %}Preserved when this schedule was finalized.{% endif %}</p>
+</div>
+{% elif conflicts %}
 <div class="toast error">
   <span class="toast-dot"></span>
   <div>
     <strong>{{ conflicts|length }} conflict{{ conflicts|length|pluralize }} detected</strong>
-    {% for conflict in conflicts %}<p>{{ conflict }}</p>{% endfor %}
+    {% for conflict in conflicts %}
+    <p>{{ conflict.message }}
+      {% if conflict.entry %}<br><small>Meeting {{ conflict.entry.assignment.meeting_index }} | {{ conflict.entry.effective_faculty }} | {{ conflict.entry.room }} | {{ conflict.entry.get_day_display }} {{ conflict.entry.start_time|time:"g:i A" }} to {{ conflict.entry.end_time|time:"g:i A" }}</small>
+      {% if can_manage and schedule.status == 'DRAFT' %}<a class="button button-small" href="{% url 'entry_update' schedule.pk conflict.entry.pk %}">Fix Conflict</a>{% endif %}
+      {% endif %}
+    </p>{% endfor %}
   </div>
 </div>
 {% else %}

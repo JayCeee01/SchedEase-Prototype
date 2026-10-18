@@ -28,6 +28,7 @@ urlpatterns = [
     path("<int:pk>/", views.schedule_detail, name="schedule_detail"),
     path("<int:pk>/entry/new/", views.entry_create, name="entry_create"),
     path("<int:pk>/entry/<int:entry_pk>/edit/", views.entry_update, name="entry_update"),
+    path("<int:pk>/entry/<int:entry_pk>/apply-suggestion/", views.entry_apply_suggestion, name="entry_apply_suggestion"),
     path("<int:pk>/copy-to-draft/", views.copy_schedule_to_draft, name="copy_schedule_to_draft"),
     path("<int:pk>/entry/<int:entry_pk>/remove/", views.entry_remove, name="entry_remove"),
     path("<int:pk>/publish/", views.publish_schedule, name="publish_schedule"),

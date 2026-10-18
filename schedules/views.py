@@ -47,7 +47,8 @@ from .models import (
     Weekday,
     YearLevel,
 )
-from .services.conflicts import conflict_messages, schedule_validation_messages
+from .services.history import historical_entries, historical_term
+from .services.conflicts import conflict_messages, schedule_validation_messages, schedule_validation_issues
 from .services.credentials import faculty_qualification, missing_credential_message, valid_credential_override
 from .services.ga import GeneticScheduler
 from .services.generation_issues import record_generation_messages, record_unexpected_failure
@@ -128,6 +129,23 @@ def entries_visible_to_user(entries, user):
         Q(section_override=student.section)
         | Q(section_override__isnull=True, assignment__section=student.section)
     )
+
+
+def restrict_schedule_filter_choices(form, entries, user):
+    """Do not reveal unrelated academic identities in historical filter menus."""
+    if admin_required(user):
+        return
+    allowed = {name: set() for name in ('term', 'department', 'program', 'year_level', 'section', 'faculty', 'room', 'subject')}
+    for entry in entries:
+        section = entry.effective_section
+        values = {'term': entry.schedule.term_id, 'department': section.program.department_id,
+            'program': section.program_id, 'year_level': section.year_level_id, 'section': section.pk,
+            'faculty': entry.effective_faculty.pk, 'room': entry.room_id, 'subject': entry.effective_subject.pk}
+        for name, pk in values.items():
+            allowed[name].add(pk)
+    for name, ids in allowed.items():
+        if name in form.fields:
+            form.fields[name].queryset = form.fields[name].queryset.filter(pk__in=ids)
 
 
 def resource_model(resource):
@@ -212,6 +230,7 @@ def dashboard(request):
         ) if faculty else ScheduleEntry.objects.none()).select_related(
             "schedule__term", "assignment__subject", "assignment__section", "assignment__faculty", "room",
             "subject_override", "section_override", "faculty_override").order_by("day", "start_time")
+        context["entries"] = historical_entries(context["entries"])
         context["timetable_grid"] = personal_schedule_grid(context["entries"])
         context["availability"] = Availability.objects.filter(faculty=faculty)
         return render(request, "schedules/faculty_dashboard.html", context)
@@ -223,6 +242,7 @@ def dashboard(request):
     ) if student_section else ScheduleEntry.objects.none()).select_related(
         "schedule__term", "assignment__subject", "assignment__section", "assignment__faculty", "room",
         "subject_override", "section_override", "faculty_override").order_by("day", "start_time")
+    context["entries"] = historical_entries(context["entries"])
     context["timetable_grid"] = personal_schedule_grid(context["entries"])
     return render(request, "schedules/student_dashboard.html", context)
 
@@ -239,6 +259,7 @@ def browse_schedules(request):
         "room",
     )
     entries = entries_visible_to_user(entries, request.user)
+    restrict_schedule_filter_choices(form, entries, request.user)
     if form.is_valid():
         term = form.cleaned_data.get("term")
         department = form.cleaned_data.get("department")
@@ -258,7 +279,9 @@ def browse_schedules(request):
             entries = entries.filter(assignment__section=section)
         if subject:
             entries = entries.filter(assignment__subject=subject)
-    return render(request, "schedules/browse.html", {"form": form, "entries": entries})
+    elif form.is_bound:
+        entries = entries.none()
+    return render(request, "schedules/browse.html", {"form": form, "entries": historical_entries(entries)})
 
 
 @login_required
@@ -834,6 +857,7 @@ def schedule_detail(request, pk):
     )
     entries = entries_visible_to_user(entries, request.user)
     filter_form = ScheduleEntryFilterForm(request.GET or None)
+    restrict_schedule_filter_choices(filter_form, entries, request.user)
     if filter_form.is_valid():
         values = filter_form.cleaned_data
         if values.get("department"):
@@ -883,10 +907,20 @@ def schedule_detail(request, pk):
                 | Q(faculty_override__full_name__icontains=search)
                 | Q(room__name__icontains=search)
             )
+    elif filter_form.is_bound:
+        entries = entries.none()
     entries = list(entries.order_by(
         "assignment__section__program__code", "assignment__section__year_level__level",
         "assignment__section__name", "assignment__subject__code", "assignment__component", "day", "start_time",
     ))
+    if schedule.status in (ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED):
+        snapshot = schedule.snapshot
+        return render(request, "schedules/schedule_detail.html", {
+            "schedule": schedule, "entries": historical_entries(entries), "filter_form": filter_form,
+            "conflicts": [], "can_manage": admin_required(request.user), "historical": True,
+            "historical_term": historical_term(snapshot), "snapshot_reconstructed": snapshot.reconstructed,
+            "snapshot_captured_at": snapshot.captured_at,
+        })
     for entry in entries:
         try:
             entry.full_clean()
@@ -901,7 +935,7 @@ def schedule_detail(request, pk):
             messages.success(request, "No conflicts detected.")
     return render(request, "schedules/schedule_detail.html", {
         "schedule": schedule, "entries": entries, "filter_form": filter_form,
-        "conflicts": schedule_validation_messages(schedule) if admin_required(request.user) else [], "can_manage": admin_required(request.user),
+        "conflicts": schedule_validation_issues(schedule) if admin_required(request.user) else [], "can_manage": admin_required(request.user),
     })
 
 
@@ -930,7 +964,11 @@ def entry_update(request, pk, entry_pk):
     form.fields["assignment"].queryset = TeachingAssignment.objects.filter(term=entry.schedule.term)
     if request.method == "POST" and form.is_valid():
         return save_entry_with_credential_check(request, form, entry.schedule)
-    return render(request, "schedules/form.html", {"form": form, "title": "Edit Schedule Entry", "tooltip_context": "schedule-entry"})
+    from .services.corrections import placement_suggestions
+    suggestions = placement_suggestions(entry, request.user) if request.method == "GET" else []
+    return render(request, "schedules/form.html", {"form": form, "title": "Edit Schedule Entry", "tooltip_context": "schedule-entry",
+        "correction_entry": entry if request.method == "GET" and entry.schedule.status == ScheduleStatus.DRAFT else None,
+        "suggestions": suggestions})
 
 
 def save_entry_with_credential_check(request, form, schedule):
@@ -982,34 +1020,16 @@ def publish_schedule(request, pk):
         return render(request, "schedules/publish_replace_confirm.html", {
             "schedule": schedule, "current": current,
         })
-    with transaction.atomic():
-        locked = Schedule.objects.select_for_update().get(pk=schedule.pk)
-        if locked.status in {ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED}:
-            messages.error(request, "Published and archived schedules are locked.")
-            return redirect("schedule_detail", pk=pk)
-        if schedule_validation_messages(locked):
-            messages.error(request, "Resolve conflicts before publishing.")
-            return redirect("schedule_detail", pk=pk)
-        current = Schedule.objects.select_for_update().filter(
-            term=locked.term, status=ScheduleStatus.PUBLISHED
-        ).exclude(pk=locked.pk).first()
-        if current and request.POST.get("replace_confirm") != "yes":
-            return render(request, "schedules/publish_replace_confirm.html", {
-                "schedule": locked, "current": current,
-            })
-        now = timezone.now()
-        if current:
-            current.status = ScheduleStatus.ARCHIVED
-            current.archived_at = now
-            current.replaced_by = locked
-            from .protection import archive_transition
-            with archive_transition():
-                current.save(update_fields=["status", "archived_at", "replaced_by", "updated_at"])
-        locked.status = ScheduleStatus.PUBLISHED
-        locked.published_at = now
-        locked.archived_at = None
-        locked.replaced_by = None
-        locked.save(update_fields=["status", "published_at", "archived_at", "replaced_by", "updated_at"])
+    from .services.publication import publish
+    try:
+        schedule, current = publish(schedule, request.user, request.POST.get("replace_confirm") == "yes")
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+        return redirect("schedule_detail", pk=pk)
+    except Exception:
+        logger.exception("Schedule publication failed for schedule %s", pk)
+        messages.error(request, "The schedule could not be published. Nothing was changed. Reload and try again.")
+        return redirect("schedule_detail", pk=pk)
     messages.success(request, "Schedule published. The previous official schedule was archived." if current else "Schedule published.")
     return redirect("schedule_detail", pk=pk)
 
@@ -1024,7 +1044,7 @@ def export_csv(request, pk):
     entries = entries_visible_to_user(schedule.entries.select_related(
         "assignment__subject", "assignment__section", "assignment__faculty", "room",
         "subject_override", "section_override", "faculty_override"), request.user)
-    for e in entries:
+    for e in historical_entries(entries):
         writer.writerow([e.get_day_display(), e.start_time, e.end_time, e.effective_subject.code, e.effective_section, e.effective_faculty, e.room.name])
     return response
 
@@ -1040,7 +1060,7 @@ def export_pdf(request, pk):
     entries = entries_visible_to_user(schedule.entries.select_related(
         "assignment__subject", "assignment__section", "assignment__faculty", "room",
         "subject_override", "section_override", "faculty_override"), request.user)
-    for e in entries:
+    for e in historical_entries(entries):
         pdf.drawString(40, y, f"{e.get_day_display()} {e.start_time}-{e.end_time} {e.effective_subject.code} {e.effective_section} {e.effective_faculty} {e.room.name}")
         y -= 18
         if y < 50:
@@ -1091,3 +1111,22 @@ def entry_remove(request, pk, entry_pk):
             messages.success(request, "Meeting removed from this draft. Review missing meetings before publishing.")
             return redirect("schedule_detail", pk=pk)
     return render(request, "schedules/entry_remove_confirm.html", {"entry": entry, "schedule": entry.schedule, "revision": revision})
+
+
+@login_required
+@user_passes_test(admin_required)
+@require_POST
+def entry_apply_suggestion(request, pk, entry_pk):
+    from .services.corrections import apply_suggestion
+    get_object_or_404(ScheduleEntry, pk=entry_pk, schedule_id=pk)
+    try:
+        apply_suggestion(schedule_id=pk, entry_id=entry_pk, actor=request.user, token=request.POST.get("suggestion", ""))
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+    except Exception:
+        logger.exception("Suggested correction failed for entry %s", entry_pk)
+        messages.error(request, "The correction could not be saved. Nothing was changed. Reload and try again.")
+    else:
+        messages.success(request, "Suggested placement saved. Review any remaining schedule issues.")
+        return redirect("schedule_detail", pk=pk)
+    return redirect("entry_update", pk=pk, entry_pk=entry_pk)

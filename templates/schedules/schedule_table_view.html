@@ -22,7 +22,7 @@
           <td><span class="badge">{{ e.get_day_display }}</span></td>
           <td>{{ e.start_time|time:"g:i A" }}</td><td>{{ e.end_time|time:"g:i A" }}</td>
           <td>{{ e.room.name }}</td><td>{{ e.effective_faculty }}</td>
-          <td>{% if e.manual_conflicts %}<span class="badge danger" data-tooltip="{{ e.manual_conflicts|join:' ' }}">Conflict</span>{% else %}<span class="badge success">Valid</span>{% endif %}</td>
+          <td>{% if e.historical %}<span class="badge">Finalized</span>{% elif e.manual_conflicts %}<span class="badge danger" data-tooltip="{{ e.manual_conflicts|join:' ' }}">Conflict</span>{% else %}<span class="badge success">Valid</span>{% endif %}</td>
           {% if can_manage %}<td class="actions-cell">{% if schedule.status != 'PUBLISHED' and schedule.status != 'ARCHIVED' %}<a class="button button-small" href="{% url 'entry_update' schedule.pk e.pk %}">Edit Meeting</a>{% if schedule.status == "DRAFT" %} <a class="button button-small" href="{% url 'entry_remove' schedule.pk e.pk %}">Remove Meeting</a>{% endif %}{% else %}<span class="subtle">Locked</span>{% endif %}</td>{% endif %}
         </tr>{% endfor %}</tbody>
       </table>

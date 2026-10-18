@@ -255,3 +255,21 @@ SQLite can temporarily reject competing writes; no partial changes are saved. Se
 Administrators can select **Copy to Draft** on a published or archived schedule. The new draft has independent meeting placements; shared academic definitions remain protected. Review the draft's validation messages before editing or publishing.
 
 In a draft's table view, select **Remove Meeting**, review the confirmation, and tick the approval box. This removes only that draft entry. Academic assignments and finalized schedules remain unchanged. Required meetings must be restored before publication. Both operations are transactional and audited; stale removal forms require reloading. No migration is required.
+
+
+### Conflict corrections (Task 3.5)
+
+Administrators can select **Fix Conflict** beside a draft meeting's validation message. The meeting editor shows up to three **Suggested Placements** with an **Apply Suggestion** button. Suggestions preserve saved academic information and required duration; unsaved editor changes are not included.
+
+The search checks the current start time and a 30-minute grid across Monday through Saturday, preferring the same day and nearby times. Every suggested placement passes the existing entry validation. If none is found, other manually entered times may still work; academic requirements may also need correction. Schedule-wide issues without a specific entry remain descriptive messages.
+
+Applying a suggestion requires an administrator, POST, CSRF protection, and a signed user/meeting/revision-bound proposal. The existing manual-save transaction rechecks current constraints, updates the revision and audit together, and rolls back on failure. Changed or expired suggestions require reloading. Published and archived schedules must first be copied to a draft. No migration or dependency is required.
+
+
+### Historical schedule snapshots (Task 3.6)
+
+Run `python manage.py migrate` to apply migration `0012_historical_snapshots`. Published and archived schedules receive one immutable historical record. The migration reconstructs existing finalized schedules from available data and labels them as reconstructed; it does not invent original publication values.
+
+Finalized schedule details, timetable displays, browsing, and exports use preserved academic labels and placements after applying the existing access restrictions. Drafts continue using live records. Archiving retains the original snapshot; Copy to Draft creates editable placements without copying historical storage.
+
+`python manage.py backfill_schedule_snapshots` safely reconstructs any missing finalized snapshots and reports incomplete historical metadata. Existing snapshots are never overwritten. See [HISTORICAL_SNAPSHOTS.md](HISTORICAL_SNAPSHOTS.md) for the capture schema, safeguards, migration verification, and limitations.

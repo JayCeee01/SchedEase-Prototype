@@ -481,6 +481,21 @@ class Schedule(ProtectedContentMixin, models.Model):
         return self.name
 
 
+class ScheduleSnapshot(models.Model):
+    """Database-captured finalization record. No application writes are allowed."""
+    schedule = models.OneToOneField(Schedule, on_delete=models.PROTECT, related_name="snapshot")
+    schema_version = models.PositiveSmallIntegerField(default=1)
+    captured_at = models.DateTimeField()
+    reconstructed = models.BooleanField(default=False)
+    data = models.JSONField()
+
+    def save(self, *args, **kwargs):
+        raise ValidationError("Historical snapshots are created by finalization and cannot be changed.")
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Historical snapshots cannot be deleted.")
+
+
 class ScheduleEntry(ProtectedContentMixin, models.Model):
     schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE, related_name="entries")
     assignment = models.ForeignKey(TeachingAssignment, on_delete=models.PROTECT)

@@ -79,21 +79,25 @@ def conflict_messages(entries):
     return messages
 
 
-def schedule_validation_messages(schedule):
+def schedule_validation_issues(schedule):
     messages = []
     entries = list(schedule.entries.select_related("assignment__faculty", "assignment__subject", "assignment__section", "room"))
     scheduled_ids = {entry.assignment_id for entry in entries}
     missing = schedule.term.teachingassignment_set.exclude(id__in=scheduled_ids).select_related("subject", "section", "faculty")
     for assignment in missing:
-        messages.append(
+        messages.append({"entry": None, "message": (
             f"Unscheduled class: {assignment.subject.code} for {assignment.section}, taught by {assignment.faculty}; "
             f"requires {assignment.required_duration_minutes} minutes in a {assignment.get_required_room_type_override_display() if assignment.required_room_type_override else assignment.subject.get_required_room_type_display()}."
-        )
+        )})
     for entry in entries:
         try:
             entry.full_clean()
         except ValidationError as exc:
-            messages.extend(f"{entry.effective_subject.code} / {entry.effective_section}: {message}" for message in exc.messages)
+            messages.extend({"entry": entry, "message": f"{entry.effective_subject.code} / {entry.effective_section}: {message}"} for message in exc.messages)
     from .meetings import scheduled_requirement_errors
-    messages.extend(scheduled_requirement_errors(schedule, entries))
-    return list(dict.fromkeys(messages))
+    messages.extend({"entry": None, "message": message} for message in scheduled_requirement_errors(schedule, entries))
+    return messages
+
+
+def schedule_validation_messages(schedule):
+    return list(dict.fromkeys(issue["message"] for issue in schedule_validation_issues(schedule)))

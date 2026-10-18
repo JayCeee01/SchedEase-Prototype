@@ -60,4 +60,18 @@
   </div>
   {% endif %}
 </form>
+{% if correction_entry %}
+<section class="panel" aria-labelledby="suggested-placements">
+  <h2 id="suggested-placements">Suggested Placements</h2>
+  <p>{{ correction_entry.effective_subject.code }} / {{ correction_entry.effective_section }} - Meeting {{ correction_entry.assignment.meeting_index }}, {{ correction_entry.effective_component_display }}, {{ correction_entry.assignment.required_duration_minutes }} minutes.</p>
+  <p class="subtle">Based on the saved meeting. Applying a suggestion changes only its day, time and room; unsaved form changes are not included.</p>
+  {% for suggestion in suggestions %}
+  <form method="post" action="{% url 'entry_apply_suggestion' correction_entry.schedule_id correction_entry.pk %}" class="toolbar">
+    {% csrf_token %}<input type="hidden" name="suggestion" value="{{ suggestion.token }}">
+    <span>{{ suggestion.entry.get_day_display }} {{ suggestion.entry.start_time|time:"g:i A" }} to {{ suggestion.entry.end_time|time:"g:i A" }} | {{ suggestion.entry.room }} (capacity {{ suggestion.entry.room.capacity }})</span>
+    <button class="button" type="submit" data-loading-text="Checking and saving">Apply Suggestion</button>
+  </form>
+  {% empty %}<p>No valid alternatives were found at the current start time or on the 30-minute search grid. Review the meeting's requirements and availability, or enter another time above.</p>{% endfor %}
+</section>
+{% endif %}
 {% endblock %}

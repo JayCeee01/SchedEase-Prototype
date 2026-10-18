@@ -72,8 +72,8 @@ def manual_edit_transaction(*, schedule_id, entry_id, actor, revision, draft_onl
         yield schedule, entry, previous, current_user
 
 
-def save_manual_entry(*, schedule_id, entry_id, actor, revision, proposed, confirmed=False, reason=""):
-    with manual_edit_transaction(schedule_id=schedule_id, entry_id=entry_id, actor=actor, revision=revision) as (schedule, entry, previous, current_user):
+def save_manual_entry(*, schedule_id, entry_id, actor, revision, proposed, confirmed=False, reason="", draft_only=False):
+    with manual_edit_transaction(schedule_id=schedule_id, entry_id=entry_id, actor=actor, revision=revision, draft_only=draft_only) as (schedule, entry, previous, current_user):
         for field in FIELDS:
             setattr(entry, field, proposed[field])
         entry.schedule = schedule
