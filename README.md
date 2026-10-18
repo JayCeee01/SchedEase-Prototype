@@ -273,3 +273,41 @@ Run `python manage.py migrate` to apply migration `0012_historical_snapshots`. P
 Finalized schedule details, timetable displays, browsing, and exports use preserved academic labels and placements after applying the existing access restrictions. Drafts continue using live records. Archiving retains the original snapshot; Copy to Draft creates editable placements without copying historical storage.
 
 `python manage.py backfill_schedule_snapshots` safely reconstructs any missing finalized snapshots and reports incomplete historical metadata. Existing snapshots are never overwritten. See [HISTORICAL_SNAPSHOTS.md](HISTORICAL_SNAPSHOTS.md) for the capture schema, safeguards, migration verification, and limitations.
+
+
+### GA fitness priority (Task 4.1)
+
+The GA ranks candidates by **fewer hard constraint violations first**, then by **higher soft preference score** when violation counts are equal. Preferences cannot outweigh an additional hard violation. Generation reports failure if no feasible result is found, and full schedule validation remains mandatory before saving.
+
+The existing numeric schedule fitness field stores the soft score of a validated result. Per-generation hard/soft statistics are available on `GeneticScheduler.generation_statistics`. See [GA_FITNESS.md](GA_FITNESS.md) for counting, deterministic ties, reporting and regression coverage. No migration is required.
+
+
+### Feasible GA placements (Task 4.2)
+
+The GA now caches individually valid room/day/time options for each meeting. Initialization and mutation prefer options that avoid other placed meetings; crossover preserves valid inherited placements and checks newly introduced conflicts. Randomized choices preserve variation, while Task 4.1's hard-first ranking remains unchanged.
+
+An empty option set identifies the meeting and explains why it cannot be placed. Individually valid options can still conflict with one another, and full schedule validation remains required before saving. See [GA_PLACEMENTS.md](GA_PLACEMENTS.md) for constraints, failure behavior and the measured deterministic comparison. No migration is required.
+
+### Targeted GA conflict repair (Task 4.3)
+
+The GA now attempts bounded repairs of overlapping meetings after creating initial candidates and after offspring mutation. It moves only affected meetings, uses existing feasible placements, and accepts only reductions in hard violations. Unresolved candidates remain subject to normal selection and final validation; importing or generating does not publish a schedule.
+
+See [GA_REPAIR.md](GA_REPAIR.md) for the repair budget, diagnostics, regression coverage, measured comparison and search limitations. No migration is required.
+
+### Shared generation reservations (Task 4.4)
+
+Generation now uses a database reservation per academic term, shared across application workers. A competing request receives a wait/retry message. Reservations renew during generation; expired requests cannot save results. Different terms can compute independently, subject to SQLite's brief write locks.
+
+Apply migration `0013_generationlease` with `python manage.py migrate` before running the updated application. Stop old workers before migration and restart them with the new code. See [GENERATION_LOCKING.md](GENERATION_LOCKING.md) for lifecycle, transaction safeguards, tests and deployment limits.
+
+### Structured generation diagnostics (Task 4.5)
+
+Generation failures now retain explicit meeting and assignment references, including conflicts involving several meetings. Administrators can review all affected meetings in the Error Log and open their assignment records. Deleted references remain identifiable without breaking historical reports.
+
+Failed-run status and issue records save together. Opening the administrator Error Log also reconciles interrupted Running records against current database leases, preserving active requests. Apply migration `0014_generationissue_details_generationrun_lease_owner` with `python manage.py migrate` before restarting updated workers. See [GENERATION_DIAGNOSTICS.md](GENERATION_DIAGNOSTICS.md) for the data format, recovery rules, privacy safeguards and limitations.
+
+### GA reproducibility information (Task 5.1)
+
+Generate Schedule now accepts an optional **Random seed**. Leave it blank to choose and record a seed automatically. In the administrator Error Log, open **Generation history ? View Run** to inspect the seed, effective parameters, input counts/fingerprint, timestamps and outcome for successful or failed runs.
+
+Apply migration `0015_generationrun_reproducibility` with `python manage.py migrate` before restarting updated workers. Historical runs show missing metadata explicitly. A fingerprint identifies prepared inputs; it is not a stored input snapshot or a guarantee of replay across different environments. See [GA_REPRODUCIBILITY.md](GA_REPRODUCIBILITY.md) for coverage, reproducibility evidence and limitations.

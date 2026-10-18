@@ -6,9 +6,13 @@
     <div class="toolbar"><span class="badge severity-{{ issue.severity|lower }}">{{ issue.get_severity_display }}</span><span class="badge status-{{ issue.status|lower }}">{{ issue.get_status_display }}</span></div>
     <h2>What happened</h2><p>{{ issue.short_description }}</p>
     <h2>Reason</h2><p>{{ issue.reason }}</p>
+    {% if affected_meetings %}<h2>Affected meetings</h2><ul>
+    {% for item in affected_meetings %}<li>{% if item.meeting %}{{ item.meeting.subject.code }} / {{ item.meeting.section }} / Meeting {{ item.meeting.meeting_index }} ? {{ item.meeting.faculty }}
+    {% if item.meeting.assignment_id %}<a href="{% url 'resource_update' 'assignments' item.meeting.assignment_id %}">Review assignment</a>{% endif %}
+    {% else %}Meeting {{ item.id }} is no longer available.{% endif %}</li>{% endfor %}</ul>{% endif %}
     <h2>Suggested action</h2><p>{{ issue.suggested_action }}</p>
     {% if issue.assignment %}<h2>Affected class</h2><dl class="detail-list"><dt>Course</dt><dd>{{ issue.assignment.subject.code }} · {{ issue.assignment.subject.title }}</dd><dt>Section</dt><dd>{{ issue.assignment.section }}</dd><dt>Faculty</dt><dd>{{ issue.assignment.faculty }}</dd><dt>Required room type</dt><dd>{{ issue.assignment.get_effective_room_type_display|default:issue.assignment.effective_room_type }}</dd>{% if issue.room %}<dt>Room</dt><dd>{{ issue.room }}</dd>{% endif %}</dl>{% endif %}
   </section>
-  <aside class="panel issue-context"><h2>Generation run</h2><dl class="detail-list"><dt>Run ID</dt><dd>{{ issue.run_id }}</dd><dt>Term</dt><dd>{{ issue.run.term }}</dd><dt>Requested schedule</dt><dd>{{ issue.run.requested_name }}</dd><dt>Run status</dt><dd>{{ issue.run.get_status_display }}</dd><dt>GA settings</dt><dd>{{ issue.run.ga_settings|default:"Unavailable" }}</dd></dl><form method="post" class="form">{% csrf_token %}<label>Resolution status<select name="status">{% for value,label in statuses %}<option value="{{ value }}"{% if issue.status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button class="primary" type="submit">Update Status</button></form></aside>
+  <aside class="panel issue-context"><h2>Generation run</h2><p><a href="{% url 'generation_run_detail' issue.run_id %}">View experiment information</a></p><dl class="detail-list"><dt>Run ID</dt><dd>{{ issue.run_id }}</dd><dt>Term</dt><dd>{{ issue.run.term }}</dd><dt>Requested schedule</dt><dd>{{ issue.run.requested_name }}</dd><dt>Run status</dt><dd>{{ issue.run.get_status_display }}</dd><dt>GA settings</dt><dd>{{ issue.run.ga_settings|default:"Unavailable" }}</dd></dl><form method="post" class="form">{% csrf_token %}<label>Resolution status<select name="status">{% for value,label in statuses %}<option value="{{ value }}"{% if issue.status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button class="primary" type="submit">Update Status</button></form></aside>
 </div>
 {% endblock %}

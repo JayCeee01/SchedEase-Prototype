@@ -41,8 +41,12 @@ def meeting_records(meetings):
     return [(m.meeting_index, m.component, m.required_duration_minutes) for m in meetings]
 
 
-def entry_requirement_errors(entry):
+def entry_requirement_errors(entry, issue_sink=None):
+    from .diagnostics import Diagnostic
     errors = duration_errors(entry.assignment.required_duration_minutes)
+    if issue_sink is not None:
+        issue_sink.extend(Diagnostic.for_meetings('INVALID_DURATION', message, [entry.assignment]) for message in errors)
+    duration_count = len(errors)
     if entry.effective_subject.pk != entry.assignment.subject_id:
         errors.append("Course must match the assigned course. Edit the assignment to change its requirements.")
     if entry.effective_component != entry.assignment.component:
@@ -51,10 +55,13 @@ def entry_requirement_errors(entry):
     hours = {"LECTURE": entry.assignment.subject.lecture_hours, "LABORATORY": entry.assignment.subject.lab_hours}
     if component not in hours or not hours[component]:
         errors.append("Meeting component does not match the course's lecture/laboratory requirements. Correct the assignment first.")
+    if issue_sink is not None:
+        issue_sink.extend(Diagnostic.for_meetings('INVALID_DATA', message, [entry.assignment],
+            details={'constraint': 'meeting_requirements'}) for message in errors[duration_count:])
     return errors
 
 
-def scheduled_requirement_errors(schedule, entries):
+def scheduled_requirement_errors(schedule, entries, issue_sink=None):
     """Validate actual time spans against each parent's requirements, including empty parents."""
     grouped = defaultdict(list)
     for entry in entries:
@@ -67,5 +74,11 @@ def scheduled_requirement_errors(schedule, entries):
     errors = []
     for parent in schedule.term.assignment_set.select_related("subject", "section"):
         for _, message in meeting_requirement_errors(parent.subject, grouped[parent.pk]):
-            errors.append(f"{parent.subject.code} / {parent.section}: {message}")
+            text = f"{parent.subject.code} / {parent.section}: {message}"
+            errors.append(text)
+            if issue_sink is not None:
+                from .diagnostics import Diagnostic
+                issue_sink.append(Diagnostic('INVALID_DATA', text,
+                    tuple(parent.meetings.values_list('pk', flat=True)), (parent.pk,),
+                    details={'constraint': 'component_totals'}))
     return errors

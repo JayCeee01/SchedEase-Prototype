@@ -6,7 +6,6 @@ from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
-from django.core.cache import cache
 from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.db.models import Count, Q
@@ -51,7 +50,10 @@ from .services.history import historical_entries, historical_term
 from .services.conflicts import conflict_messages, schedule_validation_messages, schedule_validation_issues
 from .services.credentials import faculty_qualification, missing_credential_message, valid_credential_override
 from .services.ga import GeneticScheduler
-from .services.generation_issues import record_generation_messages, record_unexpected_failure
+from .services.reproducibility import choose_seed, initial_metadata
+from .services.generation_lock import acquire, GenerationBusy, GenerationLeaseLost
+from .services.generation_issues import fail_run, unexpected_diagnostic, recover_stale_runs
+from .services.diagnostics import Diagnostic, GenerationFailure
 from .services.form_drafts import object_signature, safe_draft_payload, safe_assignment_draft_payload
 from .services.room_utilization import capacity_planning, filtered_rows, latest_schedule, personal_schedule_grid, room_schedule_grid, utilization_rows, utilization_summary
 
@@ -739,50 +741,65 @@ def resource_delete(request, resource, pk):
     return render(request, "schedules/confirm_delete.html", {"resource": resource, "object": obj})
 
 
+def finish_generation_failure(run, diagnostics):
+    if run is None:
+        return
+    try:
+        fail_run(run, diagnostics)
+    except DatabaseError:
+        # Atomic failure recording leaves the prior state intact for lease-based
+        # recovery rather than showing partial records or private DB errors.
+        logger.exception("Could not record generation failure for run %s", run.pk)
+
+
 @login_required
 @user_passes_test(admin_required)
 def generate_schedule(request):
     form = ScheduleGenerationForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         term = form.cleaned_data["term"]
-        lock_key = f"schedease-generation-term-{term.pk}"
-        if not cache.add(lock_key, request.user.pk, timeout=3600):
-            form.add_error(None, "A schedule is already being generated for this term. Please wait for it to finish.")
-            messages.warning(request, "Generation is already in progress for the selected term.")
-            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
-        run = GenerationRun.objects.create(
-            term=term,
-            ga_settings=form.cleaned_data["settings"],
-            requested_by=request.user,
-            requested_name=form.cleaned_data["name"],
-        )
         try:
-            scheduler = GeneticScheduler(term, form.cleaned_data["settings"])
-            schedule = scheduler.generate(form.cleaned_data["name"])
+            lease = acquire(term.pk)
+        except GenerationBusy as exc:
+            form.add_error(None, str(exc))
+            messages.warning(request, "Generation is already in progress or temporarily busy. Please try again shortly.")
+            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
+        run = None
+        seed = choose_seed(form.cleaned_data.get("seed"))
+        try:
+            run = GenerationRun.objects.create(
+                term=term, ga_settings=form.cleaned_data["settings"],
+                requested_by=request.user, requested_name=form.cleaned_data["name"], lease_owner=lease.owner,
+                reproducibility=initial_metadata(seed, form.cleaned_data["settings"]),
+            )
+            lease.run_id = run.pk
+            scheduler = GeneticScheduler(term, form.cleaned_data["settings"], seed=seed)
+            schedule = scheduler.generate(form.cleaned_data["name"], lease=lease)
+        except GenerationLeaseLost as exc:
+            if run is not None:
+                GenerationRun.objects.filter(pk=run.pk).update(status=GenerationRun.Status.FAILED, completed_at=timezone.now())
+            form.add_error(None, str(exc))
+            messages.warning(request, "Generation stopped because its reservation could not be maintained. Please try again.")
+            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
         except ValueError as exc:
-            record_generation_messages(run, str(exc))
-            run.status = GenerationRun.Status.FAILED
-            run.completed_at = timezone.now()
-            run.save(update_fields=["status", "completed_at"])
+            diagnostics = exc.issues if isinstance(exc, GenerationFailure) else [Diagnostic('GENERATION_FAILURE',
+                'Schedule generation could not be completed. Review the scheduling inputs and try again.')]
+            finish_generation_failure(run, diagnostics)
             form.add_error(None, "Schedule generation could not be completed. Review the Error Log for complete details and suggested actions.")
             messages.error(request, "Schedule generation could not be completed. Please check the Error Log for more information.")
             return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule", "error_run": run})
         except Exception:
             logger.exception("Unexpected schedule generation failure for term %s", term.pk)
-            record_unexpected_failure(run)
-            run.status = GenerationRun.Status.FAILED
-            run.completed_at = timezone.now()
-            run.save(update_fields=["status", "completed_at"])
+            if run is None:
+                form.add_error(None, "Generation could not start. Please try again shortly.")
+                return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
+            finish_generation_failure(run, [unexpected_diagnostic()])
             form.add_error(None, "Schedule generation could not be completed. Review the Error Log for complete details and suggested actions.")
             messages.error(request, "Schedule generation could not be completed. Please check the Error Log for more information.")
             return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule", "error_run": run})
         finally:
-            cache.delete(lock_key)
-        run.schedule = schedule
-        run.status = GenerationRun.Status.SUCCEEDED
-        run.completed_at = timezone.now()
-        run.save(update_fields=["schedule", "status", "completed_at"])
-        messages.success(request, f"Schedule generated with fitness score {schedule.fitness_score:.2f}.")
+            lease.release()
+        messages.success(request, f"Schedule generated and validated: 0 hard violations; soft preference score {schedule.fitness_score:.2f}.")
         return redirect("schedule_detail", pk=schedule.pk)
     return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
 
@@ -790,6 +807,7 @@ def generate_schedule(request):
 @login_required
 @user_passes_test(admin_required)
 def generation_error_log(request):
+    recover_stale_runs()
     issues = GenerationIssue.objects.select_related(
         "run__term", "assignment__subject", "assignment__section", "assignment__faculty", "room"
     )
@@ -832,6 +850,13 @@ def generation_error_log(request):
 
 @login_required
 @user_passes_test(admin_required)
+def generation_run_detail(request, pk):
+    run = get_object_or_404(GenerationRun.objects.select_related('term', 'schedule'), pk=pk)
+    return render(request, 'schedules/generation_run_detail.html', {'run': run})
+
+
+@login_required
+@user_passes_test(admin_required)
 def generation_error_detail(request, pk):
     issue = get_object_or_404(GenerationIssue.objects.select_related(
         "run__term", "run__ga_settings", "run__schedule", "assignment__subject",
@@ -844,7 +869,10 @@ def generation_error_detail(request, pk):
             issue.save(update_fields=["status", "updated_at"])
             messages.success(request, "Issue status updated.")
             return redirect("generation_error_detail", pk=issue.pk)
-    return render(request, "schedules/error_detail.html", {"issue": issue, "statuses": GenerationIssue.Status.choices})
+    ids = issue.details.get('meeting_ids', [])
+    meetings = {m.pk: m for m in TeachingAssignment.objects.filter(pk__in=ids, term=issue.run.term).select_related('subject', 'section', 'faculty')}
+    affected = [{'id': pk, 'meeting': meetings.get(pk)} for pk in ids]
+    return render(request, "schedules/error_detail.html", {"issue": issue, "statuses": GenerationIssue.Status.choices, "affected_meetings": affected})
 
 
 @login_required

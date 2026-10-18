@@ -2,7 +2,7 @@ import json
 from datetime import date, time
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.core.cache import cache
+from .services.generation_lock import acquire
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
@@ -154,13 +154,12 @@ class SchedulingTestCase(TestCase):
 
     def test_backend_prevents_duplicate_generation_for_same_term(self):
         self.client.login(username="admin", password="admin12345")
-        key = f"schedease-generation-term-{self.term.id}"
-        cache.set(key, self.admin_user.id, timeout=60)
+        lease = acquire(self.term.pk)
         try:
             response = self.client.post("/schedules/generate/", {
                 "term": self.term.id, "settings": self.settings.id, "name": "Duplicate"})
         finally:
-            cache.delete(key)
+            lease.release()
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "already being generated")
         self.assertFalse(Schedule.objects.filter(name="Duplicate").exists())

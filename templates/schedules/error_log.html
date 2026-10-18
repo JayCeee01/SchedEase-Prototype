@@ -31,6 +31,10 @@
   <div class="toolbar"><button class="primary" type="submit">Apply Filters</button><a class="button" href="{% url 'generation_error_log' %}">Clear</a></div>
 </form>
 
+<details class="panel"><summary>Generation history</summary><div class="table-wrap"><table><thead><tr><th>Started</th><th>Run</th><th>Status</th><th>Seed</th><th>Details</th></tr></thead><tbody>
+{% for run in runs %}<tr><td>{{ run.started_at|date:"M j, Y H:i" }}</td><td>{{ run.requested_name }}</td><td>{{ run.get_status_display }}</td><td>{% if run.reproducibility %}{{ run.reproducibility.seed }}{% else %}Not recorded{% endif %}</td><td><a href="{% url 'generation_run_detail' run.pk %}">View Run</a></td></tr>{% empty %}<tr><td colspan="5">No generation runs recorded.</td></tr>{% endfor %}
+</tbody></table></div></details>
+
 {% if issues %}
 <div class="panel table-wrap">
   <table class="error-log-table">
@@ -40,7 +44,7 @@
       <td>#{{ issue.pk }}</td>
       <td><a href="?run={{ issue.run_id }}">{{ issue.run_id|stringformat:"s"|slice:":8" }}</a></td>
       <td>{{ issue.get_category_display }}</td>
-      <td>{% if issue.assignment %}<strong tabindex="0" data-tooltip="{{ issue.assignment.subject.title }}">{{ issue.assignment.subject.code }}</strong><small>{{ issue.assignment.section }} &middot; {{ issue.assignment.faculty }}</small>{% else %}<span class="subtle">Not applicable</span>{% endif %}</td>
+      <td>{% if issue.assignment %}<strong tabindex="0" data-tooltip="{{ issue.assignment.subject.title }}">{{ issue.assignment.subject.code }}</strong><small>{{ issue.assignment.section }} &middot; {{ issue.assignment.faculty }}</small>{% else %}<span class="subtle">{% if issue.details.meeting_ids %}Referenced meeting unavailable{% else %}Not applicable{% endif %}</span>{% endif %}{% if issue.details.meeting_ids|length > 1 %}<small>{{ issue.details.meeting_ids|length }} affected meetings ? see details</small>{% endif %}</td>
       <td><span class="badge severity-{{ issue.severity|lower }}">{{ issue.get_severity_display }}</span></td>
       <td>{{ issue.short_description }}</td>
       <td><span class="badge status-{{ issue.status|lower }}">{{ issue.get_status_display }}</span></td>

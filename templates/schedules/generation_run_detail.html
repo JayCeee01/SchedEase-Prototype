@@ -1,0 +1,21 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="page-hero"><div><p class="eyebrow">Generation history</p><h1>{{ run.requested_name }}</h1><p class="subtle">{{ run.term }} · {{ run.get_status_display }}</p></div><a class="button" href="{% url 'generation_error_log' %}?run={{ run.pk }}">Back to Error Log</a></div>
+<div class="detail-grid">
+<section class="panel">
+<h2>Experiment information</h2>
+{% if run.reproducibility %}
+<dl class="detail-list"><dt>Random seed</dt><dd>{{ run.reproducibility.seed }}</dd><dt>Metadata version</dt><dd>{{ run.reproducibility.version }}</dd></dl>
+<h3>Effective parameters</h3><dl class="detail-list">{% for key,value in run.reproducibility.parameters.items %}{% if key != 'fitness' %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endif %}{% endfor %}</dl>
+<details><summary>Fitness settings</summary><dl class="detail-list">{% for key,value in run.reproducibility.parameters.fitness.items %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></details>
+<h3>Inputs used</h3>
+{% if run.reproducibility.inputs %}<dl class="detail-list">{% for key,value in run.reproducibility.inputs.counts.items %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}<dt>Fingerprint schema</dt><dd>{{ run.reproducibility.inputs.schema }}</dd><dt>SHA-256 fingerprint</dt><dd style="overflow-wrap:anywhere">{{ run.reproducibility.inputs.sha256 }}</dd></dl><p class="subtle">This fingerprint identifies inputs for comparison. It does not store a historical copy of the data.</p>{% else %}<p>Input preparation did not complete. Counts and fingerprint are unavailable.</p>{% endif %}
+<details><summary>Execution environment</summary><dl class="detail-list">{% for key,value in run.reproducibility.environment.items %}<dt>{{ key }}</dt><dd style="overflow-wrap:anywhere">{{ value }}</dd>{% endfor %}</dl></details>
+{% else %}<p>Reproducibility metadata is unavailable for this historical run.</p>{% endif %}
+</section>
+<aside class="panel"><h2>Outcome</h2><dl class="detail-list"><dt>Status</dt><dd>{{ run.get_status_display }}</dd><dt>Started</dt><dd>{{ run.started_at|date:"Y-m-d H:i:s" }}</dd><dt>Completed or recovered</dt><dd>{{ run.completed_at|date:"Y-m-d H:i:s"|default:"Not recorded" }}</dd>
+{% if run.reproducibility.outcome %}<dt>Execution time (seconds)</dt><dd>{{ run.reproducibility.outcome.duration_seconds|floatformat:3 }}</dd><dt>Best hard violations</dt><dd>{{ run.reproducibility.outcome.best_hard_violations|default_if_none:"Not available" }}</dd><dt>Best soft score</dt><dd>{{ run.reproducibility.outcome.best_soft_score|default_if_none:"Not available" }}</dd><dt>Generations evaluated</dt><dd>{{ run.reproducibility.outcome.evaluated_generations }}</dd>{% else %}<dt>Measured result</dt><dd>Not recorded. No duration or fitness result is inferred.</dd>{% endif %}</dl>
+{% if run.schedule_id %}<a class="button" href="{% url 'schedule_detail' run.schedule_id %}">View Schedule</a>{% endif %}
+<h3>Generation issues</h3>{% for issue in run.issues.all %}<p><a href="{% url 'generation_error_detail' issue.pk %}">{{ issue.get_category_display }}</a>: {{ issue.reason }}</p>{% empty %}<p>No issues recorded.</p>{% endfor %}
+</aside></div>
+{% endblock %}

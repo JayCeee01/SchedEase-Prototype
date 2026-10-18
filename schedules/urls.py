@@ -23,6 +23,7 @@ urlpatterns = [
     path("manage/<slug:resource>/<int:pk>/edit/", views.resource_update, name="resource_update"),
     path("manage/<slug:resource>/<int:pk>/delete/", views.resource_delete, name="resource_delete"),
     path("generate/", views.generate_schedule, name="generate_schedule"),
+    path("generation-runs/<uuid:pk>/", views.generation_run_detail, name="generation_run_detail"),
     path("error-log/", views.generation_error_log, name="generation_error_log"),
     path("error-log/<int:pk>/", views.generation_error_detail, name="generation_error_detail"),
     path("<int:pk>/", views.schedule_detail, name="schedule_detail"),

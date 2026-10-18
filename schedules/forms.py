@@ -137,6 +137,8 @@ MODEL_FORMS["assignments"] = AssignmentForm
 
 
 class ScheduleGenerationForm(forms.Form):
+    seed = forms.IntegerField(required=False, min_value=0, max_value=9223372036854775807,
+        label="Random seed (optional)", help_text="Use the same seed and unchanged inputs to repeat an experiment. Leave blank to choose one automatically.")
     term = forms.ModelChoiceField(queryset=AcademicTerm.objects.all())
     settings = forms.ModelChoiceField(queryset=GASettings.objects.all())
     name = forms.CharField(max_length=120, initial="Generated Schedule")

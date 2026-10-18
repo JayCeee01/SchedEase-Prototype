@@ -561,7 +561,16 @@ class ScheduleEntryAudit(ProtectedContentMixin, models.Model):
         ordering = ["-created_at"]
 
 
+class GenerationLease(models.Model):
+    """One shared generation owner per term; expired owners cannot save."""
+    term = models.OneToOneField(AcademicTerm, on_delete=models.CASCADE, primary_key=True)
+    owner = models.UUIDField(null=True, editable=False)
+    expires_at = models.DateTimeField(null=True)
+
+
 class GenerationRun(models.Model):
+    reproducibility = models.JSONField(default=dict, blank=True)
+    lease_owner = models.UUIDField(null=True, editable=False)
     class Status(models.TextChoices):
         RUNNING = "RUNNING", "Running"
         SUCCEEDED = "SUCCEEDED", "Succeeded"
@@ -586,6 +595,7 @@ class GenerationRun(models.Model):
 
 
 class GenerationIssue(models.Model):
+    details = models.JSONField(default=dict, blank=True)
     class Category(models.TextChoices):
         FACULTY_CONFLICT = "FACULTY_CONFLICT", "Faculty Conflict"
         ROOM_CONFLICT = "ROOM_CONFLICT", "Room Conflict"
