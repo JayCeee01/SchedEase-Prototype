@@ -96,6 +96,7 @@ class DurationBoundaryTests(SchedulingDefectFixture):
         admin = User.objects.create_superuser(username='h7', password='test')
         self.client.force_login(admin)
         response = self.client.post(f'/schedules/{entry.schedule_id}/entry/{entry.pk}/edit/', {
+            'revision': self.client.get(f'/schedules/{entry.schedule_id}/entry/{entry.pk}/edit/').context['form'].initial['revision'],
             'assignment': entry.assignment_id, 'room': self.room.pk, 'day': 0,
             'start_time': '18:01', 'end_time': '19:01'})
         self.assertEqual(response.status_code, 200)

@@ -106,7 +106,7 @@ class CredentialValidityTests(SchedulingDefectFixture):
         self.held.delete()
         self.client.force_login(self.admin)
         url = f'/schedules/{self.schedule.pk}/entry/new/'
-        payload = self.payload()
+        payload = {**self.payload(), "revision": self.client.get(url).context["form"].initial["revision"]}
         self.assertContains(self.client.post(url, payload), 'Credential Override Required')
         self.assertFalse(m.CredentialOverride.objects.exists())
         payload.update(credential_override_confirm='yes', credential_override_reason='Approved for this term')
@@ -122,7 +122,9 @@ class CredentialValidityTests(SchedulingDefectFixture):
         self.assertEqual(override.admin_user_id, self.admin.pk)
         self.assertIn('full academic term', override.missing_credentials)
         entry = self.schedule.entries.get()
-        self.assertEqual(self.client.post(f'/schedules/{self.schedule.pk}/entry/{entry.pk}/edit/', self.payload()).status_code, 302)
+        edit_url = f'/schedules/{self.schedule.pk}/entry/{entry.pk}/edit/'
+        edit_payload = {**self.payload(), 'revision': self.client.get(edit_url).context['form'].initial['revision']}
+        self.assertEqual(self.client.post(edit_url, edit_payload).status_code, 302)
         self.assertEqual(m.CredentialOverride.objects.count(), 1)
 
     def test_non_admin_cannot_authorize_override(self):
@@ -158,7 +160,7 @@ class CredentialValidityTests(SchedulingDefectFixture):
         other = m.Faculty.objects.create(department=self.department, employee_id='OTHER', full_name='Replacement Teacher')
         self.client.force_login(self.admin)
         url = f'/schedules/{self.schedule.pk}/entry/{entry.pk}/edit/'
-        payload = {**self.payload(), 'faculty_override': other.pk}
+        payload = {**self.payload(), 'faculty_override': other.pk, 'revision': self.client.get(url).context['form'].initial['revision']}
         response = self.client.post(url, payload)
         self.assertContains(response, 'Replacement Teacher is not qualified')
         entry.refresh_from_db()

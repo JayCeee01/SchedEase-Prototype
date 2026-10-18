@@ -73,7 +73,7 @@ class YearLevel(ProtectedContentMixin, models.Model):
         return self.label
 
 
-class AcademicTerm(models.Model):
+class AcademicTerm(ProtectedContentMixin, models.Model):
     name = models.CharField(max_length=80)
     school_year = models.CharField(max_length=20)
     starts_on = models.DateField()
@@ -88,6 +88,7 @@ class AcademicTerm(models.Model):
         return f"{self.name} {self.school_year}"
 
     def clean(self):
+        super().clean()
         if self.starts_on >= self.ends_on:
             raise ValidationError("Academic term end date must be after its start date.")
 
@@ -280,6 +281,7 @@ class Assignment(ProtectedContentMixin, models.Model):
                 self._check_schedule_references(changes)
                 if changes:
                     for meeting in self.meetings.all():
+                        meeting.assignment = self
                         for field in self.SHARED_FIELDS:
                             setattr(meeting, field, getattr(self, field))
                         try:
@@ -290,7 +292,8 @@ class Assignment(ProtectedContentMixin, models.Model):
 
     def save(self, *args, **kwargs):
         # Keep normal model/admin saves consistent as well as the assignment editor.
-        with transaction.atomic():
+        from .protection import assignment_term_sync
+        with transaction.atomic(), assignment_term_sync(self.pk, self.term_id):
             previous = type(self).objects.select_for_update().filter(pk=self.pk).first() if self.pk else None
             changes = self._shared_changes(previous, kwargs.get("update_fields")) if previous else []
             self._check_schedule_references(changes)
@@ -496,10 +499,16 @@ class ScheduleEntry(ProtectedContentMixin, models.Model):
         constraints = [models.UniqueConstraint(fields=["schedule", "assignment"], name="unique_schedule_assignment")]
 
     def clean(self):
-        super().clean()
         from .services.conflicts import validate_entry
 
-        validate_entry(self)
+        errors = []
+        for validate in (super().clean, lambda: validate_entry(self)):
+            try:
+                validate()
+            except ValidationError as exc:
+                errors.extend(exc.error_list)
+        if errors:
+            raise ValidationError(errors)
 
     @property
     def effective_subject(self):

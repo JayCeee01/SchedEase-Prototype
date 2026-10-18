@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-hero"><div><p class="eyebrow">Draft Schedule</p><h1>Remove Meeting</h1><p class="subtle">{{ schedule.name }}</p></div></div>
+<form method="post" class="panel form">
+  {% csrf_token %}
+  <input type="hidden" name="revision" value="{{ revision }}">
+  <p>Remove <strong>{{ entry.effective_subject.code }} ? {{ entry.effective_component_display }}</strong> for {{ entry.effective_section }} on {{ entry.get_day_display }}, {{ entry.start_time|time:"g:i A" }}?{{ entry.end_time|time:"g:i A" }}, in {{ entry.room.name }}?</p>
+  <p>This removes the scheduled meeting from this draft only. Its academic assignment and any published schedules remain unchanged. Missing required meetings must be scheduled again before publication.</p>
+  <label><input type="checkbox" name="confirm_remove" value="yes" required> I confirm removal of this meeting.</label>
+  <div class="toolbar"><button class="primary" type="submit" data-loading-text="Removing meeting">Remove Meeting</button><a class="button" href="{% url 'schedule_detail' schedule.pk %}">Cancel</a></div>
+</form>
+{% endblock %}

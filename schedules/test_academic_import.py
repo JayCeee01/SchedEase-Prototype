@@ -430,3 +430,22 @@ class AcademicImportTests(TestCase):
         self.assertTrue(any('published or archived' in e for e in result['errors']))
         self.assertEqual(m.Subject.objects.get().title, 'Programming')
         self.assertEqual(schedule.entries.count(), 2)
+
+    def test_term_selection_import_creates_separate_assignments_without_reassigning_finalized_data(self):
+        self.commit()
+        from datetime import time
+        schedule = m.Schedule.objects.create(term=self.term, name='Original term')
+        for i, meeting in enumerate(m.TeachingAssignment.objects.all()):
+            schedule.entries.create(assignment=meeting, room=m.Room.objects.get(room_type=meeting.effective_room_type),
+                                    day=i, start_time=time(8), end_time=time(9))
+        schedule.status = m.ScheduleStatus.PUBLISHED
+        schedule.save(update_fields=['status'])
+        original_ids = set(schedule.entries.values_list('assignment_id', flat=True))
+        other = m.AcademicTerm.objects.create(name='Next term', school_year='2026', starts_on=date(2026, 7, 1), ends_on=date(2026, 12, 1))
+        result = run_import(self.payload(), list(COLUMNS), other)
+        self.assertEqual(result['errors'], [])
+        saved = run_import(self.payload(), list(COLUMNS), other, commit=True, expected_signature=result['signature'])
+        self.assertEqual(saved['errors'], [])
+        self.assertEqual(m.TeachingAssignment.objects.filter(term=other).count(), 2)
+        self.assertEqual(set(schedule.entries.values_list('assignment_id', flat=True)), original_ids)
+        self.assertEqual(set(m.TeachingAssignment.objects.filter(pk__in=original_ids).values_list('term_id', flat=True)), {self.term.pk})

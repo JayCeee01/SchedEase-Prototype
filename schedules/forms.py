@@ -143,6 +143,7 @@ class ScheduleGenerationForm(forms.Form):
 
 
 class ScheduleEntryForm(forms.ModelForm):
+    revision = forms.CharField(widget=forms.HiddenInput, error_messages={"required": "Reload this form before saving; its edit revision is missing."})
     class Meta:
         model = ScheduleEntry
         fields = ["assignment", "subject_override", "section_override", "faculty_override", "component_override", "room", "day", "start_time", "end_time"]
@@ -157,9 +158,12 @@ class ScheduleEntryForm(forms.ModelForm):
             "end_time": forms.TimeInput(attrs={"type": "time"}),
         }
 
-    def __init__(self, *args, defer_credential_review=False, **kwargs):
+    def __init__(self, *args, defer_credential_review=False, revision_user=None, **kwargs):
         self.defer_credential_review = defer_credential_review
         super().__init__(*args, **kwargs)
+        if revision_user is not None and not self.is_bound:
+            from .services.manual_edits import revision_token
+            self.initial["revision"] = revision_token(self.instance.schedule, revision_user, self.instance if self.instance.pk else None)
         if self.instance and self.instance.pk and not self.is_bound:
             self.initial.setdefault("subject_override", self.instance.effective_subject)
             self.initial.setdefault("section_override", self.instance.effective_section)

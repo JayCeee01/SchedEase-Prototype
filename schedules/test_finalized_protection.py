@@ -55,7 +55,7 @@ class FinalizedProtectionTests(SchedulingDefectFixture):
         with self.assertRaises(ValidationError):
             self.schedule.entries.create(assignment=self.meetings[0], room=self.room, day=2,
                                          start_time=time(8), end_time=time(9))
-        with self.assertRaises(ProtectedError):
+        with self.assertRaises(ProtectedError), transaction.atomic():
             entry.delete()
         self.assertEqual(self.schedule.entries.count(), 2)
         self.assertTrue(m.ScheduleEntryAudit.objects.filter(pk=self.audit.pk).exists())
@@ -173,3 +173,32 @@ class FinalizedProtectionTests(SchedulingDefectFixture):
                 term=self.term, subject=self.subject, faculty=self.faculty, section=self.section,
                 component='LECTURE', meeting_index=3, duration_minutes=60)])
         self.assertEqual(self.parent.meetings.count(), 2)
+
+    def test_admin_bulk_delete_keeps_protected_and_unrelated_records(self):
+        free = m.Room.objects.create(name='Free', capacity=25, room_type='LECTURE')
+        response = self.client.post('/admin/schedules/room/', {
+            'action': 'delete_selected', '_selected_action': [self.room.pk, free.pk], 'post': 'yes'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['protected'])
+        self.assertEqual(m.Room.objects.filter(pk__in=[self.room.pk, free.pk]).count(), 2)
+
+    def test_effective_override_records_are_protected(self):
+        other = m.Faculty.objects.create(department=self.department, employee_id='OVERRIDE', full_name='Override')
+        draft = m.Schedule.objects.create(term=self.term, name='Override history')
+        draft.entries.create(assignment=self.meetings[0], faculty_override=other, room=self.room,
+                             day=0, start_time=time(8), end_time=time(9))
+        draft.status = m.ScheduleStatus.ARCHIVED
+        draft.save(update_fields=['status'])
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            m.Faculty.objects.filter(pk=other.pk).update(full_name='Changed')
+        other.refresh_from_db()
+        self.assertEqual(other.full_name, 'Override')
+
+    def test_archiving_scope_does_not_unlock_content(self):
+        from .protection import archive_transition
+        with archive_transition():
+            with self.assertRaises(IntegrityError), transaction.atomic():
+                m.Schedule.objects.filter(pk=self.schedule.pk).update(status='ARCHIVED', name='Changed')
+        self.schedule.refresh_from_db()
+        self.assertEqual(self.schedule.status, m.ScheduleStatus.PUBLISHED)
+        self.assertEqual(self.schedule.name, 'Official')

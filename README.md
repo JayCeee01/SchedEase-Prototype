@@ -229,3 +229,29 @@ Effective meeting durations must be whole minutes from 1 to 720, derived from th
 The existing stored zero value still means use the course component's hours (Task 2.5); that resolved duration must pass the same limits. Spreadsheet durations remain explicit positive integers. Opening and closing boundaries are inclusive. Actual scheduled durations must match the meeting requirement exactly, without rounding seconds.
 
 Inactive rooms are rejected by imports, manual scheduling, GA generation, and publication using the shared availability policy. Imports do not reactivate rooms automatically. Invalid manual edits remain unsaved and produce no edit audit record.
+
+
+### Finalized schedule protection (Task 3.1)
+
+Run `python manage.py migrate` after updating to install the SQLite integrity triggers in migration 0010. Published and archived schedules lock their entries and referenced academic content, including bulk updates and cascading deletes. Use unrelated records for future changes; ordinary draft editing remains available. Publication can archive the previous official schedule without unlocking its content.
+
+See [Finalized schedule protection](FINALIZED_SCHEDULE_PROTECTION.md) for the mutation audit, coverage, deployment requirements, and deferred term/snapshot policies.
+
+
+### Academic-term integrity (Task 3.2)
+
+Run `python manage.py migrate` to install migration 0011 in addition to 0010. Terms referenced by published or archived schedules keep their original names, school years, and dates. Their active-term flag can still change. Empty drafts may move to another term; populated drafts cannot retain meetings from a different term. Edit an unscheduled parent assignment to move its meetings together. Bulk operations cannot leave those relationships inconsistent.
+
+
+### Atomic manual edits (Task 3.3)
+
+Open the Add/Edit Schedule Entry form before saving. Its signed revision prevents stale forms from overwriting newer edits, including during override confirmation. Reload when asked to review newer data. Entry changes, approvals, audit records and the schedule revision now commit together or roll back together. New entries also receive an audit record.
+
+SQLite can temporarily reject competing writes; no partial changes are saved. See [Manual schedule transactions](MANUAL_SCHEDULE_TRANSACTIONS.md) for the save protocol and concurrency limits. No migration is required for Task 3.3.
+
+
+### Copy to Draft and Remove Meeting (Task 3.4)
+
+Administrators can select **Copy to Draft** on a published or archived schedule. The new draft has independent meeting placements; shared academic definitions remain protected. Review the draft's validation messages before editing or publishing.
+
+In a draft's table view, select **Remove Meeting**, review the confirmation, and tick the approval box. This removes only that draft entry. Academic assignments and finalized schedules remain unchanged. Required meetings must be restored before publication. Both operations are transactional and audited; stale removal forms require reloading. No migration is required.

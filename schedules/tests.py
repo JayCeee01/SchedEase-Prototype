@@ -526,6 +526,7 @@ class SchedulingTestCase(TestCase):
         schedule = Schedule.objects.create(term=self.term, name="Editable")
         entry = schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
         response = self.client.post(f"/schedules/{schedule.id}/entry/{entry.id}/edit/", {
+            "revision": self.client.get(f"/schedules/{schedule.id}/entry/{entry.id}/edit/").context["form"].initial["revision"],
             "assignment": self.assignment.id, "subject_override": self.subject.id,
             "section_override": self.section.id, "faculty_override": alternate.id,
             "component_override": TeachingAssignment.Component.LECTURE,

@@ -7,7 +7,7 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
 from django.core.cache import cache
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.db.models import Count, Q
 from django.http import Http404, HttpResponse, JsonResponse
@@ -912,7 +912,7 @@ def entry_create(request, pk):
     if schedule.status in {ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED}:
         messages.error(request, "Published and archived schedules are locked. Create or regenerate a draft version before making changes.")
         return redirect("schedule_detail", pk=pk)
-    form = ScheduleEntryForm(request.POST or None, instance=ScheduleEntry(schedule=schedule), defer_credential_review=True)
+    form = ScheduleEntryForm(request.POST or None, instance=ScheduleEntry(schedule=schedule), defer_credential_review=True, revision_user=request.user)
     form.fields["assignment"].queryset = TeachingAssignment.objects.filter(term=schedule.term)
     if request.method == "POST" and form.is_valid():
         return save_entry_with_credential_check(request, form, schedule)
@@ -926,7 +926,7 @@ def entry_update(request, pk, entry_pk):
     if entry.schedule.status in {ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED}:
         messages.error(request, "Published and archived schedules are locked. Create or regenerate a draft version before making changes.")
         return redirect("schedule_detail", pk=pk)
-    form = ScheduleEntryForm(request.POST or None, instance=entry, defer_credential_review=True)
+    form = ScheduleEntryForm(request.POST or None, instance=entry, defer_credential_review=True, revision_user=request.user)
     form.fields["assignment"].queryset = TeachingAssignment.objects.filter(term=entry.schedule.term)
     if request.method == "POST" and form.is_valid():
         return save_entry_with_credential_check(request, form, entry.schedule)
@@ -936,15 +936,8 @@ def entry_update(request, pk, entry_pk):
 def save_entry_with_credential_check(request, form, schedule):
     entry = form.save(commit=False)
     entry.schedule = schedule
-    previous = {}
-    if entry.pk:
-        old = ScheduleEntry.objects.get(pk=entry.pk)
-        previous = {field: str(getattr(old, field)) for field in (
-            "assignment_id", "subject_override_id", "section_override_id", "faculty_override_id",
-            "component_override", "room_id", "day", "start_time", "end_time")}
     result = faculty_qualification(entry.effective_faculty, entry.effective_subject, schedule.term)
     valid_override = valid_credential_override(entry.assignment, entry.effective_faculty, entry.effective_subject)
-    override_values = None
     if not result["qualified"] and not valid_override:
         if request.POST.get("credential_override_confirm") != "yes":
             return render_credential_override_confirmation(request, form, result)
@@ -952,29 +945,24 @@ def save_entry_with_credential_check(request, form, schedule):
         if not reason:
             messages.error(request, "Override reason is required.")
             return render_credential_override_confirmation(request, form, result)
-        override_values = dict(
-            assignment=entry.assignment, subject=entry.effective_subject, faculty=entry.effective_faculty,
-            admin_user=request.user, reason=reason,
-            missing_credentials=missing_credential_message(entry.effective_faculty, entry.effective_subject, schedule.term),
-        )
+    from .services.manual_edits import FIELDS, save_manual_entry
     try:
-        with transaction.atomic():
-            if override_values:
-                CredentialOverride.objects.create(**override_values)
-            entry.full_clean()
-            entry.save()
-            new_values = {field: str(getattr(entry, field)) for field in (
-                "assignment_id", "subject_override_id", "section_override_id", "faculty_override_id",
-                "component_override", "room_id", "day", "start_time", "end_time")}
-            if previous and previous != new_values:
-                ScheduleEntryAudit.objects.create(schedule=schedule, entry=entry, user=request.user,
-                                                  previous_values=previous, new_values=new_values)
-            schedule.save(update_fields=["updated_at"])
+        save_manual_entry(schedule_id=schedule.pk, entry_id=entry.pk, actor=request.user,
+            revision=form.cleaned_data["revision"], proposed={field: getattr(entry, field) for field in FIELDS},
+            confirmed=request.POST.get("credential_override_confirm") == "yes",
+            reason=request.POST.get("credential_override_reason", ""))
     except ValidationError as exc:
         form.add_error(None, exc)
-        return render(request, "schedules/form.html", {"form": form, "title": "Edit Schedule Entry", "description": "Resolve the validation issues before saving this schedule entry.", "tooltip_context": "schedule-entry"})
-    messages.success(request, "Schedule entry saved.")
-    return redirect("schedule_detail", pk=schedule.pk)
+    except DatabaseError:
+        logger.exception("Manual schedule save rejected for schedule %s", schedule.pk)
+        form.add_error(None, "The schedule changed or is busy. Nothing was saved. Reload the form and try again.")
+    except Exception:
+        logger.exception("Unexpected manual schedule save failure for schedule %s", schedule.pk)
+        form.add_error(None, "The schedule could not be saved. Nothing was changed. Reload the form and try again.")
+    else:
+        messages.success(request, "Schedule entry saved.")
+        return redirect("schedule_detail", pk=schedule.pk)
+    return render(request, "schedules/form.html", {"form": form, "title": "Edit Schedule Entry", "description": "Resolve the validation issues before saving this schedule entry.", "tooltip_context": "schedule-entry"})
 
 
 @login_required
@@ -996,9 +984,19 @@ def publish_schedule(request, pk):
         })
     with transaction.atomic():
         locked = Schedule.objects.select_for_update().get(pk=schedule.pk)
+        if locked.status in {ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED}:
+            messages.error(request, "Published and archived schedules are locked.")
+            return redirect("schedule_detail", pk=pk)
+        if schedule_validation_messages(locked):
+            messages.error(request, "Resolve conflicts before publishing.")
+            return redirect("schedule_detail", pk=pk)
         current = Schedule.objects.select_for_update().filter(
             term=locked.term, status=ScheduleStatus.PUBLISHED
         ).exclude(pk=locked.pk).first()
+        if current and request.POST.get("replace_confirm") != "yes":
+            return render(request, "schedules/publish_replace_confirm.html", {
+                "schedule": locked, "current": current,
+            })
         now = timezone.now()
         if current:
             current.status = ScheduleStatus.ARCHIVED
@@ -1050,3 +1048,46 @@ def export_pdf(request, pk):
             y = 750
     pdf.save()
     return response
+
+
+@login_required
+@user_passes_test(admin_required)
+@require_POST
+def copy_schedule_to_draft(request, pk):
+    from .services.manual_edits import copy_to_draft
+    get_object_or_404(Schedule, pk=pk)
+    try:
+        draft = copy_to_draft(source_id=pk, actor=request.user)
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+    except Exception:
+        logger.exception("Schedule copy failed for schedule %s", pk)
+        messages.error(request, "The draft could not be created. Nothing was changed. Please try again.")
+    else:
+        messages.success(request, "Draft created. Review and edit its meetings before publishing.")
+        return redirect("schedule_detail", pk=draft.pk)
+    return redirect("schedule_detail", pk=pk)
+
+
+@login_required
+@user_passes_test(admin_required)
+def entry_remove(request, pk, entry_pk):
+    from .services.manual_edits import remove_manual_entry, revision_token
+    entry = get_object_or_404(ScheduleEntry, pk=entry_pk, schedule_id=pk)
+    if entry.schedule.status != ScheduleStatus.DRAFT:
+        messages.error(request, "Meetings can only be removed from draft schedules.")
+        return redirect("schedule_detail", pk=pk)
+    revision = request.POST.get("revision", "") if request.method == "POST" else revision_token(entry.schedule, request.user, entry)
+    if request.method == "POST":
+        try:
+            remove_manual_entry(schedule_id=pk, entry_id=entry_pk, actor=request.user, revision=revision,
+                                confirmed=request.POST.get("confirm_remove") == "yes")
+        except ValidationError as exc:
+            messages.error(request, " ".join(exc.messages))
+        except Exception:
+            logger.exception("Meeting removal failed for entry %s", entry_pk)
+            messages.error(request, "The meeting could not be removed. Nothing was changed. Reload and try again.")
+        else:
+            messages.success(request, "Meeting removed from this draft. Review missing meetings before publishing.")
+            return redirect("schedule_detail", pk=pk)
+    return render(request, "schedules/entry_remove_confirm.html", {"entry": entry, "schedule": entry.schedule, "revision": revision})
