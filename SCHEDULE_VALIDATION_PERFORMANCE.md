@@ -162,7 +162,19 @@ database, not the development database.
 - 91 targeted validation, manual transaction, diagnostic, correction, finalized
   protection and meeting-requirement tests passed.
 - System check: no issues. Migration check: no changes detected.
-- Full-suite results are recorded after verification.
+- Full suite: **496 passed in 334.010 seconds**, preserving all 486 previous
+  tests plus 10 new validation tests. Zero failures, errors, skips, expected
+  failures or unexpected successes. Test runner exit code: 0.
+- `git diff --check`: passed.
+
+The full run finished successfully while the resume request arrived; it was not
+interrupted and did not need repeating. The original and paired profiling
+measurements above remain the recorded performance comparison. Full-suite
+profiling reproduced the same query/operation counts and exact diagnostic
+equivalence. The tracked `task64-test-results.log` retains that run's output.
+
+Task 6.4 is complete within the measurement limits below. No Git commit was
+created by the assistant, and Phase 7 was not started.
 
 Full model validation still performs field/constraint, credential and availability
 queries per entry. Parent requirement validation still has related-label work.
@@ -171,3 +183,6 @@ claim is made; SQL scan costs depend on backend/data distribution. Indexes and
 deeper operation-local caching were not needed for this focused improvement.
 GA caches/operators and repeated authoritative checks across distinct transactions
 were deliberately retained. No production-load or live browser test was performed.
+The timings measure the shared validation service, not end-to-end GA generation,
+manual-save transactions, suggestion searches or publication latency; those
+workflows were inspected and regression-tested without claiming separate speedups.
