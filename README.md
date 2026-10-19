@@ -5,7 +5,7 @@ SchedEase is a Django-based academic scheduling system for colleges. It manages 
 ## Technology Choices
 
 - **Django 5**: mature Python framework with authentication, forms, ORM, validation, admin tooling, and server-rendered pages that fit a CRUD-heavy academic system.
-- **SQLite for local development**: zero setup and fully relational. Move to PostgreSQL for production with the same Django ORM models.
+- **SQLite for local development**: zero setup and fully relational. Production database selection and any migration require separate compatibility and integrity testing.
 - **ReportLab**: server-side PDF export without a browser dependency.
 - **Genetic Algorithm service layer**: scheduling optimization is isolated in `schedules/services/ga.py` so it can evolve independently from views and forms.
 
@@ -347,3 +347,7 @@ SchedEase checks completeness against entered assignments and lecture/laboratory
 ### Fixed meeting placements evaluation (Task 7.2)
 
 Manual edits and Copy to Draft preserve placements within a particular schedule; they do not pin meetings during a new GA run. No approved requirement defining fixed day, time or room rules was found in the available documentation. The evaluation selects **Outcome D: academic clarification required** before implementation. See [FIXED_MEETING_PLACEMENTS_EVALUATION.md](FIXED_MEETING_PLACEMENTS_EVALUATION.md) for existing support, GA impact and questions. This task changes documentation only.
+
+### Production security preparation (Task 8.1)
+
+Local setup is unchanged. Future production workers must explicitly set `SCHED_EASE_ENV=production` and supply a private secret and allowed hosts through their environment. Production disables debugging, enforces HTTPS and secure cookies, and ignores local `.env` files. Proxy trust and HSTS require deployment-specific verification. See [PRODUCTION_SECURITY.md](PRODUCTION_SECURITY.md) for variables, checks, static serving and remaining deployment prerequisites, including a supported Django upgrade. This task does not deploy the application.
