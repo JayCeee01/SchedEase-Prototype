@@ -449,16 +449,34 @@ class GeneticScheduler:
         penalty = 0
         for buckets in (by_faculty_day, by_section_day):
             for genes in buckets.values():
-                genes.sort(key=lambda g: g.start_time)
+                genes.sort(key=lambda g: (g.start_time, g.end_time))
                 if len(genes) > 3:
                     penalty += (len(genes) - 3) * 8
-                for left, right in zip(genes, genes[1:]):
-                    gap = right.start_time.hour - left.end_time.hour
-                    if gap > 1:
-                        penalty += gap * 4
-        day_counts = defaultdict(int)
+        # Merge occupied intervals before counting faculty idle time. A nested
+        # overlap must not create a false gap after the shorter meeting ends.
+        total_idle_minutes = 0
+        for genes in by_faculty_day.values():
+            occupied_until = None
+            idle_minutes = 0
+            for gene in genes:
+                start = gene.start_time.hour * 60 + gene.start_time.minute
+                end = gene.end_time.hour * 60 + gene.end_time.minute
+                if occupied_until is not None:
+                    idle_minutes += max(0, start - occupied_until)
+                occupied_until = max(occupied_until or end, end)
+            total_idle_minutes += idle_minutes
+        penalty += total_idle_minutes * 4 / 60
+        # Preserve the separate, existing section gap preference.
+        for genes in by_section_day.values():
+            for left, right in zip(genes, genes[1:]):
+                gap = right.start_time.hour - left.end_time.hour
+                if gap > 1:
+                    penalty += gap * 4
+        # School-wide instructional calendar, not just days used by this candidate.
+        day_counts = dict.fromkeys(ALLOWED_DAYS, 0)
         for gene in chromosome:
-            day_counts[gene.day] += 1
+            if gene.day in day_counts:
+                day_counts[gene.day] += 1
         if day_counts:
             spread = max(day_counts.values()) - min(day_counts.values())
             penalty += spread * 3

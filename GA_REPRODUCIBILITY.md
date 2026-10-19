@@ -75,3 +75,21 @@ Stop old application workers, apply migrations and restart the updated code:
 ```
 
 Migration 0015 depends on Task 4.5's migration 0014. Test databases exercise the migration; the developer's database and existing uncommitted data changes remain untouched.
+
+## Resumed verification — 2026-10-19
+
+The implementation, migration 0015, administrator history UI and 20 Task 5.1 tests were already present in commit `8bde47e` when work resumed. Review found no missing implementation or test requirements. This session completed verification and added this report; no application code or migrations were changed, and no commits were made.
+
+Verified using the existing virtual environment:
+
+- `python manage.py test schedules.test_reproducibility`: 20 passed.
+- `python manage.py test`: 378 passed in 225.829 seconds, including all 358 prior tests and the 20 Task 5.1 tests. Zero failures, errors, skips, expected failures or unexpected successes.
+- `python manage.py check`: no issues.
+- `python manage.py makemigrations --check --dry-run`: no model changes detected.
+- `git diff --check`: passed.
+
+The tests verify automatic/explicit seeds, identical seeded placements and fitness statistics, RNG isolation, effective settings preservation, counts, canonical ordering, relevant/irrelevant input changes, successful/failed/interrupted runs, stale-owner rejection, rollback, historical compatibility and administrator-only metadata. The full suite also retains generation diagnostics, leases and finalized-schedule safeguards.
+
+Migration 0015 was preserved without modification or duplication and applied successfully during fresh test-database creation. Read-only `showmigrations` inspection found migrations 0013, 0014 and 0015 pending in the configured development database. They were not applied during this session; run `python manage.py migrate` before using the updated application. The existing modification to `tertiary_sample.sqlite3` was preserved.
+
+Task 5.1 implementation and verification are complete. Deployment still requires the pending migrations. The fingerprint/replay limitations above remain applicable. Task 5.2 was not started.

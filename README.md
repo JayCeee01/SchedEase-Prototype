@@ -311,3 +311,15 @@ Failed-run status and issue records save together. Opening the administrator Err
 Generate Schedule now accepts an optional **Random seed**. Leave it blank to choose and record a seed automatically. In the administrator Error Log, open **Generation history ? View Run** to inspect the seed, effective parameters, input counts/fingerprint, timestamps and outcome for successful or failed runs.
 
 Apply migration `0015_generationrun_reproducibility` with `python manage.py migrate` before restarting updated workers. Historical runs show missing metadata explicitly. A fingerprint identifies prepared inputs; it is not a stored input snapshot or a guarantee of replay across different environments. See [GA_REPRODUCIBILITY.md](GA_REPRODUCIBILITY.md) for coverage, reproducibility evidence and limitations.
+
+### Accurate soft scoring (Task 5.2)
+
+Faculty idle gaps now use actual minutes, and day balancing includes unused Monday-Saturday instructional days. Hard constraints still take priority. Generation metadata records the updated scoring version and parameters. See [GA_SOFT_SCORING.md](GA_SOFT_SCORING.md) for formulas, examples, tests and scope. No migration is required for this change.
+
+### Repeatable synthetic GA benchmarks (Task 5.3)
+
+Use `python manage.py benchmark_ga --scenario small --seeds 17 41 --output small-benchmark.json` to export fixed-seed trials. Each trial uses a separate process with a fresh in-memory database; real scheduling records are not used or changed. Choose a new `.json` or `.csv` filename. See [GA_BENCHMARKS.md](GA_BENCHMARKS.md) for fixture sizes, configurable parameters, full-suite commands, metric definitions and measured smoke results. Large searches are opt-in and no migration is required.
+
+### GA evaluation reports (Task 5.4)
+
+Use `python manage.py report_ga_benchmarks small-benchmark.json --output evaluation-report` to create a Markdown report, statistical CSV/JSON tables, and SVG/PDF charts from existing benchmark files. Multiple JSON/CSV input files are supported. Choose a new output directory. Reporting does not run experiments or access scheduling data; missing scenarios are marked **Not Evaluated**. See [GA_EVALUATION_REPORTS.md](GA_EVALUATION_REPORTS.md) for PowerShell commands, statistical methods, grouping rules and limitations. No new dependency or migration is required.

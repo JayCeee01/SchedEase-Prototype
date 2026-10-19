@@ -42,11 +42,15 @@ def effective_parameters(settings, repair_budget):
         'selection': 'tournament', 'tournament_size': min(4, settings.population_size),
         'tie_break': 'earliest_population_rank', 'repair_attempt_limit': repair_budget,
         'slot_minutes': 30, 'availability_boundary_starts': True,
-        'fitness': {'version': 'hard-first-v1', 'ordering': ['fewest_hard_violations', 'highest_soft_score'],
+        'fitness': {'version': 'hard-first-v2', 'ordering': ['fewest_hard_violations', 'highest_soft_score'],
             'base_score': 1000.0, 'preferred_period_bonus': 12, 'capacity_gap_weight': 0.15,
             'excess_capacity_penalty': 10, 'wrong_non_special_room_penalty': 20,
             'daily_class_threshold': 3, 'extra_daily_class_penalty': 8,
-            'whole_hour_gap_threshold': 1, 'whole_hour_gap_weight': 4, 'day_spread_weight': 3,
+            'faculty_idle_gap_unit': 'minutes', 'faculty_idle_gap_hour_weight': 4,
+            'faculty_idle_gap_method': 'merged_occupied_intervals',
+            'section_whole_hour_gap_threshold': 1, 'section_whole_hour_gap_weight': 4,
+            'day_spread_weight': 3, 'day_spread_scope': 'all_instructional_days',
+            'day_spread_days': list(ALLOWED_DAYS),
             'room_hours_deviation_weight': 2.5, 'unused_suitable_room_penalty': 8, 'unused_required_type_room_penalty': 3}}
 
 
