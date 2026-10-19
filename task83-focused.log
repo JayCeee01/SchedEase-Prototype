@@ -1,0 +1,102 @@
+Creating test database for alias 'default'...
+Found 124 test(s).
+System check identified no issues (0 silenced).
+.........................................................Schedule publication failed for schedule 1
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 1119, in publish_schedule
+    schedule, current = publish(schedule, request.user, request.POST.get("replace_confirm") == "yes")
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\services\publication.py", line 39, in publish
+    ScheduleSnapshot.objects.get(schedule=locked)
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+RuntimeError: private failure
+............................Meeting removal failed for entry 3
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 1197, in entry_remove
+    remove_manual_entry(schedule_id=pk, entry_id=entry_pk, actor=request.user, revision=revision,
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\services\manual_edits.py", line 107, in remove_manual_entry
+    ScheduleEntryAudit.objects.create(schedule=schedule, entry=None, user=current_user,
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+RuntimeError: private detail
+......F...Could not record generation failure for run aba7a6a4-eb2f-4d34-922f-781b1744bb6d
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 825, in generate_schedule
+    schedule = scheduler.generate(form.cleaned_data["name"], lease=lease)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+schedules.services.diagnostics.GenerationFailure: Failure
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 796, in finish_generation_failure
+    fail_run(run, diagnostics)
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\services\generation_issues.py", line 140, in fail_run
+    record_issues(run, diagnostics)
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\contextlib.py", line 81, in inner
+    return func(*args, **kwds)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\services\generation_issues.py", line 123, in record_issues
+    rows.append(GenerationIssue.objects.create(run=run, category=diagnostic.category,
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+django.db.utils.IntegrityError: private SQL
+................Unexpected schedule generation failure for term 1
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 825, in generate_schedule
+    schedule = scheduler.generate(form.cleaned_data["name"], lease=lease)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+RuntimeError: private-password
+.............
+======================================================================
+FAIL: test_admin_history_visit_recovers_stale_run_once (schedules.test_generation_diagnostics.StructuredGenerationTests.test_admin_history_visit_recovers_stale_run_once)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\test_generation_diagnostics.py", line 240, in test_admin_history_visit_recovers_stale_run_once
+    self.assertEqual(run.status, 'FAILED')
+AssertionError: 'RUNNING' != 'FAILED'
+- RUNNING
++ FAILED
+
+
+----------------------------------------------------------------------
+Ran 124 tests in 67.927s
+
+FAILED (failures=1)
+Destroying test database for alias 'default'...

@@ -62,7 +62,7 @@ MODEL_FORMS = {
     "availability": modelform_factory(Availability, fields=["faculty", "room", "day", "start_time", "end_time", "kind"], widgets={"start_time": forms.TimeInput(attrs={"type": "time"}), "end_time": forms.TimeInput(attrs={"type": "time"})}),
     "ga-settings": modelform_factory(GASettings, fields=["name", "population_size", "generations", "mutation_rate", "crossover_rate", "elitism"]),
     "schedules": modelform_factory(Schedule, fields=["term", "name"]),
-    "credential-overrides": modelform_factory(CredentialOverride, fields=["assignment", "subject", "faculty", "admin_user", "reason", "missing_credentials"], labels={"subject": "Course"}),
+    "credential-overrides": modelform_factory(CredentialOverride, fields=["assignment", "subject", "faculty", "reason", "missing_credentials"], labels={"subject": "Course"}),
 }
 
 

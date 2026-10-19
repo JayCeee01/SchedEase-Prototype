@@ -12,7 +12,7 @@ from django.db.models import Count, Q, Prefetch
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
@@ -108,7 +108,7 @@ def role(user):
 
 
 def admin_required(user):
-    return user.is_authenticated and (user.is_superuser or role(user) == Role.ADMIN)
+    return user.is_authenticated and user.is_active and (user.is_superuser or role(user) == Role.ADMIN)
 
 
 def faculty_required(user):
@@ -531,7 +531,11 @@ def resource_create(request, resource):
     draft = FormDraft.objects.filter(user=request.user, resource=resource, object_pk="").first()
     form = form_class(request.POST or None, initial=draft.payload if draft and request.method == "GET" else None)
     if request.method == "POST" and form.is_valid():
-        form.save()
+        obj = form.save(commit=False)
+        if resource == 'credential-overrides':
+            obj.admin_user = request.user
+        obj.save()
+        form.save_m2m()
         FormDraft.objects.filter(user=request.user, resource=resource, object_pk="").delete()
         messages.success(request, "Record created.")
         return redirect("resource_list", resource=resource)
@@ -850,8 +854,14 @@ def generate_schedule(request):
 
 @login_required
 @user_passes_test(admin_required)
+@require_http_methods(['GET', 'POST'])
 def generation_error_log(request):
-    recover_stale_runs()
+    if request.method == 'POST':
+        if request.POST.get('action') != 'recover':
+            return HttpResponse('Choose a supported action.', status=400)
+        count = recover_stale_runs()
+        messages.success(request, f'{count} interrupted generation run(s) reviewed.')
+        return redirect('generation_error_log')
     issues = GenerationIssue.objects.select_related(
         "run__term", "assignment__subject", "assignment__section__program", "assignment__section__year_level", "assignment__faculty", "room"
     )

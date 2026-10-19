@@ -5,6 +5,11 @@
     <p class="eyebrow">Schedule Troubleshooting</p>
     <h1>Error Log</h1>
     <p class="subtle">Review actionable scheduling problems from current and previous generation attempts.</p>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="recover">
+      <button type="submit" class="button">Review Interrupted Runs</button>
+    </form>
   </div>
 </div>
 

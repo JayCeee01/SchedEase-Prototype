@@ -351,3 +351,7 @@ Manual edits and Copy to Draft preserve placements within a particular schedule;
 ### Production security preparation (Task 8.1)
 
 Local setup is unchanged. Future production workers must explicitly set `SCHED_EASE_ENV=production` and supply a private secret and allowed hosts through their environment. Production disables debugging, enforces HTTPS and secure cookies, and ignores local `.env` files. Proxy trust and HSTS require deployment-specific verification. See [PRODUCTION_SECURITY.md](PRODUCTION_SECURITY.md) for variables, checks, static serving and remaining deployment prerequisites, including a supported Django upgrade. This task does not deploy the application.
+
+### Database backup and isolated restore (Task 8.2)
+
+Use `python manage.py backup_database --output <new-private-file.sqlite3>` for a verified SQLite online backup. Use `python manage.py restore_database --source <backup.sqlite3> --destination <new-disposable-file.sqlite3>` to verify recovery without replacing a live database. Existing files, configured database paths and public asset directories are rejected. See [DATABASE_BACKUP_RESTORE.md](DATABASE_BACKUP_RESTORE.md) for PowerShell examples, migration compatibility, storage security and synthetic recovery tests. No command activates a restored database or runs migrations automatically.

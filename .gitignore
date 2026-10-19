@@ -11,6 +11,13 @@ env/
 
 # Django/local runtime
 db.sqlite3
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+.schedease-*.partial*
+/backups/
+/recovery-drills/
 staticfiles/
 media/
 .env
