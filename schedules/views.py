@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
 from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Prefetch
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -56,6 +56,8 @@ from .services.generation_issues import fail_run, unexpected_diagnostic, recover
 from .services.diagnostics import Diagnostic, GenerationFailure
 from .services.form_drafts import object_signature, safe_draft_payload, safe_assignment_draft_payload
 from .services.room_utilization import capacity_planning, filtered_rows, latest_schedule, personal_schedule_grid, room_schedule_grid, utilization_rows, utilization_summary
+
+from .services.listing import RELATED, RECORD_ORDER, paginate, query_url, search_records
 
 logger = logging.getLogger(__name__)
 
@@ -163,13 +165,13 @@ def section_search_q(prefix, search):
         | Q(**{f"{prefix}program__code__icontains": search})
     )
     full = re.fullmatch(r"\s*(\S+)\s+(\d+)-([A-Z0-9][A-Z0-9_-]*)\s*", search, flags=re.IGNORECASE)
-    if full:
+    if full and len(full.group(2)) < 10:
         base |= Q(**{
             f"{prefix}program__code__iexact": full.group(1),
             f"{prefix}year_level__level": int(full.group(2)),
             f"{prefix}name__iexact": full.group(3),
         })
-    elif search.isdigit():
+    elif search.isdigit() and len(search) < 10:
         base |= Q(**{f"{prefix}year_level__level": int(search)})
     return base
 
@@ -337,6 +339,10 @@ def resource_list(request, resource):
     model = resource_model(resource)
     objects = model.objects.all()
     schedule_tab = request.GET.get("tab", "active")
+    if schedule_tab not in ("active", "drafts", "archived"):
+        schedule_tab = "active"
+    if resource in RELATED:
+        objects = objects.select_related(*RELATED[resource])
     if resource == "schedules":
         if schedule_tab == "archived":
             objects = objects.filter(status=ScheduleStatus.ARCHIVED)
@@ -345,15 +351,37 @@ def resource_list(request, resource):
         else:
             objects = objects.filter(status=ScheduleStatus.PUBLISHED)
     elif resource == "assignments":
-        objects = objects.select_related("subject", "section__program", "section__year_level", "faculty", "term").prefetch_related("meetings")
+        objects = objects.prefetch_related(Prefetch("meetings", queryset=TeachingAssignment.objects.select_related("subject")))
     field_names = {field.name for field in model._meta.fields}
     created_field = "created_at" if "created_at" in field_names else ("generated_at" if "generated_at" in field_names else "pk")
     modified_field = "updated_at" if "updated_at" in field_names else created_field
     sort = request.GET.get("sort", "modified_desc")
     orderings = {"added_desc": f"-{created_field}", "added_asc": created_field,
                  "modified_desc": f"-{modified_field}", "modified_asc": modified_field}
-    objects = objects.order_by(orderings.get(sort, orderings["modified_desc"]))[:200]
-    return render(request, "schedules/resource_list.html", {"resource": resource, "objects": objects,
+    columns = ([('code', 'Course Code', ('code',)), ('title', 'Course Description', ('title',))]
+               if resource == 'subjects' else
+               [('course', 'Course', ('subject__code', 'subject__title')),
+                ('section', 'Section', ('section__program__code', 'section__year_level__level', 'section__name')),
+                ('faculty', 'Faculty', ('faculty__full_name',)), ('term', 'Term', ('term__name', 'term__school_year'))]
+               if resource == 'assignments' else [('record', 'Record', RECORD_ORDER[resource])])
+    orderings = {key: (value,) for key, value in orderings.items()}
+    for key, label, fields in columns:
+        orderings[key + '_asc'] = fields
+        orderings[key + '_desc'] = tuple('-' + field for field in fields)
+    if sort not in orderings:
+        sort = 'modified_desc'
+    ordering = orderings[sort]
+    query = request.GET.get('q', '').strip()
+    objects = search_records(objects, resource, query, section_search_q)
+    objects = objects.order_by(*ordering, '-pk' if sort.endswith('_desc') else 'pk')
+    page, pagination = paginate(request, objects)
+    headers = [dict(label=label, url=query_url(request, page=None,
+        sort=key + ('_desc' if sort == key + '_asc' else '_asc')),
+        direction='ascending' if sort == key + '_asc' else 'descending' if sort == key + '_desc' else 'none')
+        for key, label, fields in columns]
+    return render(request, "schedules/resource_list.html", {"resource": resource, "objects": page.object_list, "page_obj": page, "pagination": pagination,
+        "q": query, "column_headers": headers, "column_sort": sort not in ("added_asc", "added_desc", "modified_asc", "modified_desc"),
+        "tab_links": {tab: query_url(request, tab=tab, page=None) for tab in ("active", "drafts", "archived")},
         "drafts": FormDraft.objects.filter(user=request.user, resource=resource),
         "sort": sort, "schedule_tab": schedule_tab, "resource_label": "Courses" if resource == "subjects" else resource.replace("-", " ").title(),
         "has_created_at": created_field != "pk", "has_updated_at": "updated_at" in field_names,
@@ -809,7 +837,7 @@ def generate_schedule(request):
 def generation_error_log(request):
     recover_stale_runs()
     issues = GenerationIssue.objects.select_related(
-        "run__term", "assignment__subject", "assignment__section", "assignment__faculty", "room"
+        "run__term", "assignment__subject", "assignment__section__program", "assignment__section__year_level", "assignment__faculty", "room"
     )
     filters = {
         "run": "run_id", "term": "run__term_id", "category": "category", "severity": "severity",
@@ -839,11 +867,19 @@ def generation_error_log(request):
         "warnings": summary_source.filter(severity=GenerationIssue.Severity.WARNING).count(),
         "unscheduled": summary_source.filter(category=GenerationIssue.Category.UNSCHEDULED).count(),
     }
+    issues_page, issue_pagination = paginate(request, issues.order_by('-created_at', 'pk'), count=summary['total'])
+    runs = GenerationRun.objects.select_related('term').order_by('-started_at', '-pk')
+    run_search = request.GET.get('run_q', '').strip()
+    if run_search:
+        runs = runs.filter(Q(requested_name__icontains=run_search) | Q(term__name__icontains=run_search)
+                           | Q(term__school_year__icontains=run_search) | Q(status__icontains=run_search))
+    runs_page, run_pagination = paginate(request, runs, 'run_page')
     return render(request, "schedules/error_log.html", {
-        "issues": issues[:500], "summary": summary,
-        "runs": GenerationRun.objects.select_related("term")[:100], "terms": AcademicTerm.objects.all(),
+        "issues": issues_page.object_list, "summary": summary, "issue_pagination": issue_pagination,
+        "runs": runs_page.object_list, "run_pagination": run_pagination, "run_q": run_search,
+        "run_choices": GenerationRun.objects.only('pk', 'started_at').order_by('-started_at', '-pk'), "terms": AcademicTerm.objects.all(),
         "categories": GenerationIssue.Category.choices, "severities": GenerationIssue.Severity.choices,
-        "statuses": GenerationIssue.Status.choices, "subjects": Subject.objects.all(), "sections": Section.objects.all(),
+        "statuses": GenerationIssue.Status.choices, "subjects": Subject.objects.all(), "sections": Section.objects.select_related("program", "year_level"),
         "faculty_list": Faculty.objects.all(), "rooms": Room.objects.all(),
     })
 

@@ -8,7 +8,7 @@
   </div>
   {% if resource != 'schedules' %}<a class="button primary" href="{% url 'resource_create' resource %}">New</a>{% endif %}
 </div>
-{% if resource == 'schedules' %}<div class="view-switcher" role="navigation" aria-label="Schedule status"><a class="view-tab{% if schedule_tab == 'active' %} is-active{% endif %}" href="?tab=active">Active</a><a class="view-tab{% if schedule_tab == 'drafts' %} is-active{% endif %}" href="?tab=drafts">Drafts</a><a class="view-tab{% if schedule_tab == 'archived' %} is-active{% endif %}" href="?tab=archived">Archived</a></div>{% endif %}
+{% if resource == 'schedules' %}<div class="view-switcher" role="navigation" aria-label="Schedule status"><a class="view-tab{% if schedule_tab == 'active' %} is-active{% endif %}" href="{{ tab_links.active }}">Active</a><a class="view-tab{% if schedule_tab == 'drafts' %} is-active{% endif %}" href="{{ tab_links.drafts }}">Drafts</a><a class="view-tab{% if schedule_tab == 'archived' %} is-active{% endif %}" href="{{ tab_links.archived }}">Archived</a></div>{% endif %}
 {% if drafts %}
 <section class="panel draft-list" aria-labelledby="draft-list-title">
   <div><h2 id="draft-list-title">Unfinished drafts</h2><p class="subtle">Resume your saved work or discard it without changing official records.</p></div>
@@ -25,15 +25,18 @@
 {% endif %}
 <div class="panel table-wrap">
   <div class="table-tools">
-    <label class="table-search">
-      <span class="icon search-icon"></span>
-      <input type="search" data-table-filter placeholder="Search {{ resource }}">
-    </label>
-    <span class="badge">{{ objects|length }} records</span>
-    <form method="get" class="inline-sort" data-auto-tooltips="false">{% if resource == 'schedules' %}<input type="hidden" name="tab" value="{{ schedule_tab }}">{% endif %}<label>Sort <select name="sort" onchange="this.form.submit()"><option value="modified_desc"{% if sort == 'modified_desc' %} selected{% endif %}>Recently Modified</option><option value="modified_asc"{% if sort == 'modified_asc' %} selected{% endif %}>Least Recently Modified</option><option value="added_desc"{% if sort == 'added_desc' %} selected{% endif %}>Recently Added</option><option value="added_asc"{% if sort == 'added_asc' %} selected{% endif %}>Oldest Added</option></select></label></form>
+    <form method="get" class="toolbar" data-auto-tooltips="false">
+      {% if resource == 'schedules' %}<input type="hidden" name="tab" value="{{ schedule_tab }}">{% endif %}
+      <label class="table-search"><span class="icon search-icon"></span><input type="search" name="q" value="{{ q }}" aria-label="Search {{ resource_label }}" placeholder="Search {{ resource_label }}"></label>
+      <label>Sort <select name="sort" onchange="this.form.submit()">
+        {% if column_sort %}<option value="{{ sort }}" selected>Column order</option>{% endif %}
+        <option value="modified_desc"{% if sort == 'modified_desc' %} selected{% endif %}>Recently Modified</option><option value="modified_asc"{% if sort == 'modified_asc' %} selected{% endif %}>Least Recently Modified</option><option value="added_desc"{% if sort == 'added_desc' %} selected{% endif %}>Recently Added</option><option value="added_asc"{% if sort == 'added_asc' %} selected{% endif %}>Oldest Added</option>
+      </select></label><button class="button" type="submit">Search</button>
+    </form>
+    <span class="badge">{{ objects|length }} records on this page</span>
   </div>
   <table{% if resource == 'assignments' %} class="assignments-table"{% endif %}>
-    <thead><tr>{% if resource == 'subjects' %}<th data-sort>Course Code</th><th data-sort>Course Description</th>{% elif resource == 'assignments' %}<th data-sort>Course</th><th data-sort>Section</th><th data-sort>Faculty</th><th data-sort>Term</th><th>Meetings</th><th class="assignment-actions" scope="col">Actions</th>{% else %}<th data-sort>Record</th>{% endif %}{% if has_created_at %}<th>Date Added</th>{% endif %}{% if has_updated_at %}<th>Last Modified</th>{% endif %}{% if resource != 'assignments' %}<th>Actions</th>{% endif %}</tr></thead>
+    <thead><tr>{% for header in column_headers %}<th scope="col" aria-sort="{{ header.direction }}"><a href="{{ header.url }}">{{ header.label }}</a></th>{% endfor %}{% if resource == 'assignments' %}<th>Meetings</th><th class="assignment-actions" scope="col">Actions</th>{% endif %}{% if has_created_at %}<th>Date Added</th>{% endif %}{% if has_updated_at %}<th>Last Modified</th>{% endif %}{% if resource != 'assignments' %}<th>Actions</th>{% endif %}</tr></thead>
     <tbody>
       {% for obj in objects %}
       <tr>
@@ -52,9 +55,10 @@
         {% if resource == 'assignments' %}{% if has_created_at %}<td>{{ obj.created_at|date:"M j, Y g:i A" }}</td>{% endif %}{% if has_updated_at %}<td>{{ obj.updated_at|date:"M j, Y g:i A" }}</td>{% endif %}{% endif %}
       </tr>
       {% empty %}
-      <tr><td colspan="10" class="table-empty">No records in this view.</td></tr>
+      <tr><td colspan="10" class="table-empty">{% if q %}No records match your search.{% else %}No records in this view.{% endif %}</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+{% include "schedules/_pagination.html" %}
 {% endblock %}

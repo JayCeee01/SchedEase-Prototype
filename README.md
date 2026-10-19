@@ -323,3 +323,7 @@ Use `python manage.py benchmark_ga --scenario small --seeds 17 41 --output small
 ### GA evaluation reports (Task 5.4)
 
 Use `python manage.py report_ga_benchmarks small-benchmark.json --output evaluation-report` to create a Markdown report, statistical CSV/JSON tables, and SVG/PDF charts from existing benchmark files. Multiple JSON/CSV input files are supported. Choose a new output directory. Reporting does not run experiments or access scheduling data; missing scenarios are marked **Not Evaluated**. See [GA_EVALUATION_REPORTS.md](GA_EVALUATION_REPORTS.md) for PowerShell commands, statistical methods, grouping rules and limitations. No new dependency or migration is required.
+
+### Administrative list pagination and search (Task 6.1)
+
+Academic record lists, Error Log issues and generation history now use 20-record server-side pages. Use each list's Search form to search the database; page links retain search, sort and filter selections. Existing academic table headers sort the complete matching list. See [ADMIN_LIST_PAGINATION.md](ADMIN_LIST_PAGINATION.md) for updated pages, search fields, query measurements and limitations. No migration or dependency is required.

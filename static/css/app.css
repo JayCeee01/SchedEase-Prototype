@@ -1702,3 +1702,7 @@ input[type="checkbox"] {
   }
   .landing-card-grid { grid-template-columns: 1fr; }
 }
+
+/* Shared server-side record navigation, using existing theme tokens. */
+.record-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-block: 16px; }
+.record-pagination .toolbar { flex-wrap: wrap; gap: 6px; }
