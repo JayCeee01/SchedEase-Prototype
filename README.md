@@ -339,3 +339,11 @@ Internal Error Logs and generation history remain administrator-only. Django adm
 ### Schedule validation performance (Task 6.4)
 
 Validation now loads only relevant overlapping meetings and faculty workload records, with related data loaded together. Existing constraints, diagnostics, final validation, transactions and generation safeguards remain unchanged. See [SCHEDULE_VALIDATION_PERFORMANCE.md](SCHEDULE_VALIDATION_PERFORMANCE.md) for isolated before/after measurements, exact-output regression tests and limitations. No migration or dependency is required.
+
+### Curriculum completeness evaluation (Task 7.1)
+
+SchedEase checks completeness against entered assignments and lecture/laboratory requirements. It does not independently verify that every curriculum-required course was entered. No authoritative curriculum model or approved thesis requirement for that feature was found. The evaluation selects **Outcome D: academic clarification required** before implementation. See [CURRICULUM_COMPLETENESS_EVALUATION.md](CURRICULUM_COMPLETENESS_EVALUATION.md) for evidence, gaps and questions. This task changes documentation only.
+
+### Fixed meeting placements evaluation (Task 7.2)
+
+Manual edits and Copy to Draft preserve placements within a particular schedule; they do not pin meetings during a new GA run. No approved requirement defining fixed day, time or room rules was found in the available documentation. The evaluation selects **Outcome D: academic clarification required** before implementation. See [FIXED_MEETING_PLACEMENTS_EVALUATION.md](FIXED_MEETING_PLACEMENTS_EVALUATION.md) for existing support, GA impact and questions. This task changes documentation only.
