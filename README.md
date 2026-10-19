@@ -327,3 +327,7 @@ Use `python manage.py report_ga_benchmarks small-benchmark.json --output evaluat
 ### Administrative list pagination and search (Task 6.1)
 
 Academic record lists, Error Log issues and generation history now use 20-record server-side pages. Use each list's Search form to search the database; page links retain search, sort and filter selections. Existing academic table headers sort the complete matching list. See [ADMIN_LIST_PAGINATION.md](ADMIN_LIST_PAGINATION.md) for updated pages, search fields, query measurements and limitations. No migration or dependency is required.
+
+### Record counts, sorting and filters (Task 6.2)
+
+Academic record lists now show total records, matching records and the displayed range. Choose a sort order and filters, then select **Search / Apply**. Page links retain your selections; **Clear search and filters** removes them. Schedule totals cover only the selected tab. Invalid or deleted filter selections show a message so you can correct them. See [ADMIN_LIST_CONTROLS.md](ADMIN_LIST_CONTROLS.md) for available controls, count scope, query measurements and limitations. No migration or dependency is required.

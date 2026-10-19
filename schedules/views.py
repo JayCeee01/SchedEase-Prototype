@@ -57,7 +57,8 @@ from .services.diagnostics import Diagnostic, GenerationFailure
 from .services.form_drafts import object_signature, safe_draft_payload, safe_assignment_draft_payload
 from .services.room_utilization import capacity_planning, filtered_rows, latest_schedule, personal_schedule_grid, room_schedule_grid, utilization_rows, utilization_summary
 
-from .services.listing import RELATED, RECORD_ORDER, paginate, query_url, search_records
+from .services.listing import (RELATED, RECORD_ORDER, EXTRA_SORTS, paginate, query_url,
+                               search_records, list_request, filter_records, record_counts)
 
 logger = logging.getLogger(__name__)
 
@@ -337,6 +338,7 @@ def my_availability_update(request, pk):
 @user_passes_test(admin_required)
 def resource_list(request, resource):
     model = resource_model(resource)
+    navigation = list_request(request, resource)
     objects = model.objects.all()
     schedule_tab = request.GET.get("tab", "active")
     if schedule_tab not in ("active", "drafts", "archived"):
@@ -365,23 +367,37 @@ def resource_list(request, resource):
                 ('faculty', 'Faculty', ('faculty__full_name',)), ('term', 'Term', ('term__name', 'term__school_year'))]
                if resource == 'assignments' else [('record', 'Record', RECORD_ORDER[resource])])
     orderings = {key: (value,) for key, value in orderings.items()}
-    for key, label, fields in columns:
+    sort_options = [('modified_desc', 'Recently Modified'), ('modified_asc', 'Least Recently Modified'),
+                    ('added_desc', 'Recently Added'), ('added_asc', 'Oldest Added')]
+    for key, label, fields in columns + EXTRA_SORTS.get(resource, []):
         orderings[key + '_asc'] = fields
         orderings[key + '_desc'] = tuple('-' + field for field in fields)
+        sort_options.extend([(key + '_asc', label + ' (ascending)'), (key + '_desc', label + ' (descending)')])
     if sort not in orderings:
         sort = 'modified_desc'
     ordering = orderings[sort]
     query = request.GET.get('q', '').strip()
+    if 'sort' in navigation.GET:
+        navigation.GET['sort'] = sort
+    if 'tab' in navigation.GET:
+        navigation.GET['tab'] = schedule_tab
+    scope = objects
+    objects, filters, filter_errors = filter_records(objects, resource, navigation.GET)
     objects = search_records(objects, resource, query, section_search_q)
+    filters_active = any(control['value'] for control in filters)
+    total_count, filtered_count = record_counts(scope, objects, bool(query or filters_active))
     objects = objects.order_by(*ordering, '-pk' if sort.endswith('_desc') else 'pk')
-    page, pagination = paginate(request, objects)
-    headers = [dict(label=label, url=query_url(request, page=None,
+    page, pagination = paginate(navigation, objects, count=filtered_count)
+    headers = [dict(label=label, url=query_url(navigation, page=None,
         sort=key + ('_desc' if sort == key + '_asc' else '_asc')),
         direction='ascending' if sort == key + '_asc' else 'descending' if sort == key + '_desc' else 'none')
         for key, label, fields in columns]
     return render(request, "schedules/resource_list.html", {"resource": resource, "objects": page.object_list, "page_obj": page, "pagination": pagination,
+        "total_count": total_count, "filtered_count": filtered_count, "filters": filters,
+        "filter_errors": filter_errors, "filters_active": filters_active, "sort_options": sort_options,
+        "clear_url": query_url(navigation, page=None, q=None, **{control['name']: None for control in filters}),
         "q": query, "column_headers": headers, "column_sort": sort not in ("added_asc", "added_desc", "modified_asc", "modified_desc"),
-        "tab_links": {tab: query_url(request, tab=tab, page=None) for tab in ("active", "drafts", "archived")},
+        "tab_links": {tab: query_url(navigation, tab=tab, page=None, status=None) for tab in ("active", "drafts", "archived")},
         "drafts": FormDraft.objects.filter(user=request.user, resource=resource),
         "sort": sort, "schedule_tab": schedule_tab, "resource_label": "Courses" if resource == "subjects" else resource.replace("-", " ").title(),
         "has_created_at": created_field != "pk", "has_updated_at": "updated_at" in field_names,
