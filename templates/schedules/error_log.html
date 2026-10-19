@@ -8,6 +8,7 @@
   </div>
 </div>
 
+{% for label in diagnostic_filter_errors %}<p class="badge danger" role="alert">{{ label }}: Check this filter or clear it to view matching issues.</p>{% endfor %}
 <div class="metrics error-summary">
   <article class="metric"><span>Total Issues</span><strong>{{ summary.total }}</strong></article>
   <article class="metric"><span>Critical</span><strong>{{ summary.critical }}</strong></article>

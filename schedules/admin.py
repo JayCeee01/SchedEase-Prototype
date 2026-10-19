@@ -30,6 +30,32 @@ class ProtectedScheduleAdmin(admin.ModelAdmin):
         return super().has_delete_permission(request, obj) and (obj is None or not protected(obj))
 
 
+class DiagnosticRecordAdmin(ProtectedScheduleAdmin):
+    """Audit/override diagnostics need the app role AND Django admin permissions."""
+    @staticmethod
+    def authorized(request):
+        from .views import admin_required
+        return admin_required(request.user)
+
+    def has_module_permission(self, request):
+        return self.authorized(request) and super().has_module_permission(request)
+
+    def has_view_permission(self, request, obj=None):
+        return self.authorized(request) and super().has_view_permission(request, obj)
+
+    def has_add_permission(self, request):
+        return self.authorized(request) and super().has_add_permission(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self.authorized(request) and super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return self.authorized(request) and super().has_delete_permission(request, obj)
+
+
+admin.site.register([CredentialOverride, ScheduleEntryAudit], DiagnosticRecordAdmin)
+
+
 @admin.register(ScheduleEntry)
 class ScheduleEntryAdmin(ProtectedScheduleAdmin):
     list_display = ("assignment", "room", "day", "start_time", "end_time", "schedule")
@@ -42,7 +68,6 @@ for model in [
     Assignment,
     Availability,
     Credential,
-    CredentialOverride,
     Department,
     Faculty,
     FacultyCredential,
@@ -51,7 +76,6 @@ for model in [
     Profile,
     Room,
     Schedule,
-    ScheduleEntryAudit,
     Section,
     Student,
     Subject,

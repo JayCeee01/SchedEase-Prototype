@@ -331,3 +331,11 @@ Academic record lists, Error Log issues and generation history now use 20-record
 ### Record counts, sorting and filters (Task 6.2)
 
 Academic record lists now show total records, matching records and the displayed range. Choose a sort order and filters, then select **Search / Apply**. Page links retain your selections; **Clear search and filters** removes them. Schedule totals cover only the selected tab. Invalid or deleted filter selections show a message so you can correct them. See [ADMIN_LIST_CONTROLS.md](ADMIN_LIST_CONTROLS.md) for available controls, count scope, query measurements and limitations. No migration or dependency is required.
+
+### Diagnostic access by role (Task 6.3)
+
+Internal Error Logs and generation history remain administrator-only. Django admin access to credential overrides and schedule edit audits now also requires the SchedEase administrator role (or superuser), in addition to existing Django permissions. Invalid Error Log filters show a correction message instead of causing a server error. Faculty/student timetable access and permitted availability feedback are unchanged. See [DIAGNOSTIC_ACCESS.md](DIAGNOSTIC_ACCESS.md) for the endpoint inventory, access policy, tests and limits. No migration or dependency is required.
+
+### Schedule validation performance (Task 6.4)
+
+Validation now loads only relevant overlapping meetings and faculty workload records, with related data loaded together. Existing constraints, diagnostics, final validation, transactions and generation safeguards remain unchanged. See [SCHEDULE_VALIDATION_PERFORMANCE.md](SCHEDULE_VALIDATION_PERFORMANCE.md) for isolated before/after measurements, exact-output regression tests and limitations. No migration or dependency is required.

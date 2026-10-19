@@ -15,6 +15,7 @@ from .models import (
     Faculty,
     FacultyCredential,
     GASettings,
+    GenerationIssue,
     Program,
     Room,
     Schedule,
@@ -27,6 +28,21 @@ from .models import (
     Weekday,
     YearLevel,
 )
+
+
+class DiagnosticFilterForm(forms.Form):
+    """Validate diagnostic query values before ORM conversion; no scope expansion."""
+    run = forms.UUIDField(required=False, label="Generation run")
+    date = forms.DateField(required=False, input_formats=['%Y-%m-%d'])
+    category = forms.ChoiceField(required=False, choices=GenerationIssue.Category.choices)
+    severity = forms.ChoiceField(required=False, choices=GenerationIssue.Severity.choices)
+    status = forms.ChoiceField(required=False, choices=GenerationIssue.Status.choices)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ('term', 'subject', 'section', 'faculty', 'room'):
+            self.fields[name] = forms.IntegerField(required=False, min_value=1, max_value=2**63 - 1,
+                                                    label='Course' if name == 'subject' else name.title())
 
 
 MODEL_FORMS = {

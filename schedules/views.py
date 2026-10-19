@@ -16,7 +16,7 @@ from django.views.decorators.http import require_POST
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
-from .forms import AssignmentMeetingFormSetFactory, EmailOrUsernameAuthenticationForm, MODEL_FORMS, ScheduleEntryFilterForm, ScheduleEntryForm, ScheduleGenerationForm, ScheduleSearchForm
+from .forms import AssignmentMeetingFormSetFactory, DiagnosticFilterForm, EmailOrUsernameAuthenticationForm, MODEL_FORMS, ScheduleEntryFilterForm, ScheduleEntryForm, ScheduleGenerationForm, ScheduleSearchForm
 from .models import (
     AcademicTerm,
     Assignment,
@@ -860,13 +860,16 @@ def generation_error_log(request):
         "subject": "assignment__subject_id", "section": "assignment__section_id",
         "faculty": "assignment__faculty_id", "room": "room_id", "status": "status",
     }
-    for parameter, lookup in filters.items():
-        value = request.GET.get(parameter, "").strip()
-        if value:
-            issues = issues.filter(**{lookup: value})
-    date_value = request.GET.get("date", "").strip()
-    if date_value:
-        issues = issues.filter(created_at__date=date_value)
+    diagnostic_filters = DiagnosticFilterForm(request.GET)
+    if diagnostic_filters.is_valid():
+        for parameter, lookup in filters.items():
+            value = diagnostic_filters.cleaned_data.get(parameter)
+            if value:
+                issues = issues.filter(**{lookup: value})
+        if diagnostic_filters.cleaned_data.get('date'):
+            issues = issues.filter(created_at__date=diagnostic_filters.cleaned_data['date'])
+    else:
+        issues = issues.none()
     search = request.GET.get("q", "").strip()
     if search:
         issues = issues.filter(
@@ -892,6 +895,7 @@ def generation_error_log(request):
     runs_page, run_pagination = paginate(request, runs, 'run_page')
     return render(request, "schedules/error_log.html", {
         "issues": issues_page.object_list, "summary": summary, "issue_pagination": issue_pagination,
+        "diagnostic_filter_errors": [diagnostic_filters.fields[name].label or name.title() for name in diagnostic_filters.errors],
         "runs": runs_page.object_list, "run_pagination": run_pagination, "run_q": run_search,
         "run_choices": GenerationRun.objects.only('pk', 'started_at').order_by('-started_at', '-pk'), "terms": AcademicTerm.objects.all(),
         "categories": GenerationIssue.Category.choices, "severities": GenerationIssue.Severity.choices,
