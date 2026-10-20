@@ -1,0 +1,1314 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Top navigation regression</title>
+<script>localStorage.setItem('schedease-theme',new URLSearchParams(location.search).get('theme'));</script>
+<link rel="stylesheet" href="../../static/css/app.css"><link rel="stylesheet" href="../../static/css/academic-import.css"></head><body><div class="app-shell"><aside class="sidebar" id="sidebar"><button data-sidebar-collapse>Navigation</button></aside><div class="workspace">      <header class="topbar">
+        <div class="topbar-left">
+          <a class="topbar-brand" href="" aria-label="SchedEase home">
+            <span class="brand-mark">SE</span>
+            <span>SchedEase</span>
+          </a>
+          <button class="icon-button mobile-only" type="button" data-sidebar-toggle aria-label="Open navigation">
+            <span class="icon menu-icon"></span>
+          </button>
+        </div>
+        <div class="topbar-search">
+          <span class="icon search-icon"></span>
+          <input type="search" data-global-filter aria-label="Filter table rows on this page" placeholder="Filter rows on this page">
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" type="button" data-theme-toggle aria-label="Toggle theme">
+            <span class="icon theme-icon"></span>
+          </button>
+          
+          <div class="user-menu" role="group" aria-label="Signed in as Alexandra Longaccountname">
+            <span class="avatar">A</span>
+            <span>
+              <strong>Alexandra Longaccountname</strong>
+              <small>Administrator</small>
+            </span>
+          </div>
+          <form method="post" action="">
+            
+            <button class="button button-ghost" data-loading-text="Signing out">Sign out</button>
+          </form>
+          
+        </div>
+      </header>
+
+
+<div data-page="resource_create{'resource': 'programs'}"><section class="content">
+        
+        
+<div class="record-editor record-editor--standard">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor &middot; Create</p>
+    <h1 id="record-editor-title">New programs</h1>
+    
+    <p class="subtle">Manage academic programs and connect them to their departments.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form" data-tooltip-context="programs" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="programs" data-draft-object-pk="" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="vtWJ5ef2slCRHowL6a4B4A0eX4gQvKzvacAYO0JccOcs53zGCIkMqhuCFXe7PipW">
+  
+  <p>
+    <label for="id_department">Department:</label>
+    <select name="department" required id="id_department">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_code">Code:</label>
+    <input type="text" name="code" maxlength="20" required id="id_code">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_name">Name:</label>
+    <input type="text" name="name" maxlength="160" required id="id_name">
+    
+    
+      
+    
+  </p>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/programs/">Cancel</a>
+  </div>
+  
+</form>
+
+</div>
+
+      </section></div><div data-page="resource_create{'resource': 'subjects'}"><section class="content">
+        
+        
+<div class="record-editor record-editor--standard">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor &middot; Create</p>
+    <h1 id="record-editor-title">New subjects</h1>
+    
+    <p class="subtle">Configure course hours, units, and room requirements used by the generator.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form" data-tooltip-context="subjects" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="subjects" data-draft-object-pk="" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="EqkETFFfJPbuZHlxZwyeWeZLseNMrYb3j9YTCr9ptiL5nmosv4OpiVt9a7L3Lw1u">
+  
+  <p>
+    <label for="id_code">Course Code:</label>
+    <input type="text" name="code" maxlength="30" required id="id_code">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_title">Course Description:</label>
+    <input type="text" name="title" maxlength="180" required id="id_title">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_department">Department:</label>
+    <select name="department" required id="id_department">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_units">Units:</label>
+    <input type="number" name="units" value="3" step="0.1" required id="id_units">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_lecture_hours">Required Lecture Hours:</label>
+    <input type="number" name="lecture_hours" value="3" min="0" required id="id_lecture_hours">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_lab_hours">Required Lab Hours:</label>
+    <input type="number" name="lab_hours" value="0" min="0" required id="id_lab_hours">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_required_room_type">Required room type:</label>
+    <select name="required_room_type" id="id_required_room_type">
+  <option value="LECTURE" selected>Lecture Room</option>
+
+  <option value="COMPUTER_LAB">Computer Laboratory</option>
+
+  <option value="SCIENCE_LAB">Science Laboratory</option>
+
+  <option value="GYM">Gym</option>
+
+  <option value="SPECIAL">Specialized Room</option>
+
+</select>
+    
+    
+      
+    
+  </p>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/subjects/">Cancel</a>
+  </div>
+  
+</form>
+
+</div>
+
+      </section></div><div data-page="resource_create{'resource': 'sections'}"><section class="content">
+        
+        
+<div class="record-editor record-editor--standard">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor &middot; Create</p>
+    <h1 id="record-editor-title">New sections</h1>
+    
+    <p class="subtle">Track section size, program, year level, and advising assignments.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form" data-tooltip-context="sections" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="sections" data-draft-object-pk="" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="TSkJcbOSVTrA2EoVFLHGQV6orcYSnI8cyBYYVXi2Fm1bqjrQbjXRcCAM95W9HgYD">
+  
+  <p>
+    <label for="id_program">Program:</label>
+    <select name="program" data-section-program="" required id="id_program">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_year_level">Year level:</label>
+    <select name="year_level" data-section-year="" required id="id_year_level">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_name">Section Code:</label>
+    <input type="text" name="name" maxlength="30" data-section-code="" required aria-describedby="id_name_helptext" id="id_name">
+    
+      <span class="helptext" id="id_name_helptext">Enter only the identifier, such as 201 or 202.</span>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_size">Size:</label>
+    <input type="number" name="size" value="30" min="0" required id="id_size">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_adviser">Adviser:</label>
+    <select name="adviser" id="id_adviser">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+      
+    
+  </p>
+  
+  <div class="section-name-preview" data-section-preview role="status" aria-live="polite">
+    <small>Section Name Preview <span class="info-icon" tabindex="0" data-tooltip="Shows how this section will appear throughout SchedEase." aria-label="About the section name preview">i</span></small>
+    <strong>Choose a program, year level, and section code</strong>
+  </div>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/sections/">Cancel</a>
+  </div>
+  
+</form>
+
+</div>
+
+      </section></div><div data-page="resource_create{'resource': 'terms'}"><section class="content">
+        
+        
+<div class="record-editor record-editor--standard">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor &middot; Create</p>
+    <h1 id="record-editor-title">New terms</h1>
+    
+    <p class="subtle">Configure academic terms for schedule generation and publishing.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form" data-tooltip-context="terms" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="terms" data-draft-object-pk="" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="QSKjfTqHHe2WQDjiXPmztHELdrPiQC5pvBoyYFURrHCxeimdtnCKPo89VkNzaaVQ">
+  
+  <p>
+    <label for="id_name">Name:</label>
+    <input type="text" name="name" maxlength="80" required id="id_name">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_school_year">School year:</label>
+    <input type="text" name="school_year" maxlength="20" required id="id_school_year">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_starts_on">Starts on:</label>
+    <input type="date" name="starts_on" required id="id_starts_on">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_ends_on">Ends on:</label>
+    <input type="date" name="ends_on" required id="id_ends_on">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_is_active">Is active:</label>
+    <input type="checkbox" name="is_active" id="id_is_active">
+    
+    
+      
+    
+  </p>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/terms/">Cancel</a>
+  </div>
+  
+</form>
+
+</div>
+
+      </section></div><div data-page="resource_create{'resource': 'faculty'}"><section class="content">
+        
+        
+<div class="record-editor record-editor--standard">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor &middot; Create</p>
+    <h1 id="record-editor-title">New faculty</h1>
+    
+    <p class="subtle">Manage faculty records and workload details.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form" data-tooltip-context="faculty" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="faculty" data-draft-object-pk="" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="q4vUeen1qOIjLjFTpIs23dYM0HMVeIni5N99X0RbahiU9YIOVgIdpUsaIAKcygdJ">
+  
+  <p>
+    <label for="id_user">User:</label>
+    <select name="user" id="id_user">
+  <option value="" selected>---------</option>
+
+  <option value="1">responsive-admin</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_department">Department:</label>
+    <select name="department" required id="id_department">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_employee_id">Employee id:</label>
+    <input type="text" name="employee_id" maxlength="40" required id="id_employee_id">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_full_name">Full name:</label>
+    <input type="text" name="full_name" maxlength="160" required id="id_full_name">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_max_weekly_hours">Max weekly hours:</label>
+    <input type="number" name="max_weekly_hours" value="24" min="0" required id="id_max_weekly_hours">
+    
+    
+      
+    
+  </p>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/faculty/">Cancel</a>
+  </div>
+  
+</form>
+
+</div>
+
+      </section></div><div data-page="resource_create{'resource': 'students'}"><section class="content">
+        
+        
+<div class="record-editor record-editor--standard">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor &middot; Create</p>
+    <h1 id="record-editor-title">New students</h1>
+    
+    <p class="subtle">Manage student records and section membership.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form" data-tooltip-context="students" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="students" data-draft-object-pk="" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="qZkWL96S1Wrr0lo7f9MbORDimNiVx0Vt5IYbuVA2Lp12o0r2LH2may7G4GgcRyLU">
+  
+  <p>
+    <label for="id_user">User:</label>
+    <select name="user" id="id_user">
+  <option value="" selected>---------</option>
+
+  <option value="1">responsive-admin</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_section">Section:</label>
+    <select name="section" required id="id_section">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_student_number">Student number:</label>
+    <input type="text" name="student_number" maxlength="40" required id="id_student_number">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_full_name">Full name:</label>
+    <input type="text" name="full_name" maxlength="160" required id="id_full_name">
+    
+    
+      
+    
+  </p>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/students/">Cancel</a>
+  </div>
+  
+</form>
+
+</div>
+
+      </section></div><div data-page="resource_create{'resource': 'rooms'}"><section class="content">
+        
+        
+<div class="record-editor record-editor--standard">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor &middot; Create</p>
+    <h1 id="record-editor-title">New rooms</h1>
+    
+    <p class="subtle">Maintain room capacity, availability, and specialized room types.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form" data-tooltip-context="rooms" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="rooms" data-draft-object-pk="" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="M8B3FPF6VqQJFUXApydZOjxVGrOVDkK7rRfioB9gFTqk3z0vV6taa01jokMcXSAy">
+  
+  <p>
+    <label for="id_name">Name:</label>
+    <input type="text" name="name" maxlength="80" required id="id_name">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_room_type">Room type:</label>
+    <select name="room_type" required id="id_room_type">
+  <option value="" selected>---------</option>
+
+  <option value="LECTURE">Lecture Room</option>
+
+  <option value="COMPUTER_LAB">Computer Laboratory</option>
+
+  <option value="SCIENCE_LAB">Science Laboratory</option>
+
+  <option value="GYM">Gym</option>
+
+  <option value="SPECIAL">Specialized Room</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_capacity">Capacity:</label>
+    <input type="number" name="capacity" min="0" required id="id_capacity">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_is_active">Is active:</label>
+    <input type="checkbox" name="is_active" id="id_is_active" checked>
+    
+    
+      
+    
+  </p>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/rooms/">Cancel</a>
+  </div>
+  
+</form>
+
+</div>
+
+      </section></div><div data-page="resource_create{'resource': 'availability'}"><section class="content">
+        
+        
+<div class="record-editor record-editor--standard">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor &middot; Create</p>
+    <h1 id="record-editor-title">New availability</h1>
+    
+    <p class="subtle">Define preferred, available, and unavailable time windows for faculty or rooms.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form" data-tooltip-context="availability" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="availability" data-draft-object-pk="" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="sP4EoyJa2qSvWesOUdEhTdoeKEsswFl57yIT7kdkMTs6kTvJqLUsfUSCsxqJQdbw">
+  
+  <p>
+    <label for="id_faculty">Faculty:</label>
+    <select name="faculty" id="id_faculty">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_room">Room:</label>
+    <select name="room" id="id_room">
+  <option value="" selected>---------</option>
+
+  <option value="1">Computer laboratory (Lecture Room)</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_day">Day:</label>
+    <select name="day" required id="id_day">
+  <option value="" selected>---------</option>
+
+  <option value="0">Monday</option>
+
+  <option value="1">Tuesday</option>
+
+  <option value="2">Wednesday</option>
+
+  <option value="3">Thursday</option>
+
+  <option value="4">Friday</option>
+
+  <option value="5">Saturday</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_start_time">Start time:</label>
+    <input type="time" name="start_time" required id="id_start_time">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_end_time">End time:</label>
+    <input type="time" name="end_time" required id="id_end_time">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_kind">Kind:</label>
+    <select name="kind" id="id_kind">
+  <option value="AVAILABLE" selected>Available</option>
+
+  <option value="PREFERRED">Preferred</option>
+
+  <option value="UNAVAILABLE">Unavailable</option>
+
+</select>
+    
+    
+      
+    
+  </p>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/availability/">Cancel</a>
+  </div>
+  
+</form>
+
+</div>
+
+      </section></div><div data-page="resource_create{'resource': 'credentials'}"><section class="content">
+        
+        
+<div class="record-editor record-editor--standard">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor &middot; Create</p>
+    <h1 id="record-editor-title">New credentials</h1>
+    
+    <p class="subtle">Create the exact credential names used for faculty qualification matching.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form" data-tooltip-context="credentials" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="credentials" data-draft-object-pk="" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="1NBqESEWT2iPda9E4WOCzPLmUOLGYAFIGwfFnE86DvSqBPczAu4NVwfKCHJXi8v9">
+  
+  <p>
+    <label for="id_name">Name:</label>
+    <input type="text" name="name" maxlength="120" required id="id_name">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_description">Description:</label>
+    <textarea name="description" cols="40" rows="10" id="id_description">
+</textarea>
+    
+    
+      
+    
+  </p>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/credentials/">Cancel</a>
+  </div>
+  
+</form>
+
+</div>
+
+      </section></div><div data-page="resource_create{'resource': 'faculty-credentials'}"><section class="content">
+        
+        
+<div class="record-editor record-editor--standard">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor &middot; Create</p>
+    <h1 id="record-editor-title">New faculty credentials</h1>
+    
+    <p class="subtle">Assign credentials to faculty members for teaching eligibility checks.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form" data-tooltip-context="faculty-credentials" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="faculty-credentials" data-draft-object-pk="" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="AQrPYns9DkJt1wZiyweGGiKLApIfekPvfz54H9WjnNj4pb2d44uR2Ze9iiGwySFW">
+  
+  <p>
+    <label for="id_faculty">Faculty:</label>
+    <select name="faculty" required id="id_faculty">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_credential">Credential:</label>
+    <select name="credential" required id="id_credential">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_issued_by">Issued by:</label>
+    <input type="text" name="issued_by" maxlength="160" id="id_issued_by">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_issued_on">Issued on:</label>
+    <input type="date" name="issued_on" id="id_issued_on">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_expires_on">Expires on:</label>
+    <input type="date" name="expires_on" id="id_expires_on">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_notes">Notes:</label>
+    <textarea name="notes" cols="40" rows="10" id="id_notes">
+</textarea>
+    
+    
+      
+    
+  </p>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/faculty-credentials/">Cancel</a>
+  </div>
+  
+</form>
+
+</div>
+
+      </section></div><div data-page="resource_create{'resource': 'credential-overrides'}"><section class="content">
+        
+        
+<div class="record-editor record-editor--standard">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor &middot; Create</p>
+    <h1 id="record-editor-title">New credential overrides</h1>
+    
+    <p class="subtle">Audit admin-approved exceptions for unqualified faculty assignments.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form" data-tooltip-context="credential-overrides" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="credential-overrides" data-draft-object-pk="" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="CntRxsLtXjAA8180x5wfoM9zPJ5qVrUkh676gefDHMabwGbV3DMqKtDXxC3HfZKL">
+  
+  <p>
+    <label for="id_assignment">Assignment:</label>
+    <select name="assignment" id="id_assignment">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_subject">Course:</label>
+    <select name="subject" required id="id_subject">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_faculty">Faculty:</label>
+    <select name="faculty" required id="id_faculty">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_reason">Reason:</label>
+    <textarea name="reason" cols="40" rows="10" required id="id_reason">
+</textarea>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_missing_credentials">Missing credentials:</label>
+    <textarea name="missing_credentials" cols="40" rows="10" required id="id_missing_credentials">
+</textarea>
+    
+    
+      
+    
+  </p>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/credential-overrides/">Cancel</a>
+  </div>
+  
+</form>
+
+</div>
+
+      </section></div><div data-page="resource_create{'resource': 'assignments'}"><section class="content">
+        
+        
+<div class="record-editor">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Scheduling Requirement &middot; Create</p>
+    <h1 id="record-editor-title">New Assignment</h1>
+    
+    <p class="subtle">Set the shared course, section, and faculty once, then define every independently scheduled meeting.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form assignment-editor" data-assignment-editor data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="assignments" data-draft-object-pk="">
+  
+  <input type="hidden" name="csrfmiddlewaretoken" value="4LlwU7DNiPFocce00MQtIccEzxCBOuYTJuZLDT7X2ifZARhVwk6E4TG2hqAS82Ok">
+  <h2>Assignment Information</h2>
+  <p>
+    <label for="id_term">Term:</label>
+    <select name="term" required id="id_term">
+  <option value="" selected>---------</option>
+
+  <option value="1">First semester 2026</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_subject">Course:</label>
+    <select name="subject" required id="id_subject">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_section">Section:</label>
+    <select name="section" required id="id_section">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_faculty">Faculty:</label>
+    <select name="faculty" required id="id_faculty">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+      
+    
+  </p>
+  <div class="form-section-heading"><div><h2>Meetings</h2><p class="subtle">Lecture and laboratory time must match the selected course requirements.</p></div></div>
+  <input type="hidden" name="meetings-TOTAL_FORMS" value="1" id="id_meetings-TOTAL_FORMS"><input type="hidden" name="meetings-INITIAL_FORMS" value="0" id="id_meetings-INITIAL_FORMS"><input type="hidden" name="meetings-MIN_NUM_FORMS" value="1" id="id_meetings-MIN_NUM_FORMS"><input type="hidden" name="meetings-MAX_NUM_FORMS" value="1000" id="id_meetings-MAX_NUM_FORMS">
+  
+  <div class="meeting-tab-toolbar" data-meeting-toolbar hidden><div class="meeting-tabs" role="tablist" aria-label="Assignment meetings" data-meeting-tabs></div><button class="button" type="button" data-add-meeting>+ Add Meeting</button></div>
+  <p class="subtle" data-meeting-status role="status" aria-live="polite"></p>
+  <div class="meeting-form-list" data-meeting-list>
+    
+    <fieldset class="meeting-form" data-meeting-form>
+  <legend>Meeting <span data-meeting-number>1</span></legend>
+  
+  <input type="hidden" name="meetings-0-id" id="id_meetings-0-id"><input type="hidden" name="meetings-0-assignment" id="id_meetings-0-assignment">
+  
+  <p>
+    <label for="id_meetings-0-meeting_index">Meeting index:</label> <input type="number" name="meetings-0-meeting_index" value="1" min="0" id="id_meetings-0-meeting_index">
+    
+  </p>
+  
+  <p>
+    <label for="id_meetings-0-component">Session Type:</label> <select name="meetings-0-component" id="id_meetings-0-component">
+  <option value="GENERAL" selected>General</option>
+
+  <option value="LECTURE">Lecture</option>
+
+  <option value="LABORATORY">Laboratory</option>
+
+</select>
+    
+  </p>
+  
+  <p>
+    <label for="id_meetings-0-duration_minutes">Required Duration (minutes):</label> <input type="number" name="meetings-0-duration_minutes" value="0" min="0" aria-describedby="id_meetings-0-duration_minutes_helptext" id="id_meetings-0-duration_minutes">
+    <span class="helptext">Per-meeting duration; zero uses the subject hours.</span>
+  </p>
+  
+  <p>
+    <label for="id_meetings-0-required_room_type_override">Required Room Type:</label> <select name="meetings-0-required_room_type_override" id="id_meetings-0-required_room_type_override">
+  <option value="" selected>---------</option>
+
+  <option value="LECTURE">Lecture Room</option>
+
+  <option value="COMPUTER_LAB">Computer Laboratory</option>
+
+  <option value="SCIENCE_LAB">Science Laboratory</option>
+
+  <option value="GYM">Gym</option>
+
+  <option value="SPECIAL">Specialized Room</option>
+
+</select>
+    
+  </p>
+  
+  <p class="meeting-delete">
+    <label for="id_meetings-0-DELETE">Delete:</label> <input type="checkbox" name="meetings-0-DELETE" id="id_meetings-0-DELETE">
+    
+  </p>
+  
+  <button class="button" type="button" data-remove-meeting hidden>Remove Meeting</button>
+</fieldset>
+
+    
+  </div>
+  <template data-empty-meeting><fieldset class="meeting-form" data-meeting-form>
+  <legend>Meeting <span data-meeting-number>__number__</span></legend>
+  
+  <input type="hidden" name="meetings-__prefix__-id" id="id_meetings-__prefix__-id"><input type="hidden" name="meetings-__prefix__-assignment" id="id_meetings-__prefix__-assignment">
+  
+  <p>
+    <label for="id_meetings-__prefix__-meeting_index">Meeting index:</label> <input type="number" name="meetings-__prefix__-meeting_index" value="1" min="0" id="id_meetings-__prefix__-meeting_index">
+    
+  </p>
+  
+  <p>
+    <label for="id_meetings-__prefix__-component">Session Type:</label> <select name="meetings-__prefix__-component" id="id_meetings-__prefix__-component">
+  <option value="GENERAL" selected>General</option>
+
+  <option value="LECTURE">Lecture</option>
+
+  <option value="LABORATORY">Laboratory</option>
+
+</select>
+    
+  </p>
+  
+  <p>
+    <label for="id_meetings-__prefix__-duration_minutes">Required Duration (minutes):</label> <input type="number" name="meetings-__prefix__-duration_minutes" value="0" min="0" aria-describedby="id_meetings-__prefix__-duration_minutes_helptext" id="id_meetings-__prefix__-duration_minutes">
+    <span class="helptext">Per-meeting duration; zero uses the subject hours.</span>
+  </p>
+  
+  <p>
+    <label for="id_meetings-__prefix__-required_room_type_override">Required Room Type:</label> <select name="meetings-__prefix__-required_room_type_override" id="id_meetings-__prefix__-required_room_type_override">
+  <option value="" selected>---------</option>
+
+  <option value="LECTURE">Lecture Room</option>
+
+  <option value="COMPUTER_LAB">Computer Laboratory</option>
+
+  <option value="SCIENCE_LAB">Science Laboratory</option>
+
+  <option value="GYM">Gym</option>
+
+  <option value="SPECIAL">Specialized Room</option>
+
+</select>
+    
+  </p>
+  
+  <p class="meeting-delete">
+    <label for="id_meetings-__prefix__-DELETE">Delete:</label> <input type="checkbox" name="meetings-__prefix__-DELETE" id="id_meetings-__prefix__-DELETE">
+    
+  </p>
+  
+  <button class="button" type="button" data-remove-meeting hidden>Remove Meeting</button>
+</fieldset>
+</template>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite"></div>
+  <div class="toolbar form-actions"><button class="primary" type="submit">Save Assignment</button><a class="button" href="/schedules/manage/assignments/">Cancel</a></div>
+</form>
+</div>
+
+      </section></div><div data-page="resource_update{'resource': 'rooms', 'pk': 1}"><section class="content">
+        
+        
+<div class="record-editor record-editor--standard">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor &middot; Edit</p>
+    <h1 id="record-editor-title">Edit Computer laboratory (Lecture Room)</h1>
+    
+    <p class="subtle">Maintain room capacity, availability, and specialized room types.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form" data-tooltip-context="rooms" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="rooms" data-draft-object-pk="1" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="4upymJ5fCY31tL1hkHPe3JirjkR3AVmkJd3N5vzpmrDCRq4cQf5ppqMP1dPkUtcL">
+  
+  <p>
+    <label for="id_name">Name:</label>
+    <input type="text" name="name" value="Computer laboratory" maxlength="80" required id="id_name">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_room_type">Room type:</label>
+    <select name="room_type" required id="id_room_type">
+  <option value="">---------</option>
+
+  <option value="LECTURE" selected>Lecture Room</option>
+
+  <option value="COMPUTER_LAB">Computer Laboratory</option>
+
+  <option value="SCIENCE_LAB">Science Laboratory</option>
+
+  <option value="GYM">Gym</option>
+
+  <option value="SPECIAL">Specialized Room</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_capacity">Capacity:</label>
+    <input type="number" name="capacity" value="40" min="0" required id="id_capacity">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_is_active">Is active:</label>
+    <input type="checkbox" name="is_active" id="id_is_active" checked>
+    
+    
+      
+    
+  </p>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/rooms/">Cancel</a>
+  </div>
+  
+</form>
+
+</div>
+
+      </section></div><div data-page="resource_update{'resource': 'terms', 'pk': 1}"><section class="content">
+        
+        
+<div class="record-editor record-editor--standard">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor &middot; Edit</p>
+    <h1 id="record-editor-title">Edit First semester 2026</h1>
+    
+    <p class="subtle">Configure academic terms for schedule generation and publishing.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form" data-tooltip-context="terms" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="terms" data-draft-object-pk="1" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="kWN9DkpjTT2A3iFiCbtI9vpSEkTzm00dZFrom6TtDmCbrXId8JJTvcTgmdRQGyQE">
+  
+  <p>
+    <label for="id_name">Name:</label>
+    <input type="text" name="name" value="First semester" maxlength="80" required id="id_name">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_school_year">School year:</label>
+    <input type="text" name="school_year" value="2026" maxlength="20" required id="id_school_year">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_starts_on">Starts on:</label>
+    <input type="date" name="starts_on" value="2026-01-01" required id="id_starts_on">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_ends_on">Ends on:</label>
+    <input type="date" name="ends_on" value="2026-06-01" required id="id_ends_on">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_is_active">Is active:</label>
+    <input type="checkbox" name="is_active" id="id_is_active" checked>
+    
+    
+      
+    
+  </p>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/terms/">Cancel</a>
+  </div>
+  
+</form>
+
+</div>
+
+      </section></div><div data-page="invalid-room"><section class="content">
+        
+        
+<div class="record-editor record-editor--standard">
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor &middot; Create</p>
+    <h1 id="record-editor-title">New rooms</h1>
+    
+    <p class="subtle">Maintain room capacity, availability, and specialized room types.</p>
+  </div>
+</div>
+
+
+<form method="post" aria-labelledby="record-editor-title" class="panel form" data-tooltip-context="rooms" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="rooms" data-draft-object-pk="" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="HwRSL8AU40XP15TyjpIdQJsA6QWzUbu7mfv7uU44OtxqpKWtPXYocqWYOJUQeJky">
+  
+  <p>
+    <label for="id_name">Name:</label>
+    <input type="text" name="name" value="Preserved room name" maxlength="80" required id="id_name">
+    
+    
+  </p>
+
+  <ul class="errorlist"><li>This field is required.</li></ul>
+  <p>
+    <label for="id_room_type">Room type:</label>
+    <select name="room_type" required aria-invalid="true" id="id_room_type">
+  <option value="" selected>---------</option>
+
+  <option value="LECTURE">Lecture Room</option>
+
+  <option value="COMPUTER_LAB">Computer Laboratory</option>
+
+  <option value="SCIENCE_LAB">Science Laboratory</option>
+
+  <option value="GYM">Gym</option>
+
+  <option value="SPECIAL">Specialized Room</option>
+
+</select>
+    
+    
+  </p>
+
+  <ul class="errorlist"><li>Enter a whole number.</li></ul>
+  <p>
+    <label for="id_capacity">Capacity:</label>
+    <input type="number" name="capacity" value="invalid" min="0" required aria-invalid="true" id="id_capacity">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_is_active">Is active:</label>
+    <input type="checkbox" name="is_active" id="id_is_active">
+    
+    
+      
+    
+  </p>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/rooms/">Cancel</a>
+  </div>
+  
+</form>
+
+</div>
+
+      </section></div><pre id="results">RUNNING</pre></div></div><script src="../../static/js/app.js"></script><script src="../../static/js/table-scroll.js"></script><script>
+setTimeout(async()=>{const errors=[];let checks=0;const check=(ok,name)=>{checks++;if(!ok)errors.push(name)};
+for(const page of document.querySelectorAll('[data-page]')){
+ const form=page.querySelector('form.panel'), heading=page.querySelector('h1'), actions=form.querySelector('.form-actions');
+ check(page.scrollWidth<=page.clientWidth+1,page.dataset.page+' contained');
+ check(form.getAttribute('aria-labelledby')===heading.id,page.dataset.page+' named');
+ check(actions&&actions.getBoundingClientRect().width<=form.getBoundingClientRect().width,page.dataset.page+' actions fit');
+ check(Math.abs(heading.getBoundingClientRect().left-form.getBoundingClientRect().left)<2,page.dataset.page+' heading aligned');
+ check([...form.querySelectorAll('input:not([type=hidden]),select,textarea')].filter(x=>x.getClientRects().length).every(x=>x.getBoundingClientRect().right<=form.getBoundingClientRect().right+1),page.dataset.page+' controls fit');
+}
+const invalid=document.querySelector('[data-page="invalid-room"]');check(invalid.querySelector('.errorlist')&&invalid.querySelector('[name=name]').value==='Preserved room name','bound errors preserve input');
+const first=document.querySelector('form.panel'), help=first.querySelector('.info-icon');help.scrollIntoView({block:'center'});await new Promise(r=>setTimeout(r,100));help.focus({preventScroll:true});check(document.querySelector('.app-tooltip').classList.contains('is-visible'),'help focus opens tooltip');document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));check(!document.querySelector('.app-tooltip').classList.contains('is-visible'),'Escape dismisses help');
+const sample=first.querySelector('input[type=text]');sample.readOnly=true;sample.focus({preventScroll:true});check(getComputedStyle(sample).borderTopStyle==='dashed'&&document.activeElement===sample,'read-only remains focusable and distinct');sample.readOnly=false;sample.disabled=true;await new Promise(r=>setTimeout(r,250));check(getComputedStyle(sample).backgroundColor!==getComputedStyle(first).backgroundColor,'disabled remains visually distinct');sample.disabled=false;
+window.scrollTo(0,0);document.querySelector('#results').textContent=errors.length?'FAIL '+errors.join('; '):'PASS '+checks+' editor checks\nviewport width '+innerWidth;
+},500);</script></body></html>

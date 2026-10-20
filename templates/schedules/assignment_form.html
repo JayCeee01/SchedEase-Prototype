@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-hero"><div><p class="eyebrow">Scheduling Requirement</p><h1>{{ title }}</h1><p class="subtle">Set the shared course, section, and faculty once, then define every independently scheduled meeting.</p></div></div>
+<div class="record-editor">
+{% include "schedules/_editor_heading.html" with editor_eyebrow="Scheduling Requirement" description="Set the shared course, section, and faculty once, then define every independently scheduled meeting." %}
 {% if draft %}<div class="draft-banner" role="status"><div><strong>Draft restored</strong><small>Continue your saved assignment and meetings.</small></div><form method="post" action="{% url 'discard_form_draft' draft.pk %}">{% csrf_token %}<button type="submit" class="button">Discard draft</button></form></div>{% endif %}
-<form method="post" class="panel form assignment-editor" data-assignment-editor data-form-draft data-draft-save-url="{% url 'save_form_draft' %}" data-draft-resource="assignments" data-draft-object-pk="{{ assignment.pk|default_if_none:'' }}">
+<form method="post" aria-labelledby="record-editor-title" class="panel form assignment-editor" data-assignment-editor data-form-draft data-draft-save-url="{% url 'save_form_draft' %}" data-draft-resource="assignments" data-draft-object-pk="{{ assignment.pk|default_if_none:'' }}">
   {% if draft_conflict %}<div class="draft-conflict" role="alert"><strong>This assignment or its meetings changed after this draft began.</strong><p>Review the saved assignment before replacing it with this draft.</p><label><input type="checkbox" name="draft_conflict_confirm" value="yes" required> I reviewed the changes and want to save this draft.</label></div>{% endif %}
   {% csrf_token %}
   <h2>Assignment Information</h2>
@@ -24,4 +25,5 @@
   <div class="draft-save-status" data-draft-status role="status" aria-live="polite">{% if draft %}Draft saved{% endif %}</div>
   <div class="toolbar form-actions"><button class="primary" type="submit">Save Assignment</button><a class="button" href="{% url 'resource_list' 'assignments' %}">Cancel</a></div>
 </form>
+</div>
 {% endblock %}

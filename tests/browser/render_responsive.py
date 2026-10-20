@@ -31,6 +31,12 @@ routes = [(name, {}) for name in ['dashboard','generate_schedule','room_utilizat
 routes += [('resource_list', {'resource': resource}) for resource in ['subjects','faculty','students','rooms','credentials','assignments','availability','departments','programs','sections']]
 routes += [('resource_create', {'resource': resource}) for resource in ['subjects','assignments']]
 routes += [('resource_delete', {'resource':'rooms','pk':room.pk}), ('schedule_detail', {'pk':schedule.pk})]
+if '--editors' in sys.argv:
+    routes = [('resource_create', {'resource': resource}) for resource in [
+        'programs','subjects','sections','terms','faculty','students','rooms','availability',
+        'credentials','faculty-credentials','credential-overrides','assignments']]
+    routes += [('resource_update', {'resource':'rooms','pk':room.pk}),
+               ('resource_update', {'resource':'terms','pk':term.pk})]
 class Content(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=False)
@@ -56,11 +62,34 @@ for name, kwargs in routes:
     assert response.status_code == 200, (name,kwargs,response.status_code)
     parser=Content();parser.feed(response.content.decode())
     sections.append('<div data-page="'+name+str(kwargs).replace('"','')+'">'+''.join(parser.parts)+'</div>')
+if '--editors' in sys.argv:
+    response = client.post(reverse('resource_create', kwargs={'resource':'rooms'}),
+                           {'name':'Preserved room name', 'capacity':'invalid'})
+    assert response.status_code == 200 and b'Preserved room name' in response.content
+    parser=Content(); parser.feed(response.content.decode())
+    sections.append('<div data-page="invalid-room">'+''.join(parser.parts)+'</div>')
 base=(root/'tests/browser/responsive_layout.html').read_text()
 head=base[:base.index('<section class="content">')].replace('</head>', '<link rel="stylesheet" href="../../static/css/academic-import.css"></head>')
 script='''<pre id="results">RUNNING</pre></div></div><script src="../../static/js/app.js"></script><script src="../../static/js/table-scroll.js"></script><script>
 setTimeout(()=>{const errors=[];for(const page of document.querySelectorAll('[data-page]'))if(page.scrollWidth>page.clientWidth+1)errors.push(page.dataset.page);
 const n=document.querySelectorAll('[data-page]').length;document.querySelector('#results').textContent=errors.length?'FAIL overflow: '+errors.join(', '):'PASS '+n+' rendered pages\\nviewport width '+innerWidth;},500);
 </script></body></html>'''
-(root/'tests/browser/rendered_responsive.html').write_text(head+''.join(sections)+script,encoding='utf-8')
+if '--editors' in sys.argv:
+    script = '''<pre id="results">RUNNING</pre></div></div><script src="../../static/js/app.js"></script><script src="../../static/js/table-scroll.js"></script><script>
+setTimeout(async()=>{const errors=[];let checks=0;const check=(ok,name)=>{checks++;if(!ok)errors.push(name)};
+for(const page of document.querySelectorAll('[data-page]')){
+ const form=page.querySelector('form.panel'), heading=page.querySelector('h1'), actions=form.querySelector('.form-actions');
+ check(page.scrollWidth<=page.clientWidth+1,page.dataset.page+' contained');
+ check(form.getAttribute('aria-labelledby')===heading.id,page.dataset.page+' named');
+ check(actions&&actions.getBoundingClientRect().width<=form.getBoundingClientRect().width,page.dataset.page+' actions fit');
+ check(Math.abs(heading.getBoundingClientRect().left-form.getBoundingClientRect().left)<2,page.dataset.page+' heading aligned');
+ check([...form.querySelectorAll('input:not([type=hidden]),select,textarea')].filter(x=>x.getClientRects().length).every(x=>x.getBoundingClientRect().right<=form.getBoundingClientRect().right+1),page.dataset.page+' controls fit');
+}
+const invalid=document.querySelector('[data-page="invalid-room"]');check(invalid.querySelector('.errorlist')&&invalid.querySelector('[name=name]').value==='Preserved room name','bound errors preserve input');
+const first=document.querySelector('form.panel'), help=first.querySelector('.info-icon');help.scrollIntoView({block:'center'});await new Promise(r=>setTimeout(r,100));help.focus({preventScroll:true});check(document.querySelector('.app-tooltip').classList.contains('is-visible'),'help focus opens tooltip');document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));check(!document.querySelector('.app-tooltip').classList.contains('is-visible'),'Escape dismisses help');
+const sample=first.querySelector('input[type=text]');sample.readOnly=true;sample.focus({preventScroll:true});check(getComputedStyle(sample).borderTopStyle==='dashed'&&document.activeElement===sample,'read-only remains focusable and distinct');sample.readOnly=false;sample.disabled=true;await new Promise(r=>setTimeout(r,250));check(getComputedStyle(sample).backgroundColor!==getComputedStyle(first).backgroundColor,'disabled remains visually distinct');sample.disabled=false;
+window.scrollTo(0,0);document.querySelector('#results').textContent=errors.length?'FAIL '+errors.join('; '):'PASS '+checks+' editor checks\\nviewport width '+innerWidth;
+},500);</script></body></html>'''
+output = 'rendered_editors.html' if '--editors' in sys.argv else 'rendered_responsive.html'
+(root/'tests/browser'/output).write_text(head+''.join(sections)+script,encoding='utf-8')
 print('Rendered',len(sections),'authenticated admin pages using isolated in-memory records.')

@@ -1,13 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-hero">
-  <div>
-    <p class="eyebrow">Record Editor</p>
-    <h1>{{ title }}</h1>
-    {% if tooltip_context == 'generate-schedule' %}<a class="button" href="{% url 'academic_import' %}">Import Spreadsheet</a>{% endif %}
-    <p class="subtle">{{ description|default:"Required fields are validated before saving. Time fields use the school scheduling range configured in the backend." }}</p>
-  </div>
-</div>
+<div class="record-editor{% if tooltip_context != 'generate-schedule' and tooltip_context != 'schedule-entry' %} record-editor--standard{% endif %}">
+{% include "schedules/_editor_heading.html" %}
 {% if draft %}
 <div class="draft-banner" role="status">
   <div><strong>Draft restored</strong><small>You are continuing unfinished changes saved {{ draft.updated_at|timesince }} ago.</small></div>
@@ -16,7 +10,7 @@
   </form>
 </div>
 {% endif %}
-<form method="post" class="panel form{% if tooltip_context == 'generate-schedule' %} generation-form{% endif %}" data-tooltip-context="{{ tooltip_context|default:title|slugify }}"{% if tooltip_context == 'generate-schedule' %} data-schedule-generation{% endif %}{% if draft_resource %} data-form-draft data-draft-save-url="{% url 'save_form_draft' %}" data-draft-resource="{{ draft_resource }}" data-draft-object-pk="{{ draft_object_pk }}" data-has-draft="{% if draft %}true{% else %}false{% endif %}"{% endif %}>
+<form method="post" aria-labelledby="record-editor-title" class="panel form{% if tooltip_context == 'generate-schedule' %} generation-form{% endif %}" data-tooltip-context="{{ tooltip_context|default:title|slugify }}"{% if tooltip_context == 'generate-schedule' %} data-schedule-generation{% endif %}{% if draft_resource %} data-form-draft data-draft-save-url="{% url 'save_form_draft' %}" data-draft-resource="{{ draft_resource }}" data-draft-object-pk="{{ draft_object_pk }}" data-has-draft="{% if draft %}true{% else %}false{% endif %}"{% endif %}>
   {% csrf_token %}
   {% if draft_conflict %}
   <div class="draft-conflict" role="alert">
@@ -74,4 +68,5 @@
   {% empty %}<p>No valid alternatives were found at the current start time or on the 30-minute search grid. Review the meeting's requirements and availability, or enter another time above.</p>{% endfor %}
 </section>
 {% endif %}
+</div>
 {% endblock %}

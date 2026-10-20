@@ -11,14 +11,14 @@ from urllib.request import Request, urlopen
 from cdp_browser import DevTools
 
 root = Path(__file__).resolve().parents[2]
-fixture = 'rendered_responsive.html' if '--rendered' in sys.argv else 'responsive_layout.html' if '--responsive' in sys.argv else 'top_navigation.html' if '--topbar' in sys.argv else 'sidebar_navigation.html' if '--sidebar' in sys.argv else ('table_scrolling.html' if '--tables' in sys.argv else 'interaction_states.html')
+fixture = 'rendered_editors.html' if '--editors' in sys.argv else 'rendered_responsive.html' if '--rendered' in sys.argv else 'responsive_layout.html' if '--responsive' in sys.argv else 'top_navigation.html' if '--topbar' in sys.argv else 'sidebar_navigation.html' if '--sidebar' in sys.argv else ('table_scrolling.html' if '--tables' in sys.argv else 'interaction_states.html')
 candidates = [Path(os.environ.get('PROGRAMFILES', '')) / 'Google/Chrome/Application/chrome.exe',
               Path(os.environ.get('PROGRAMFILES(X86)', '')) / 'Microsoft/Edge/Application/msedge.exe']
 browser = next((p for p in candidates if p.is_file()), None)
 if browser is None:
     raise SystemExit('Chrome/Edge unavailable: run the documented manual checklist.')
 for theme in ('light', 'dark'):
-    for width in ((1360, 1024, 901, 768, 621, 500, 390) if '--responsive' in sys.argv or '--rendered' in sys.argv else (1360, 768, 500, 390) if '--sidebar' in sys.argv or '--topbar' in sys.argv else (1360, 390)):
+    for width in ((1360, 1024, 901, 768, 621, 500, 390) if '--responsive' in sys.argv or '--rendered' in sys.argv or '--editors' in sys.argv else (1360, 768, 500, 390) if '--sidebar' in sys.argv or '--topbar' in sys.argv else (1360, 390)):
         with tempfile.TemporaryDirectory(prefix='schedease-ui-', dir=root/'tests/browser') as profile:
             assert Path(profile).resolve().parent == (root/'tests/browser').resolve()
             process = subprocess.Popen([str(browser), '--headless=new', '--disable-gpu', '--no-first-run',
@@ -40,7 +40,7 @@ for theme in ('light', 'dark'):
                 with urlopen(Request(f'http://127.0.0.1:{port}/json/new?about:blank', method='PUT'), timeout=5) as response:
                     target = json.load(response)
                 client = DevTools(target['webSocketDebuggerUrl'])
-                client.call('Emulation.setDeviceMetricsOverride', {'width': width, 'height': 768 if '--responsive' in sys.argv or '--rendered' in sys.argv else 900, 'deviceScaleFactor': 1, 'mobile': False})
+                client.call('Emulation.setDeviceMetricsOverride', {'width': width, 'height': 768 if '--responsive' in sys.argv or '--rendered' in sys.argv or '--editors' in sys.argv else 900, 'deviceScaleFactor': 1, 'mobile': False})
                 client.call('Page.bringToFront')
                 client.call('Emulation.setFocusEmulationEnabled', {'enabled': True})
                 client.call('Page.navigate', {'url': (root/'tests/browser'/fixture).as_uri()+'?theme='+theme})
@@ -56,6 +56,9 @@ for theme in ('light', 'dark'):
                 assert text.startswith('PASS '), text
                 lines = text.splitlines()
                 assert lines[1] == f'viewport width {width}', lines[1]
+                if '--measure' in sys.argv:
+                    metrics = client.call('Runtime.evaluate', {'expression': "JSON.stringify([...document.querySelectorAll('[data-page]')].filter(p=>/dashboard|resource_create|room_utilization/.test(p.dataset.page)).map(p=>({page:p.dataset.page,height:Math.round(p.getBoundingClientRect().height),firstPanel:Math.round((p.querySelector('.panel,.metrics')?.getBoundingClientRect().top||0)-p.getBoundingClientRect().top)})))", 'returnByValue': True})
+                    print(theme, width, metrics['result']['value'], flush=True)
                 if '--tables' in sys.argv:
                     client.call('Emulation.setDeviceMetricsOverride', {'width': width - 40, 'height': 900, 'deviceScaleFactor': 1, 'mobile': False})
                     time.sleep(.2)
@@ -84,7 +87,7 @@ for theme in ('light', 'dark'):
                     assert reloaded.startswith('PASS '), reloaded
                 if '--screenshots' in sys.argv:
                     shot = client.call('Page.captureScreenshot', {'format': 'png'})
-                    (root/f'ui-refinement-{theme}-{width}.png').write_bytes(base64.b64decode(shot['data']))
+                    (root/f"{'ui-editor' if '--editors' in sys.argv else 'ui-refinement'}-{theme}-{width}.png").write_bytes(base64.b64decode(shot['data']))
                 if '--sidebar' in sys.argv and '--screenshots' in sys.argv:
                     expression = "document.querySelector('[data-sidebar-collapse]').click()" if width > 900 else "document.querySelector('button[data-sidebar-toggle]').click()"
                     client.call('Runtime.evaluate', {'expression': expression})

@@ -1,0 +1,8 @@
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">{{ editor_eyebrow|default:"Record Editor" }}{% if title|slice:":4" == "Edit" %} &middot; Edit{% elif title|slice:":3" == "New" or title|slice:":3" == "Add" %} &middot; Create{% endif %}</p>
+    <h1 id="record-editor-title">{{ title }}</h1>
+    {% if tooltip_context == 'generate-schedule' %}<a class="button" href="{% url 'academic_import' %}">Import Spreadsheet</a>{% endif %}
+    <p class="subtle">{{ description|default:"Required fields are validated before saving. Time fields use the school scheduling range configured in the backend." }}</p>
+  </div>
+</div>

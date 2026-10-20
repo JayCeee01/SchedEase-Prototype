@@ -1,6 +1,6 @@
 :root {
   color-scheme: light;
-  /* Shared dimensions retain the existing layout; semantic colors are theme-specific. */
+  /* Shared dimensions use the spacing scale; semantic colors are theme-specific. */
   --font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --text-body: 16px;
   --text-title: clamp(26px, 3vw, 40px);
@@ -15,9 +15,9 @@
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
-  --content-padding: 28px;
-  --card-padding: 18px;
-  --form-gap: 14px;
+  --content-padding: var(--space-6);
+  --card-padding: var(--space-4);
+  --form-gap: var(--space-3);
   --button-padding: 9px 13px;
   --control-padding: 10px 12px;
   --border-width: 1px;
@@ -917,7 +917,7 @@ html.sidebar-collapsed .nav-children { padding-left: 0; }
   background: color-mix(in srgb, var(--primary-soft) 35%, var(--surface));
 }
 table { width: 100%; border-collapse: collapse; min-width: 760px; font-size: var(--text-table); }
-th, td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th, td { text-align: left; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); vertical-align: middle; }
 th {
   background: var(--surface-soft);
   color: var(--muted);
@@ -1991,3 +1991,35 @@ body.modal-open .table-scroll-proxy, body.sidebar-open .table-scroll-proxy { vis
 .metrics article { min-width: 0; flex-wrap: wrap; }
 .metrics article > span { min-width: 0; max-width: 100%; }
 .metric-icon { flex-shrink: 0; }
+
+/* Task 2.4: density follows the shared spacing scale without shrinking controls. */
+.content h2 { margin-block: var(--space-6) var(--space-3); }
+.content .panel > h2:first-child, .content .card > h2:first-child { margin-top: 0; }
+.content .form-section-heading h2 { margin: 0; }
+.page-hero { margin-bottom: var(--space-4); }
+.eyebrow { margin-bottom: var(--space-2); }
+.hero-card { gap: var(--space-4); margin-bottom: var(--space-4); }
+.command-panel { padding: var(--space-5); }
+.action-tile { min-height: calc(var(--space-4) * 4); padding: var(--space-3); gap: var(--space-3); }
+.metrics, .grid { gap: var(--space-3); }
+.metrics { margin-bottom: var(--space-4); }
+.form p { gap: var(--space-2); }
+.form-section-heading { margin-top: var(--space-5); }
+.utilization-filters { padding: var(--space-4); gap: var(--space-4); }
+.utilization-filters label { gap: var(--space-2); }
+.record-pagination { gap: var(--space-3); margin-block: var(--space-4); }
+@media (max-width: 900px) {
+  .content { padding: var(--space-4); }
+}
+
+.table-tools { gap: var(--space-3); padding: var(--space-3) var(--space-4); }
+.toast { margin-bottom: var(--space-4); }
+
+/* Task 3.1: one aligned editor shell; specialist meeting/placement flows stay wide. */
+.record-editor { width: 100%; min-width: 0; }
+.record-editor--standard { max-width: 56rem; }
+.record-editor .form input[readonly], .record-editor .form textarea[readonly] {
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  border-style: dashed;
+}

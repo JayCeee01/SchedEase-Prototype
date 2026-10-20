@@ -47,6 +47,10 @@
 <script src="../../static/js/app.js"></script><script src="../../static/js/table-scroll.js"></script><script>
 (async()=>{const results=[],errors=[];const check=(ok,name)=>{results.push(name);if(!ok)errors.push(name)};const wait=()=>new Promise(r=>setTimeout(r,250));
 await wait();check(true,'viewport width '+innerWidth);
+check(document.querySelector('.form-actions button').getBoundingClientRect().height>=42,'save target remains comfortable');
+check(document.querySelector('#course').getBoundingClientRect().height>=40,'select remains usable');
+check(parseFloat(getComputedStyle(document.querySelector('.content')).paddingTop)>=(innerWidth<=900?16:24),'page breathing room retained');
+check(parseFloat(getComputedStyle(document.querySelector('.form')).rowGap)>=12,'fields remain separated');
 for(const selector of ['.planning-assumptions','.utilization-filters','.schedule-board','.detail-grid','.form','.grid','.toolbar','.record-pagination','.metrics']){
 for(const item of document.querySelectorAll(selector)){check(item.scrollWidth<=item.clientWidth+1,selector+' contained');}}
 check(document.documentElement.scrollWidth<=innerWidth,'no page horizontal overflow');

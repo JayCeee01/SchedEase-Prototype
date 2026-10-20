@@ -1,0 +1,205 @@
+Creating test database for alias 'default'...
+Found 561 test(s).
+System check identified no issues (0 silenced).
+.........................................................................Meeting removal failed for entry 3
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 1197, in entry_remove
+    remove_manual_entry(schedule_id=pk, entry_id=entry_pk, actor=request.user, revision=revision,
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\services\manual_edits.py", line 107, in remove_manual_entry
+    ScheduleEntryAudit.objects.create(schedule=schedule, entry=None, user=current_user,
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+RuntimeError: private detail
+............................................................................................................................................Could not record generation failure for run 66f82807-5822-414d-8e15-044546ec0237
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 825, in generate_schedule
+    schedule = scheduler.generate(form.cleaned_data["name"], lease=lease)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+schedules.services.diagnostics.GenerationFailure: Failure
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 796, in finish_generation_failure
+    fail_run(run, diagnostics)
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\services\generation_issues.py", line 140, in fail_run
+    record_issues(run, diagnostics)
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\contextlib.py", line 81, in inner
+    return func(*args, **kwds)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\services\generation_issues.py", line 123, in record_issues
+    rows.append(GenerationIssue.objects.create(run=run, category=diagnostic.category,
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+django.db.utils.IntegrityError: private SQL
+................Unexpected schedule generation failure for term 1
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 825, in generate_schedule
+    schedule = scheduler.generate(form.cleaned_data["name"], lease=lease)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+RuntimeError: private-password
+..........Generation reservation cleanup deferred to expiry for term 1
+.........Unexpected schedule generation failure for term 1
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 818, in generate_schedule
+    run = GenerationRun.objects.create(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+RuntimeError: private database failure
+....Unexpected schedule generation failure for term 1
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 825, in generate_schedule
+    schedule = scheduler.generate(form.cleaned_data["name"], lease=lease)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\services\ga.py", line 135, in generate
+    return self._generate(name)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\services\ga.py", line 224, in _generate
+    recorded = GenerationRun.objects.filter(pk=self._lease.run_id, term=self.term).update(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\test_generation_lock.py", line 129, in fail
+    raise RuntimeError('forced run write failure')
+RuntimeError: forced run write failure
+....Unexpected schedule generation failure for term 1
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 825, in generate_schedule
+    schedule = scheduler.generate(form.cleaned_data["name"], lease=lease)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+RuntimeError: secret failure
+...........................................Manual schedule save rejected for schedule 1
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 1082, in save_entry_with_credential_check
+    save_manual_entry(schedule_id=schedule.pk, entry_id=entry.pk, actor=request.user,
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\services\manual_edits.py", line 76, in save_manual_entry
+    with manual_edit_transaction(schedule_id=schedule_id, entry_id=entry_id, actor=actor, revision=revision, draft_only=draft_only) as (schedule, entry, previous, current_user):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\services\manual_edits.py", line 52, in manual_edit_transaction
+    candidates = Schedule.objects.filter(pk=schedule_id, updated_at=baseline["version"],
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+django.db.utils.OperationalError: database is locked
+...Unexpected manual schedule save failure for schedule 1
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 1082, in save_entry_with_credential_check
+    save_manual_entry(schedule_id=schedule.pk, entry_id=entry.pk, actor=request.user,
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\services\manual_edits.py", line 93, in save_manual_entry
+    ScheduleEntryAudit.objects.create(schedule=schedule, entry=entry, user=current_user,
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+RuntimeError: private detail
+........................................Unexpected schedule generation failure for term 1
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 824, in generate_schedule
+    scheduler = GeneticScheduler(term, form.cleaned_data["settings"], seed=seed)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+RuntimeError: private initialization failure
+.............................Schedule publication failed for schedule 1
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 1119, in publish_schedule
+    schedule, current = publish(schedule, request.user, request.POST.get("replace_confirm") == "yes")
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\services\publication.py", line 39, in publish
+    ScheduleSnapshot.objects.get(schedule=locked)
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+RuntimeError: private failure
+........................................................................................Unexpected schedule generation failure for term 1
+Traceback (most recent call last):
+  File "C:\Users\JEROME\SchedEase-Prototype\schedules\views.py", line 825, in generate_schedule
+    schedule = scheduler.generate(form.cleaned_data["name"], lease=lease)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1139, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1143, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\JEROME\AppData\Local\Python\pythoncore-3.12-64\Lib\unittest\mock.py", line 1198, in _execute_mock_call
+    raise effect
+RuntimeError: private technical detail
+...Placement comparison, seed 17: legacy 195/200 individually invalid; feasible domains 0/200. No timing claim.
+Repair comparison seeds 0..19: hard 60->0; repaired 20/20; unresolved 0; attempts 20; repair-only 0.0035s (warm domains).
+Task 6.2 filtered assignment HTTP render: 8 queries, one combined count.
+Assignment list: previous data/render access 26 queries for 25 rows; paginated HTTP render 8 queries for 20 rows.
+Validation profiles: [{"meetings": 8, "scenario": "valid", "before": {"queries": 116, "seconds": 0.100478, "validation_calls": 8, "overlap_comparisons": 56, "diagnostics": 0, "categories": {}, "subject_selects": 24}, "after": {"queries": 92, "seconds": 0.106494, "validation_calls": 8, "overlap_comparisons": 0, "diagnostics": 0, "categories": {}, "subject_selects": 0}}, {"meetings": 8, "scenario": "conflicts", "before": {"queries": 156, "seconds": 0.113462, "validation_calls": 8, "overlap_comparisons": 56, "diagnostics": 72, "categories": {"FACULTY_CONFLICT": 24, "ROOM_CONFLICT": 24, "SECTION_CONFLICT": 24}, "subject_selects": 48}, "after": {"queries": 92, "seconds": 0.224029, "validation_calls": 8, "overlap_comparisons": 24, "diagnostics": 72, "categories": {"FACULTY_CONFLICT": 24, "ROOM_CONFLICT": 24, "SECTION_CONFLICT": 24}, "subject_selects": 0}}, {"meetings": 8, "scenario": "invalid", "before": {"queries": 172, "seconds": 0.243594, "validation_calls": 8, "overlap_comparisons": 56, "diagnostics": 24, "categories": {"FACULTY_CREDENTIAL": 8, "FACULTY_UNAVAILABLE": 8, "ROOM_UNAVAILABLE": 8}, "subject_selects": 24}, "after": {"queries": 132, "seconds": 0.242781, "validation_calls": 8, "overlap_comparisons": 0, "diagnostics": 24, "categories": {"FACULTY_CREDENTIAL": 8, "FACULTY_UNAVAILABLE": 8, "ROOM_UNAVAILABLE": 8}, "subject_selects": 0}}, {"meetings": 32, "scenario": "valid", "before": {"queries": 452, "seconds": 0.69515, "validation_calls": 32, "overlap_comparisons": 992, "diagnostics": 0, "categories": {}, "subject_selects": 96}, "after": {"queries": 356, "seconds": 0.425677, "validation_calls": 32, "overlap_comparisons": 0, "diagnostics": 0, "categories": {}, "subject_selects": 0}}, {"meetings": 32, "scenario": "conflicts", "before": {"queries": 612, "seconds": 0.541157, "validation_calls": 32, "overlap_comparisons": 992, "diagnostics": 288, "categories": {"FACULTY_CONFLICT": 96, "ROOM_CONFLICT": 96, "SECTION_CONFLICT": 96}, "subject_selects": 192}, "after": {"queries": 356, "seconds": 0.4112, "validation_calls": 32, "overlap_comparisons": 96, "diagnostics": 288, "categories": {"FACULTY_CONFLICT": 96, "ROOM_CONFLICT": 96, "SECTION_CONFLICT": 96}, "subject_selects": 0}}, {"meetings": 32, "scenario": "invalid", "before": {"queries": 676, "seconds": 0.653467, "validation_calls": 32, "overlap_comparisons": 992, "diagnostics": 96, "categories": {"FACULTY_CREDENTIAL": 32, "FACULTY_UNAVAILABLE": 32, "ROOM_UNAVAILABLE": 32}, "subject_selects": 96}, "after": {"queries": 516, "seconds": 0.521077, "validation_calls": 32, "overlap_comparisons": 0, "diagnostics": 96, "categories": {"FACULTY_CREDENTIAL": 32, "FACULTY_UNAVAILABLE": 32, "ROOM_UNAVAILABLE": 32}, "subject_selects": 0}}, {"meetings": 96, "scenario": "valid", "before": {"queries": 1348, "seconds": 2.135988, "validation_calls": 96, "overlap_comparisons": 9120, "diagnostics": 0, "categories": {}, "subject_selects": 288}, "after": {"queries": 1060, "seconds": 1.131958, "validation_calls": 96, "overlap_comparisons": 0, "diagnostics": 0, "categories": {}, "subject_selects": 0}}, {"meetings": 96, "scenario": "conflicts", "before": {"queries": 1828, "seconds": 2.642791, "validation_calls": 96, "overlap_comparisons": 9120, "diagnostics": 864, "categories": {"FACULTY_CONFLICT": 288, "ROOM_CONFLICT": 288, "SECTION_CONFLICT": 288}, "subject_selects": 576}, "after": {"queries": 1060, "seconds": 1.181126, "validation_calls": 96, "overlap_comparisons": 288, "diagnostics": 864, "categories": {"FACULTY_CONFLICT": 288, "ROOM_CONFLICT": 288, "SECTION_CONFLICT": 288}, "subject_selects": 0}}, {"meetings": 96, "scenario": "invalid", "before": {"queries": 2020, "seconds": 2.699448, "validation_calls": 96, "overlap_comparisons": 9120, "diagnostics": 288, "categories": {"FACULTY_CREDENTIAL": 96, "FACULTY_UNAVAILABLE": 96, "ROOM_UNAVAILABLE": 96}, "subject_selects": 288}, "after": {"queries": 1540, "seconds": 1.48967, "validation_calls": 96, "overlap_comparisons": 0, "diagnostics": 288, "categories": {"FACULTY_CREDENTIAL": 96, "FACULTY_UNAVAILABLE": 96, "ROOM_UNAVAILABLE": 96}, "subject_selects": 0}}]
+................................................................................Synthetic recovery drill: {"exact_schema_and_rows": true, "indexes": 92, "protected_mutations_rejected": 7, "rows": 236, "source_and_backup_unchanged": true, "tables": 38, "triggers": 55}
+...................
+----------------------------------------------------------------------
+Ran 561 tests in 307.500s
+
+OK
+Destroying test database for alias 'default'...
