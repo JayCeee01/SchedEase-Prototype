@@ -11,14 +11,14 @@ from urllib.request import Request, urlopen
 from cdp_browser import DevTools
 
 root = Path(__file__).resolve().parents[2]
-fixture = 'sidebar_navigation.html' if '--sidebar' in sys.argv else ('table_scrolling.html' if '--tables' in sys.argv else 'interaction_states.html')
+fixture = 'rendered_responsive.html' if '--rendered' in sys.argv else 'responsive_layout.html' if '--responsive' in sys.argv else 'top_navigation.html' if '--topbar' in sys.argv else 'sidebar_navigation.html' if '--sidebar' in sys.argv else ('table_scrolling.html' if '--tables' in sys.argv else 'interaction_states.html')
 candidates = [Path(os.environ.get('PROGRAMFILES', '')) / 'Google/Chrome/Application/chrome.exe',
               Path(os.environ.get('PROGRAMFILES(X86)', '')) / 'Microsoft/Edge/Application/msedge.exe']
 browser = next((p for p in candidates if p.is_file()), None)
 if browser is None:
     raise SystemExit('Chrome/Edge unavailable: run the documented manual checklist.')
 for theme in ('light', 'dark'):
-    for width in ((1360, 768, 500, 390) if '--sidebar' in sys.argv else (1360, 390)):
+    for width in ((1360, 1024, 901, 768, 621, 500, 390) if '--responsive' in sys.argv or '--rendered' in sys.argv else (1360, 768, 500, 390) if '--sidebar' in sys.argv or '--topbar' in sys.argv else (1360, 390)):
         with tempfile.TemporaryDirectory(prefix='schedease-ui-', dir=root/'tests/browser') as profile:
             assert Path(profile).resolve().parent == (root/'tests/browser').resolve()
             process = subprocess.Popen([str(browser), '--headless=new', '--disable-gpu', '--no-first-run',
@@ -29,15 +29,18 @@ for theme in ('light', 'dark'):
             try:
                 port_file = Path(profile)/'DevToolsActivePort'
                 deadline = time.monotonic() + 15
-                while not port_file.exists():
-                    if time.monotonic() > deadline:
-                        raise TimeoutError('Browser did not start')
-                    time.sleep(.1)
-                port = port_file.read_text().splitlines()[0]
+                while True:
+                    try:
+                        port = port_file.read_text().splitlines()[0]
+                        break
+                    except (OSError, IndexError):
+                        if time.monotonic() > deadline:
+                            raise TimeoutError('Browser did not start')
+                        time.sleep(.1)
                 with urlopen(Request(f'http://127.0.0.1:{port}/json/new?about:blank', method='PUT'), timeout=5) as response:
                     target = json.load(response)
                 client = DevTools(target['webSocketDebuggerUrl'])
-                client.call('Emulation.setDeviceMetricsOverride', {'width': width, 'height': 900, 'deviceScaleFactor': 1, 'mobile': False})
+                client.call('Emulation.setDeviceMetricsOverride', {'width': width, 'height': 768 if '--responsive' in sys.argv or '--rendered' in sys.argv else 900, 'deviceScaleFactor': 1, 'mobile': False})
                 client.call('Page.bringToFront')
                 client.call('Emulation.setFocusEmulationEnabled', {'enabled': True})
                 client.call('Page.navigate', {'url': (root/'tests/browser'/fixture).as_uri()+'?theme='+theme})
@@ -91,6 +94,11 @@ for theme in ('light', 'dark'):
                 print(fixture, theme, width, lines[0], '+ resize/keyboard checks' if '--tables' in sys.argv else '', flush=True)
             finally:
                 if client:
+                    try:
+                        client.call("Browser.close")
+                        time.sleep(.5)
+                    except (OSError, RuntimeError):
+                        pass
                     client.close()
                 process.terminate()
                 process.wait(timeout=10)

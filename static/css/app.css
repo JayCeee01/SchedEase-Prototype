@@ -1935,3 +1935,59 @@ body.modal-open .table-scroll-proxy, body.sidebar-open .table-scroll-proxy { vis
   body.sidebar-open .sidebar .brand-mark { margin: 0; flex-shrink: 0; }
   body.sidebar-open .sidebar .sidebar-menu-button { justify-self: start; }
 }
+
+/* Task 2.2: compact navigation with usable search at every breakpoint. */
+.topbar { gap: var(--space-3); }
+.topbar-search { min-width: 180px; }
+.topbar-search input { width: 100%; min-width: 0; }
+.topbar-search .icon { pointer-events: none; z-index: 1; }
+.topbar-actions { gap: var(--space-2); }
+.topbar-actions form { margin: 0; }
+.topbar-actions .button { white-space: nowrap; }
+.user-menu { min-width: 0; max-width: 200px; }
+.user-menu > span:last-child { min-width: 0; }
+.user-menu strong { overflow-wrap: anywhere; line-height: 1.3; }
+.user-menu .avatar { flex-shrink: 0; }
+.app-tooltip { overflow-wrap: anywhere; max-height: calc(100dvh - 16px); overflow-y: auto; }
+@media (min-width: 901px) and (max-width: 1200px) {
+  .topbar-brand > span:not(.brand-mark) { display: none; }
+  .user-menu { max-width: 140px; }
+}
+@media (max-width: 620px) {
+  .topbar { flex-wrap: wrap; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
+  .topbar-search { display: block; order: 3; flex: 1 0 100%; max-width: none; min-width: 0; }
+}
+
+/* Task 2.3: fit the available workspace, including an expanded sidebar. */
+.schedule-board { grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); }
+.planning-assumptions, .room-report-filters, .room-schedule-filters,
+.schedule-entry-filters, .utilization-filters {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+}
+.form > *, .form p, .form label, .detail-grid > *, .grid > *,
+.planning-assumptions > *, .room-report-filters > *, .room-schedule-filters > *,
+.schedule-entry-filters > *, .utilization-filters > * { min-width: 0; }
+.form :is(input, select, textarea), .planning-assumptions select,
+.room-report-filters select, .room-schedule-filters select,
+.schedule-entry-filters select { min-width: 0; max-width: 100%; }
+.form label, .errorlist, .detail-list, .metrics article { overflow-wrap: anywhere; }
+.info-icon { flex-shrink: 0; }
+.grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+.login-modal-card { max-height: min(calc(100dvh - 36px), 720px); min-width: 0; }
+@media (max-width: 1180px) {
+  .detail-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 900px) {
+  .schedule-board { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 620px) {
+  .schedule-board, .planning-assumptions, .room-report-filters,
+  .room-schedule-filters, .schedule-entry-filters, .utilization-filters { grid-template-columns: minmax(0, 1fr); }
+}
+
+.view-switcher { flex-wrap: wrap; max-width: 100%; }
+
+.metrics { grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); }
+.metrics article { min-width: 0; flex-wrap: wrap; }
+.metrics article > span { min-width: 0; max-width: 100%; }
+.metric-icon { flex-shrink: 0; }

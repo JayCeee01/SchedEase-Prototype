@@ -1,0 +1,1382 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Top navigation regression</title>
+<script>localStorage.setItem('schedease-theme',new URLSearchParams(location.search).get('theme'));</script>
+<link rel="stylesheet" href="../../static/css/app.css"><link rel="stylesheet" href="../../static/css/academic-import.css"></head><body><div class="app-shell"><aside class="sidebar" id="sidebar"><button data-sidebar-collapse>Navigation</button></aside><div class="workspace">      <header class="topbar">
+        <div class="topbar-left">
+          <a class="topbar-brand" href="" aria-label="SchedEase home">
+            <span class="brand-mark">SE</span>
+            <span>SchedEase</span>
+          </a>
+          <button class="icon-button mobile-only" type="button" data-sidebar-toggle aria-label="Open navigation">
+            <span class="icon menu-icon"></span>
+          </button>
+        </div>
+        <div class="topbar-search">
+          <span class="icon search-icon"></span>
+          <input type="search" data-global-filter aria-label="Filter table rows on this page" placeholder="Filter rows on this page">
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" type="button" data-theme-toggle aria-label="Toggle theme">
+            <span class="icon theme-icon"></span>
+          </button>
+          
+          <div class="user-menu" role="group" aria-label="Signed in as Alexandra Longaccountname">
+            <span class="avatar">A</span>
+            <span>
+              <strong>Alexandra Longaccountname</strong>
+              <small>Administrator</small>
+            </span>
+          </div>
+          <form method="post" action="">
+            
+            <button class="button button-ghost" data-loading-text="Signing out">Sign out</button>
+          </form>
+          
+        </div>
+      </header>
+
+
+<div data-page="dashboard{}"><section class="content">
+        
+        
+<section class="hero-card">
+  <div class="command-panel">
+    <p class="eyebrow">Academic Operations</p>
+    <h1>Build conflict-aware college schedules with Genetic Algorithm optimization.</h1>
+    <p class="subtle">Manage academic data, tune generation settings, review conflicts, and publish schedules from one focused workspace.</p>
+    <div class="toolbar" style="justify-content:flex-start;margin-top:18px">
+      <a class="button primary" href="/schedules/generate/">Run Genetic Algorithm</a>
+      <a class="button" href="/schedules/browse/">View Published Schedules</a>
+    </div>
+  </div>
+  <div class="quick-actions">
+    <a class="action-tile" href="/schedules/manage/subjects/"><span class="metric-icon">CO</span><strong>Courses</strong></a>
+    <a class="action-tile" href="/schedules/manage/rooms/"><span class="metric-icon">RM</span><strong>Rooms</strong></a>
+    <a class="action-tile" href="/schedules/manage/availability/"><span class="metric-icon">AV</span><strong>Availability</strong></a>
+    <a class="action-tile" href="/schedules/manage/ga-settings/"><span class="metric-icon">GA</span><strong>GA Settings</strong></a>
+  </div>
+</section>
+<section class="metrics">
+  
+  <article>
+    <span class="metric-icon">DE</span>
+    <span><strong>0</strong><span>Departments</span></span>
+  </article>
+  
+  <article>
+    <span class="metric-icon">FA</span>
+    <span><strong>0</strong><span>Faculty</span></span>
+  </article>
+  
+  <article>
+    <span class="metric-icon">SE</span>
+    <span><strong>0</strong><span>Sections</span></span>
+  </article>
+  
+  <article>
+    <span class="metric-icon">SU</span>
+    <span><strong>0</strong><span>Subjects</span></span>
+  </article>
+  
+  <article>
+    <span class="metric-icon">RO</span>
+    <span><strong>1</strong><span>Rooms</span></span>
+  </article>
+  
+  <article>
+    <span class="metric-icon">SC</span>
+    <span><strong>0</strong><span>Scheduled Classes</span></span>
+  </article>
+  
+  <article>
+    <span class="metric-icon">UN</span>
+    <span><strong>0</strong><span>Unscheduled Classes</span></span>
+  </article>
+  
+  <article>
+    <span class="metric-icon">SC</span>
+    <span><strong>0</strong><span>Schedule Issues</span></span>
+  </article>
+  
+  <article>
+    <span class="metric-icon">AV</span>
+    <span><strong>0.0%</strong><span>Average Room Utilization</span></span>
+  </article>
+  
+</section>
+<div class="heading-row">
+  <h2>Recent Schedules</h2>
+  <span class="badge success">Ready for review</span>
+</div>
+<div class="grid">
+  
+  <article class="card">
+    <span class="badge ">DRAFT</span>
+    <h3><a href="/schedules/1/">Responsive draft</a></h3>
+    <p class="muted">First semester 2026</p>
+    <p><strong>Fitness score:</strong> 0.00</p>
+  </article>
+  
+</div>
+
+
+      </section></div><div data-page="generate_schedule{}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor</p>
+    <h1>Generate Schedule</h1>
+    <a class="button" href="/schedules/import/">Import Spreadsheet</a>
+    <p class="subtle">Required fields are validated before saving. Time fields use the school scheduling range configured in the backend.</p>
+  </div>
+</div>
+
+<form method="post" class="panel form generation-form" data-tooltip-context="generate-schedule" data-schedule-generation>
+  <input type="hidden" name="csrfmiddlewaretoken" value="xys5ECwTjNOcpcyr2u4KJRGDFqfHKpeAncE2fsNTAkUZf2DTBOA3vtpE7cnxe79N">
+  
+  <p>
+    <label for="id_seed">Random seed (optional):</label>
+    <input type="number" name="seed" min="0" max="9223372036854775807" aria-describedby="id_seed_helptext" id="id_seed">
+    
+      <span class="helptext" id="id_seed_helptext">Use the same seed and unchanged inputs to repeat an experiment. Leave blank to choose one automatically.</span>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_term">Term:</label>
+    <select name="term" required id="id_term">
+  <option value="" selected>---------</option>
+
+  <option value="1">First semester 2026</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_settings">Settings:</label>
+    <select name="settings" required id="id_settings">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_name">Name:</label>
+    <input type="text" name="name" value="Generated Schedule" maxlength="120" required id="id_name">
+    
+    
+      
+    
+  </p>
+  
+  
+  <div class="toolbar form-actions">
+    
+    <button class="primary generation-submit" type="submit" data-loading-text="Generating schedule...">Generate Schedule</button>
+    
+    <button class="button" type="button" onclick="history.back()">Cancel</button>
+  </div>
+  
+  
+  <div class="generation-loading" data-generation-loading role="status" aria-live="polite" aria-atomic="true" hidden>
+    <span class="generation-spinner" aria-hidden="true"></span>
+    <span>
+      <strong>Generating schedule...</strong>
+      <small>Please wait while SchedEase creates the schedule. This may take several minutes for large datasets.</small>
+    </span>
+  </div>
+  
+</form>
+
+
+      </section></div><div data-page="room_utilization{}"><section class="content">
+        
+        
+<div class="page-hero"><div><p class="eyebrow">Room Utilization</p><h1>Weekly room usage</h1><p class="subtle">See how frequently each room is used throughout the week using its actual availability.</p></div><div class="actions"><a class="button" href="/schedules/room-utilization/export/csv/?">CSV</a><a class="button" href="/schedules/room-utilization/export/pdf/?">PDF</a></div></div>
+<p class="selection-note"><strong>Schedule:</strong> Responsive draft · First semester 2026 · <span class="badge">Draft</span></p>
+<section class="metrics utilization-summary room-metrics">
+  <article><span><strong>1</strong><span>Total Rooms</span></span></article>
+  <article><span><strong>1</strong><span>Lecture Rooms</span></span></article>
+  <article><span><strong>0</strong><span>Laboratories</span></span></article>
+  <article><span><strong>0.0%</strong><span>Weekly Utilization</span></span></article>
+  <article><span><strong>Computer laboratory</strong><span>Most Utilized</span></span></article>
+  <article><span><strong>Computer laboratory</strong><span>Least Utilized</span></span></article>
+  <article><span><strong>0</strong><span>Underutilized</span></span></article>
+  <article><span><strong>1</strong><span>Unused Rooms</span></span></article>
+</section>
+<form method="get" class="panel room-report-filters" data-auto-tooltips="false">
+  <label><span class="field-label">Academic Term</span><select name="term"><option value="">All terms</option><option value="1">First semester 2026</option></select></label>
+  <label><span class="field-label">Schedule Version</span><select name="schedule"><option value="">Latest schedule</option><option value="1" selected>Responsive draft · Draft</option></select></label>
+  <label><span class="field-label">Room Group</span><select name="room_group"><option value="">All rooms</option><option value="lecture">Lecture Rooms</option><option value="laboratory">Laboratories</option></select></label>
+  <label><span class="field-label">Room Type</span><select name="room_type"><option value="">All types</option><option value="LECTURE">Lecture Room</option><option value="COMPUTER_LAB">Computer Laboratory</option><option value="SCIENCE_LAB">Science Laboratory</option><option value="GYM">Gym</option><option value="SPECIAL">Specialized Room</option></select></label>
+  <label><span class="field-label">Day</span><select name="day"><option value="">All days</option><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option></select></label>
+  <label><span class="field-label">Department</span><select name="department"><option value="">All departments</option></select></label>
+  <label><span class="field-label">Status</span><select name="utilization"><option value="">All statuses</option><option>Unused</option><option>Underutilized</option><option>Moderately Utilized</option><option>Well Utilized</option><option>Highly Utilized</option><option>Fully Utilized</option></select></label>
+  <label><span class="field-label">Search Room</span><input type="search" name="q" value="" placeholder="Room name"></label>
+  <div class="toolbar"><button class="primary" type="submit">Apply Filters</button><a class="button" href="/schedules/room-utilization/">Clear</a></div>
+</form>
+<div class="panel table-wrap"><table class="daily-utilization-table"><thead><tr><th data-sort>Room</th><th data-sort>Type</th><th data-sort>Capacity</th><th data-sort>Mon</th><th data-sort>Tue</th><th data-sort>Wed</th><th data-sort>Thu</th><th data-sort>Fri</th><th data-sort>Sat</th><th data-sort><span data-tooltip="Scheduled weekly hours divided by actual available weekly hours.">Weekly %</span></th><th data-sort><span data-tooltip="Average section size compared with room capacity.">Seat %</span></th><th data-sort>Scheduled / Available</th><th data-sort>Classes</th><th data-sort>Status</th></tr></thead><tbody>
+<tr><td><strong>Computer laboratory</strong></td><td>Lecture Room</td><td>40</td><td><span class="daily-percent">0.0%</span><small>0/12.0h</small></td><td><span class="daily-percent">0.0%</span><small>0/12.0h</small></td><td><span class="daily-percent">0.0%</span><small>0/12.0h</small></td><td><span class="daily-percent">0.0%</span><small>0/12.0h</small></td><td><span class="daily-percent">0.0%</span><small>0/12.0h</small></td><td><span class="daily-percent">0.0%</span><small>0/12.0h</small></td><td><div class="utilization-meter"><span style="width:0.0%"></span></div><strong>0.0%</strong></td><td>0%</td><td>0 / 72.0h</td><td>0</td><td><span class="badge ">Unused</span></td></tr>
+</tbody></table></div>
+
+      </section></div><div data-page="room_schedule{}"><section class="content">
+        
+        
+<div class="page-hero"><div><p class="eyebrow">Room Schedule</p><h1>Weekly room timetable</h1><p class="subtle">View the weekly schedule and available times for a selected room.</p></div></div>
+<form method="get" class="panel room-schedule-filters" data-auto-tooltips="false"><label>Academic Term<select name="term"><option value="">All terms</option><option value="1">First semester 2026</option></select></label><label>Schedule Version<select name="schedule"><option value="1" selected>Responsive draft</option></select></label><label>Room<select name="room"><option value="1" selected>Computer laboratory · Lecture Room</option></select></label><button class="primary">View Schedule</button></form>
+<div class="legend"><span><i class="legend-swatch occupied"></i> Scheduled</span><span><i class="legend-swatch vacant"></i> Available / vacant</span><span><i class="legend-swatch unavailable"></i> Unavailable</span></div><div class="panel table-wrap"><table class="room-schedule-grid"><thead><tr><th>Time</th><th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th><th>Saturday</th></tr></thead><tbody><tr><th>7:00 AM<small>7:30 AM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>7:30 AM<small>8:00 AM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>8:00 AM<small>8:30 AM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>8:30 AM<small>9:00 AM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>9:00 AM<small>9:30 AM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>9:30 AM<small>10:00 AM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>10:00 AM<small>10:30 AM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>10:30 AM<small>11:00 AM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>11:00 AM<small>11:30 AM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>11:30 AM<small>12:00 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>12:00 PM<small>12:30 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>12:30 PM<small>1:00 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>1:00 PM<small>1:30 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>1:30 PM<small>2:00 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>2:00 PM<small>2:30 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>2:30 PM<small>3:00 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>3:00 PM<small>3:30 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>3:30 PM<small>4:00 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>4:00 PM<small>4:30 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>4:30 PM<small>5:00 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>5:00 PM<small>5:30 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>5:30 PM<small>6:00 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>6:00 PM<small>6:30 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr><tr><th>6:30 PM<small>7:00 PM</small></th><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td><td class="vacant-cell"></td></tr></tbody></table></div>
+
+      </section></div><div data-page="room_capacity_planning{}"><section class="content">
+        
+        
+<div class="page-hero"><div><p class="eyebrow">Room Capacity Planning</p><h1>Plan room capacity</h1><p class="subtle">Estimate whether the school's available rooms can support expected and current classes.</p></div></div>
+<div class="planning-callout"><strong>Actual SchedEase data</strong> comes from rooms, sections, availability, and teaching requirements. <strong>Planning assumptions</strong> below can be changed without modifying academic records.</div>
+<form method="get" class="panel planning-assumptions" data-auto-tooltips="false"><label>Academic Term<select name="term"><option value="1" selected>First semester 2026</option></select></label><label>Expected Students<input type="number" min="0" name="students" value="0"></label><label>Target Class Size<input type="number" min="1" name="class_size" value="40"></label><label>Courses per Section<input type="number" min="0" step="0.5" name="subjects" value="7.0"></label><label>Hours per Course<input type="number" min="0.5" step="0.5" name="hours" value="3.0"></label><div class="planning-submit"><button class="primary">Recalculate</button></div></form>
+<section class="metrics planning-results"><article><span><strong>0</strong><span>Estimated Sections</span></span></article><article><span><strong>0</strong><span>Required Classes</span></span></article><article><span><strong>0.0h</strong><span>Required Room Hours</span></span></article><article><span><strong>0</strong><span>Lecture Rooms Needed</span></span></article><article><span><strong>1</strong><span>Existing Lecture Rooms</span></span></article><article><span><strong>1</strong><span>Surplus / Shortage</span></span></article></section>
+<div class="view-switcher" role="tablist"><button class="view-tab is-active" data-planning-tab="all" type="button">All Types</button><button class="view-tab" data-planning-tab="LECTURE" type="button">Lecture Rooms</button><button class="view-tab" data-planning-tab="COMPUTER_LAB" type="button">Computer Labs</button><button class="view-tab" data-planning-tab="SPECIAL" type="button">Specialized / Culinary</button></div>
+<div class="panel table-wrap"><table><thead><tr><th>Room Type</th><th>Existing Rooms</th><th>Scheduling Requirements</th><th>Required Hours</th><th>Available Hours</th><th>Projected Utilization</th><th>Rooms Needed</th><th>Surplus / Shortage</th></tr></thead><tbody><tr data-planning-row="LECTURE"><td>Lecture Room</td><td>1</td><td>0</td><td>0.0</td><td>72.0</td><td>0.0%</td><td>0</td><td><span class="badge success">1</span></td></tr><tr data-planning-row="COMPUTER_LAB"><td>Computer Laboratory</td><td>0</td><td>0</td><td>0.0</td><td>0</td><td>0%</td><td>0</td><td><span class="badge success">0</span></td></tr><tr data-planning-row="SCIENCE_LAB"><td>Science Laboratory</td><td>0</td><td>0</td><td>0.0</td><td>0</td><td>0%</td><td>0</td><td><span class="badge success">0</span></td></tr><tr data-planning-row="GYM"><td>Gym</td><td>0</td><td>0</td><td>0.0</td><td>0</td><td>0%</td><td>0</td><td><span class="badge success">0</span></td></tr><tr data-planning-row="SPECIAL"><td>Specialized Room</td><td>0</td><td>0</td><td>0.0</td><td>0</td><td>0%</td><td>0</td><td><span class="badge success">0</span></td></tr></tbody></table></div>
+
+      </section></div><div data-page="generation_error_log{}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Schedule Troubleshooting</p>
+    <h1>Error Log</h1>
+    <p class="subtle">Review actionable scheduling problems from current and previous generation attempts.</p>
+    <form method="post">
+      <input type="hidden" name="csrfmiddlewaretoken" value="8mv2IlKPRtVSk3YA1m2iTBOVj6uWBpMLY0HZjb1P801FaT32AGyBFdxWLSCM57HY">
+      <input type="hidden" name="action" value="recover">
+      <button type="submit" class="button">Review Interrupted Runs</button>
+    </form>
+  </div>
+</div>
+
+
+<div class="metrics error-summary">
+  <article class="metric"><span>Total Issues</span><strong>0</strong></article>
+  <article class="metric"><span>Critical</span><strong>0</strong></article>
+  <article class="metric"><span>Errors</span><strong>0</strong></article>
+  <article class="metric"><span>Warnings</span><strong>0</strong></article>
+  <article class="metric"><span>Unscheduled</span><strong>0</strong></article>
+</div>
+
+<form method="get" class="panel error-log-filters" data-tooltip-context="error-log-filters" data-auto-tooltips="false">
+  <input type="hidden" name="run_q" value="">
+  <label><span class="field-label">Search</span><input type="search" name="q" value="" placeholder="Course, section, faculty, room, or problem"></label>
+  <label><span class="field-label">Generation Run <span class="info-icon" tabindex="0" data-tooltip="The unique schedule-generation attempt that recorded the issue.">i</span></span><select name="run"><option value="">All runs</option></select></label>
+  <label><span class="field-label">Academic Term</span><select name="term"><option value="">All terms</option><option value="1">First semester 2026</option></select></label>
+  <label><span class="field-label">Date</span><input type="date" name="date" value=""></label>
+  <label><span class="field-label">Error Type</span><select name="category"><option value="">All types</option><option value="FACULTY_CONFLICT">Faculty Conflict</option><option value="ROOM_CONFLICT">Room Conflict</option><option value="SECTION_CONFLICT">Section Conflict</option><option value="FACULTY_UNAVAILABLE">Faculty Unavailable</option><option value="ROOM_UNAVAILABLE">Room Unavailable</option><option value="ROOM_CAPACITY">Room Capacity</option><option value="ROOM_TYPE">Room Type Requirement</option><option value="FACULTY_CREDENTIAL">Faculty Credential Requirement</option><option value="FACULTY_WORKLOAD">Faculty Workload</option><option value="INVALID_DURATION">Invalid Class Duration</option><option value="NO_SLOT">No Available Time Slot</option><option value="UNSCHEDULED">Unscheduled Class</option><option value="INVALID_DATA">Invalid Input/Data</option><option value="GENERATION_FAILURE">Generation Failure</option><option value="OTHER">Other</option></select></label>
+  <label><span class="field-label">Severity <span class="info-icon" tabindex="0" data-tooltip="Shows how strongly an issue affected schedule generation.">i</span></span><select name="severity"><option value="">All severities</option><option value="INFO">Info</option><option value="WARNING">Warning</option><option value="ERROR">Error</option><option value="CRITICAL">Critical</option></select></label>
+  <label><span class="field-label">Status <span class="info-icon" tabindex="0" data-tooltip="Tracks whether an administrator has reviewed or resolved the issue.">i</span></span><select name="status"><option value="">All statuses</option><option value="OPEN">Open</option><option value="REVIEWED">Reviewed</option><option value="RESOLVED">Resolved</option></select></label>
+  <label><span class="field-label">Course</span><select name="subject"><option value="">All courses</option></select></label>
+  <label><span class="field-label">Section</span><select name="section"><option value="">All sections</option></select></label>
+  <label><span class="field-label">Faculty</span><select name="faculty"><option value="">All faculty</option></select></label>
+  <label><span class="field-label">Room</span><select name="room"><option value="">All rooms</option><option value="1">Computer laboratory</option></select></label>
+  <div class="toolbar"><button class="primary" type="submit">Apply Filters</button><a class="button" href="/schedules/error-log/">Clear</a></div>
+</form>
+
+<details class="panel"><summary>Generation history</summary>
+<form method="get" class="toolbar" data-auto-tooltips="false">
+
+<label>Search generation history <input type="search" name="run_q" value=""></label><button class="button" type="submit">Search</button>
+</form><div class="table-wrap"><table><thead><tr><th>Started</th><th>Run</th><th>Status</th><th>Seed</th><th>Details</th></tr></thead><tbody>
+<tr><td colspan="5">No generation runs recorded.</td></tr>
+</tbody></table></div><nav class="record-pagination" aria-label="Generation history pages">
+  <span>Page 1 of 1</span>
+  <div class="toolbar">
+    
+    
+      <span class="button primary" aria-current="page">1</span>
+    
+    
+  </div>
+</nav>
+</details>
+
+
+<div class="panel empty-state"><h2>No scheduling issues found</h2><p>Schedule generation errors and warnings will appear here when they occur.</p></div>
+
+<nav class="record-pagination" aria-label="Issue pages">
+  <span>Page 1 of 1</span>
+  <div class="toolbar">
+    
+    
+      <span class="button primary" aria-current="page">1</span>
+    
+    
+  </div>
+</nav>
+
+
+      </section></div><div data-page="academic_import{}"><section class="content">
+        
+        
+<link rel="stylesheet" href="/static/css/academic-import.css">
+<div class="import-workspace">
+<header class="import-heading"><div><p class="eyebrow">Academic Data</p><h1>Import Spreadsheet</h1><p class="subtle">Prepare your file, check the records, and import when you are ready.</p></div><a class="button" href="/schedules/generate/">Back to Generate Schedule</a></header>
+<ol class="import-stepper" aria-label="Import progress"><li class="is-current" aria-current="step"><span>1</span><strong>Download Template</strong></li><li class=""><span>2</span><strong>Upload File</strong></li><li class=""><span>3</span><strong>Review Data</strong></li><li class=""><span>4</span><strong>Confirm Import</strong></li></ol>
+
+
+<section class="panel import-card"><p class="eyebrow">Step 1 of 4</p><h2>Start with a template</h2><p>Use one row for each class meeting. Both templates include a lecture and a lab example.</p>
+<div class="import-template-options"><a class="import-template-option" href="/schedules/import/template/xlsx/"><strong>Download Excel Template</strong><span>.xlsx &middot; Required headers highlighted &middot; Two example rows</span></a><a class="import-template-option" href="/schedules/import/template/csv/"><strong>Download CSV Template</strong><span>.csv &middot; Works with most spreadsheet apps &middot; Two example rows</span></a></div>
+<div class="import-notice"><strong>Replace the examples with your own information.</strong><p>All SAMPLE codes, names, capacities and hours are fictional. Keep the column headings.</p></div>
+<div class="import-footer"><span class="subtle">Already have a completed file? Continue to upload.</span><a class="button primary" href="?step=upload">Continue to Upload</a></div></section>
+
+<details class="panel import-card"><summary>Column guide and examples</summary>
+<p>Required columns need a value on every row. New records need extra details. Keep headings as shown in the template.</p>
+<div class="import-guide-tools"><label>Find a column<input type="search" data-guide-search placeholder="Try course, room, or duration"></label><label>Category<select data-guide-category><option value="">All categories</option><option>Programs &amp; departments</option><option>Sections</option><option>Courses</option><option>Faculty</option><option>Rooms</option><option>Meetings</option><option>Availability</option><option>Reference only</option></select></label></div>
+<div class="import-scroll"><table class="import-guide"><thead><tr><th>Column</th><th>When needed</th><th>Example</th><th>What to enter</th></tr></thead><tbody><tr data-guide-row data-category="Programs &amp; departments"><td><strong>Department code</strong><small>department_code · Programs &amp; departments</small></td><td><span class="badge">Required</span></td><td>SAMPLE-CS</td><td>Short department code, such as CCS.</td></tr><tr data-guide-row data-category="Programs &amp; departments"><td><strong>Department name</strong><small>department_name · Programs &amp; departments</small></td><td><span class="badge">For new records</span></td><td>Sample Computing Department</td><td>Full name, such as College of Computer Studies. Needed for a new department.</td></tr><tr data-guide-row data-category="Programs &amp; departments"><td><strong>Program code</strong><small>program_code · Programs &amp; departments</small></td><td><span class="badge">Required</span></td><td>SAMPLE-BSCS</td><td>Short program code, such as BSCS.</td></tr><tr data-guide-row data-category="Programs &amp; departments"><td><strong>Program name</strong><small>program_name · Programs &amp; departments</small></td><td><span class="badge">For new records</span></td><td>Sample Computer Science Program</td><td>Full name, such as Bachelor of Science in Computer Science. Needed for a new program.</td></tr><tr data-guide-row data-category="Sections"><td><strong>Year level</strong><small>year_level · Sections</small></td><td><span class="badge">Required</span></td><td>1</td><td>A whole number starting at 1, such as 2.</td></tr><tr data-guide-row data-category="Sections"><td><strong>Year level name</strong><small>year_label · Sections</small></td><td><span class="badge">For new records</span></td><td>Year 1</td><td>For example, Year 2. Needed for a new year level.</td></tr><tr data-guide-row data-category="Sections"><td><strong>Section code</strong><small>section_code · Sections</small></td><td><span class="badge">Required</span></td><td>SAMPLE-A</td><td>Section code only, such as 201 or A.</td></tr><tr data-guide-row data-category="Sections"><td><strong>Number of students</strong><small>section_size · Sections</small></td><td><span class="badge">For new records</span></td><td>25</td><td>Student count, such as 30. Needed for a new section.</td></tr><tr data-guide-row data-category="Courses"><td><strong>Course code</strong><small>course_code · Courses</small></td><td><span class="badge">Required</span></td><td>SAMPLE-CS101</td><td>Course code, such as CS101.</td></tr><tr data-guide-row data-category="Courses"><td><strong>Course name</strong><small>course_description · Courses</small></td><td><span class="badge">For new records</span></td><td>Sample Programming Course</td><td>For example, Introduction to Computing. Needed for a new course.</td></tr><tr data-guide-row data-category="Courses"><td><strong>Units</strong><small>units · Courses</small></td><td><span class="badge">For new records</span></td><td>3</td><td>For example, 3 or 1.5. Use zero or more, with at most one decimal place. Needed for a new course.</td></tr><tr data-guide-row data-category="Courses"><td><strong>Weekly lecture hours</strong><small>lecture_hours · Courses</small></td><td><span class="badge">For new records</span></td><td>2</td><td>Weekly hours, such as 2. Use a whole number, including 0. Needed for a new course.</td></tr><tr data-guide-row data-category="Courses"><td><strong>Weekly lab hours</strong><small>lab_hours · Courses</small></td><td><span class="badge">For new records</span></td><td>1</td><td>Weekly hours, such as 3. Use a whole number, including 0. Needed for a new course.</td></tr><tr data-guide-row data-category="Courses"><td><strong>Course room type</strong><small>course_room_type · Courses</small></td><td><span class="badge">For new records</span></td><td>LECTURE</td><td>Use LECTURE, COMPUTER_LAB, SCIENCE_LAB, GYM or SPECIAL. Needed for a new course.</td></tr><tr data-guide-row data-category="Courses"><td><strong>Qualifications needed for the course</strong><small>course_credentials · Courses</small></td><td><span class="badge">Optional</span></td><td>Certificate A</td><td>Use the exact qualification names required for this course. Separate multiple names with |.</td></tr><tr data-guide-row data-category="Faculty"><td><strong>Assigned teacher’s employee ID</strong><small>assigned_faculty_id · Faculty</small></td><td><span class="badge">Required</span></td><td>SAMPLE-F001</td><td>Employee ID of the teacher who will teach this class, such as F001.</td></tr><tr data-guide-row data-category="Faculty"><td><strong>Teacher’s full name</strong><small>faculty_name · Faculty</small></td><td><span class="badge">For new records</span></td><td>Sample Teacher</td><td>For example, Maria Santos. Needed for a new teacher.</td></tr><tr data-guide-row data-category="Faculty"><td><strong>Maximum teaching hours per week</strong><small>faculty_max_hours · Faculty</small></td><td><span class="badge">For new records</span></td><td>24</td><td>A whole number above 0, such as 24. Needed for a new teacher.</td></tr><tr data-guide-row data-category="Faculty"><td><strong>Teacher’s qualifications</strong><small>faculty_credentials · Faculty</small></td><td><span class="badge">Optional</span></td><td>Certificate A|License B</td><td>Use the exact qualification names. Separate multiple names with |, such as License A|Certificate B.</td></tr><tr data-guide-row data-category="Rooms"><td><strong>Room name</strong><small>room_name · Rooms</small></td><td><span class="badge">Optional</span></td><td>SAMPLE-101</td><td>For example, Room 101. Adding a room does not assign the class to it.</td></tr><tr data-guide-row data-category="Rooms"><td><strong>Room type</strong><small>room_type · Rooms</small></td><td><span class="badge">For new records</span></td><td>LECTURE</td><td>Use LECTURE, COMPUTER_LAB, SCIENCE_LAB, GYM or SPECIAL. Needed for a new room.</td></tr><tr data-guide-row data-category="Rooms"><td><strong>Number of seats</strong><small>room_capacity · Rooms</small></td><td><span class="badge">For new records</span></td><td>30</td><td>A whole number above 0, such as 40. Needed for a new room.</td></tr><tr data-guide-row data-category="Meetings"><td><strong>Class type</strong><small>component · Meetings</small></td><td><span class="badge">Required</span></td><td>LECTURE</td><td>Use LECTURE or LABORATORY. Use GENERAL only when both weekly lecture and lab hours are 0.</td></tr><tr data-guide-row data-category="Meetings"><td><strong>Meeting number</strong><small>meeting_index · Meetings</small></td><td><span class="badge">Required</span></td><td>1</td><td>Use 1, 2, 3 and so on. Give each meeting in an assignment a different number.</td></tr><tr data-guide-row data-category="Meetings"><td><strong>Class length in minutes</strong><small>duration_minutes · Meetings</small></td><td><span class="badge">Required</span></td><td>120</td><td>For example, 60 for one hour. Use 1–720. Total lecture and lab minutes must match the course’s weekly hours.</td></tr><tr data-guide-row data-category="Meetings"><td><strong>Room type for this meeting</strong><small>meeting_room_type · Meetings</small></td><td><span class="badge">Optional</span></td><td>LECTURE</td><td>Optional. Use a room type above, such as COMPUTER_LAB for a lab class.</td></tr><tr data-guide-row data-category="Availability"><td><strong>Availability applies to</strong><small>availability_owner · Availability</small></td><td><span class="badge">Optional</span></td><td>FACULTY</td><td>Optional. Use FACULTY for the assigned teacher or ROOM for the named room.</td></tr><tr data-guide-row data-category="Availability"><td><strong>Availability day</strong><small>availability_day · Availability</small></td><td><span class="badge">Optional</span></td><td>Monday</td><td>Use Monday through Saturday, or 0 for Monday through 5 for Saturday.</td></tr><tr data-guide-row data-category="Availability"><td><strong>Availability start time</strong><small>availability_start · Availability</small></td><td><span class="badge">Optional</span></td><td>08:00</td><td>Use 24-hour time, such as 08:00. Earliest time: 07:00.</td></tr><tr data-guide-row data-category="Availability"><td><strong>Availability end time</strong><small>availability_end · Availability</small></td><td><span class="badge">Optional</span></td><td>10:00</td><td>Use 24-hour time, such as 17:00. Must be after the start and no later than 19:00.</td></tr><tr data-guide-row data-category="Availability"><td><strong>Availability choice</strong><small>availability_kind · Availability</small></td><td><span class="badge">Optional</span></td><td>UNAVAILABLE</td><td>For a teacher: UNAVAILABLE or PREFERRED. For a room: AVAILABLE or UNAVAILABLE. Fill in all five availability columns together.</td></tr><tr data-guide-row data-category="Reference only"><td><strong>Original teacher (for reference)</strong><small>reference_faculty · Reference only</small></td><td><span class="badge">Optional</span></td><td>Previous teacher</td><td>Optional. Keep the old teacher’s name here without assigning them to the class.</td></tr><tr data-guide-row data-category="Reference only"><td><strong>Original room (for reference)</strong><small>reference_room · Reference only</small></td><td><span class="badge">Optional</span></td><td>Room 101</td><td>Optional. Keep the old room here without assigning it to the class.</td></tr><tr data-guide-row data-category="Reference only"><td><strong>Original day (for reference)</strong><small>reference_day · Reference only</small></td><td><span class="badge">Optional</span></td><td>Monday</td><td>Optional. Keep the old day here without setting the new class day.</td></tr><tr data-guide-row data-category="Reference only"><td><strong>Original start time (for reference)</strong><small>reference_start · Reference only</small></td><td><span class="badge">Optional</span></td><td>08:00</td><td>Optional. Keep the old start time here without setting the new class time.</td></tr><tr data-guide-row data-category="Reference only"><td><strong>Original end time (for reference)</strong><small>reference_end · Reference only</small></td><td><span class="badge">Optional</span></td><td>10:00</td><td>Optional. Keep the old end time here without setting the new class time.</td></tr></tbody></table></div><p data-guide-empty hidden>No columns match. Try another search or category.</p>
+</details>
+<details class="panel import-card"><summary>More Information</summary><ul>
+<li>Use one Excel sheet. Remove merged cells and replace formulas with their values.</li>
+<li>Repeat shared details consistently. For example, use the same course name on its lecture and lab rows.</li>
+<li>Lecture and lab minutes must add up to the course’s weekly hours.</li>
+<li>Only enter qualifications the teacher holds. Original timetable columns are kept for reference.</li>
+<li>Review links work for two hours. If a link expires, upload your file again.</li>
+</ul></details>
+
+</div><script src="/static/js/academic-import.js"></script>
+
+      </section></div><div data-page="resource_list{'resource': 'subjects'}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Master Data</p>
+    <h1>Courses</h1>
+    <p class="subtle">Configure course hours, units, and room requirements used by the generator.</p>
+  </div>
+  <a class="button primary" href="/schedules/manage/subjects/new/">New</a>
+</div>
+
+
+<div class="panel table-wrap">
+  <div class="table-tools">
+    <form method="get" class="toolbar record-controls" data-auto-tooltips="false">
+      
+      <label class="table-search"><span class="icon search-icon"></span><input type="search" name="q" value="" aria-label="Search Courses" placeholder="Search Courses"></label>
+      <label>Sort <select name="sort" onchange="this.form.submit()">
+        <option value="modified_desc" selected>Recently Modified</option><option value="modified_asc">Least Recently Modified</option><option value="added_desc">Recently Added</option><option value="added_asc">Oldest Added</option><option value="code_asc">Course Code (ascending)</option><option value="code_desc">Course Code (descending)</option><option value="title_asc">Course Description (ascending)</option><option value="title_desc">Course Description (descending)</option><option value="department_asc">Department (ascending)</option><option value="department_desc">Department (descending)</option><option value="units_asc">Units (ascending)</option><option value="units_desc">Units (descending)</option>
+      </select></label>
+      
+      <label>Department <select name="department">
+        <option value="">All</option>
+        
+        
+      </select></label>
+      
+      <label>Room type <select name="room_type">
+        <option value="">All</option>
+        
+        <option value="LECTURE">Lecture Room</option><option value="COMPUTER_LAB">Computer Laboratory</option><option value="SCIENCE_LAB">Science Laboratory</option><option value="GYM">Gym</option><option value="SPECIAL">Specialized Room</option>
+      </select></label>
+      
+      <button class="button" type="submit">Search / Apply</button>
+      
+    </form>
+  </div>
+  
+  <p class="subtle" role="status">0 total · 0 matching · Showing 0–0</p>
+  <table>
+    <thead><tr><th scope="col" aria-sort="none"><a href="?sort=code_asc">Course Code</a></th><th scope="col" aria-sort="none"><a href="?sort=title_asc">Course Description</a></th><th>Date Added</th><th>Last Modified</th><th>Actions</th></tr></thead>
+    <tbody>
+      
+      <tr><td colspan="10" class="table-empty">No records in this view.</td></tr>
+      
+    </tbody>
+  </table>
+</div>
+<nav class="record-pagination" aria-label="Record pages">
+  <span>Page 1 of 1</span>
+  <div class="toolbar">
+    
+    
+      <span class="button primary" aria-current="page">1</span>
+    
+    
+  </div>
+</nav>
+
+
+      </section></div><div data-page="resource_list{'resource': 'faculty'}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Master Data</p>
+    <h1>Faculty</h1>
+    <p class="subtle">Manage faculty records and workload details.</p>
+  </div>
+  <a class="button primary" href="/schedules/manage/faculty/new/">New</a>
+</div>
+
+
+<div class="panel table-wrap">
+  <div class="table-tools">
+    <form method="get" class="toolbar record-controls" data-auto-tooltips="false">
+      
+      <label class="table-search"><span class="icon search-icon"></span><input type="search" name="q" value="" aria-label="Search Faculty" placeholder="Search Faculty"></label>
+      <label>Sort <select name="sort" onchange="this.form.submit()">
+        <option value="modified_desc" selected>Recently Modified</option><option value="modified_asc">Least Recently Modified</option><option value="added_desc">Recently Added</option><option value="added_asc">Oldest Added</option><option value="record_asc">Record (ascending)</option><option value="record_desc">Record (descending)</option><option value="department_asc">Department (ascending)</option><option value="department_desc">Department (descending)</option>
+      </select></label>
+      
+      <label>Department <select name="department">
+        <option value="">All</option>
+        
+        
+      </select></label>
+      
+      <button class="button" type="submit">Search / Apply</button>
+      
+    </form>
+  </div>
+  
+  <p class="subtle" role="status">0 total · 0 matching · Showing 0–0</p>
+  <table>
+    <thead><tr><th scope="col" aria-sort="none"><a href="?sort=record_asc">Record</a></th><th>Actions</th></tr></thead>
+    <tbody>
+      
+      <tr><td colspan="10" class="table-empty">No records in this view.</td></tr>
+      
+    </tbody>
+  </table>
+</div>
+<nav class="record-pagination" aria-label="Record pages">
+  <span>Page 1 of 1</span>
+  <div class="toolbar">
+    
+    
+      <span class="button primary" aria-current="page">1</span>
+    
+    
+  </div>
+</nav>
+
+
+      </section></div><div data-page="resource_list{'resource': 'students'}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Master Data</p>
+    <h1>Students</h1>
+    <p class="subtle">Manage student records and section membership.</p>
+  </div>
+  <a class="button primary" href="/schedules/manage/students/new/">New</a>
+</div>
+
+
+<div class="panel table-wrap">
+  <div class="table-tools">
+    <form method="get" class="toolbar record-controls" data-auto-tooltips="false">
+      
+      <label class="table-search"><span class="icon search-icon"></span><input type="search" name="q" value="" aria-label="Search Students" placeholder="Search Students"></label>
+      <label>Sort <select name="sort" onchange="this.form.submit()">
+        <option value="modified_desc" selected>Recently Modified</option><option value="modified_asc">Least Recently Modified</option><option value="added_desc">Recently Added</option><option value="added_asc">Oldest Added</option><option value="record_asc">Record (ascending)</option><option value="record_desc">Record (descending)</option><option value="section_asc">Section (ascending)</option><option value="section_desc">Section (descending)</option>
+      </select></label>
+      
+      <label>Program <select name="program">
+        <option value="">All</option>
+        
+        
+      </select></label>
+      
+      <label>Year level <select name="year">
+        <option value="">All</option>
+        
+        
+      </select></label>
+      
+      <button class="button" type="submit">Search / Apply</button>
+      
+    </form>
+  </div>
+  
+  <p class="subtle" role="status">0 total · 0 matching · Showing 0–0</p>
+  <table>
+    <thead><tr><th scope="col" aria-sort="none"><a href="?sort=record_asc">Record</a></th><th>Actions</th></tr></thead>
+    <tbody>
+      
+      <tr><td colspan="10" class="table-empty">No records in this view.</td></tr>
+      
+    </tbody>
+  </table>
+</div>
+<nav class="record-pagination" aria-label="Record pages">
+  <span>Page 1 of 1</span>
+  <div class="toolbar">
+    
+    
+      <span class="button primary" aria-current="page">1</span>
+    
+    
+  </div>
+</nav>
+
+
+      </section></div><div data-page="resource_list{'resource': 'rooms'}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Master Data</p>
+    <h1>Rooms</h1>
+    <p class="subtle">Maintain room capacity, availability, and specialized room types.</p>
+  </div>
+  <a class="button primary" href="/schedules/manage/rooms/new/">New</a>
+</div>
+
+
+<div class="panel table-wrap">
+  <div class="table-tools">
+    <form method="get" class="toolbar record-controls" data-auto-tooltips="false">
+      
+      <label class="table-search"><span class="icon search-icon"></span><input type="search" name="q" value="" aria-label="Search Rooms" placeholder="Search Rooms"></label>
+      <label>Sort <select name="sort" onchange="this.form.submit()">
+        <option value="modified_desc" selected>Recently Modified</option><option value="modified_asc">Least Recently Modified</option><option value="added_desc">Recently Added</option><option value="added_asc">Oldest Added</option><option value="record_asc">Record (ascending)</option><option value="record_desc">Record (descending)</option><option value="capacity_asc">Capacity (ascending)</option><option value="capacity_desc">Capacity (descending)</option><option value="type_asc">Room type (ascending)</option><option value="type_desc">Room type (descending)</option><option value="active_asc">Active status (ascending)</option><option value="active_desc">Active status (descending)</option>
+      </select></label>
+      
+      <label>Room type <select name="room_type">
+        <option value="">All</option>
+        
+        <option value="LECTURE">Lecture Room</option><option value="COMPUTER_LAB">Computer Laboratory</option><option value="SCIENCE_LAB">Science Laboratory</option><option value="GYM">Gym</option><option value="SPECIAL">Specialized Room</option>
+      </select></label>
+      
+      <label>Active status <select name="active">
+        <option value="">All</option>
+        
+        <option value="1">Active</option><option value="0">Inactive</option>
+      </select></label>
+      
+      <button class="button" type="submit">Search / Apply</button>
+      
+    </form>
+  </div>
+  
+  <p class="subtle" role="status">1 total · 1 matching · Showing 1–1</p>
+  <table>
+    <thead><tr><th scope="col" aria-sort="none"><a href="?sort=record_asc">Record</a></th><th>Actions</th></tr></thead>
+    <tbody>
+      
+      <tr>
+        <td>Computer laboratory (Lecture Room)</td>
+        
+        <td class="actions-cell">
+          <a class="button" href="/schedules/manage/rooms/1/edit/">Edit</a>
+          <a class="button" href="/schedules/manage/rooms/1/delete/">Delete</a>
+        </td>
+        
+      </tr>
+      
+    </tbody>
+  </table>
+</div>
+<nav class="record-pagination" aria-label="Record pages">
+  <span>Page 1 of 1</span>
+  <div class="toolbar">
+    
+    
+      <span class="button primary" aria-current="page">1</span>
+    
+    
+  </div>
+</nav>
+
+
+      </section></div><div data-page="resource_list{'resource': 'credentials'}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Master Data</p>
+    <h1>Credentials</h1>
+    <p class="subtle">Create the exact credential names used for faculty qualification matching.</p>
+  </div>
+  <a class="button primary" href="/schedules/manage/credentials/new/">New</a>
+</div>
+
+
+<div class="panel table-wrap">
+  <div class="table-tools">
+    <form method="get" class="toolbar record-controls" data-auto-tooltips="false">
+      
+      <label class="table-search"><span class="icon search-icon"></span><input type="search" name="q" value="" aria-label="Search Credentials" placeholder="Search Credentials"></label>
+      <label>Sort <select name="sort" onchange="this.form.submit()">
+        <option value="modified_desc" selected>Recently Modified</option><option value="modified_asc">Least Recently Modified</option><option value="added_desc">Recently Added</option><option value="added_asc">Oldest Added</option><option value="record_asc">Record (ascending)</option><option value="record_desc">Record (descending)</option>
+      </select></label>
+      
+      <button class="button" type="submit">Search / Apply</button>
+      
+    </form>
+  </div>
+  
+  <p class="subtle" role="status">0 total · 0 matching · Showing 0–0</p>
+  <table>
+    <thead><tr><th scope="col" aria-sort="none"><a href="?sort=record_asc">Record</a></th><th>Actions</th></tr></thead>
+    <tbody>
+      
+      <tr><td colspan="10" class="table-empty">No records in this view.</td></tr>
+      
+    </tbody>
+  </table>
+</div>
+<nav class="record-pagination" aria-label="Record pages">
+  <span>Page 1 of 1</span>
+  <div class="toolbar">
+    
+    
+      <span class="button primary" aria-current="page">1</span>
+    
+    
+  </div>
+</nav>
+
+
+      </section></div><div data-page="resource_list{'resource': 'assignments'}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Master Data</p>
+    <h1>Assignments</h1>
+    <p class="subtle">Assign faculty to courses and sections, with one or more schedulable meetings.</p>
+  </div>
+  <a class="button primary" href="/schedules/manage/assignments/new/">New</a>
+</div>
+
+
+<div class="panel table-wrap">
+  <div class="table-tools">
+    <form method="get" class="toolbar record-controls" data-auto-tooltips="false">
+      
+      <label class="table-search"><span class="icon search-icon"></span><input type="search" name="q" value="" aria-label="Search Assignments" placeholder="Search Assignments"></label>
+      <label>Sort <select name="sort" onchange="this.form.submit()">
+        <option value="modified_desc" selected>Recently Modified</option><option value="modified_asc">Least Recently Modified</option><option value="added_desc">Recently Added</option><option value="added_asc">Oldest Added</option><option value="course_asc">Course (ascending)</option><option value="course_desc">Course (descending)</option><option value="section_asc">Section (ascending)</option><option value="section_desc">Section (descending)</option><option value="faculty_asc">Faculty (ascending)</option><option value="faculty_desc">Faculty (descending)</option><option value="term_asc">Term (ascending)</option><option value="term_desc">Term (descending)</option>
+      </select></label>
+      
+      <label>Academic term <select name="term">
+        <option value="">All</option>
+        
+        <option value="1">First semester 2026</option>
+      </select></label>
+      
+      <label>Department <select name="department">
+        <option value="">All</option>
+        
+        
+      </select></label>
+      
+      <label>Program <select name="program">
+        <option value="">All</option>
+        
+        
+      </select></label>
+      
+      <label>Year level <select name="year">
+        <option value="">All</option>
+        
+        
+      </select></label>
+      
+      <button class="button" type="submit">Search / Apply</button>
+      
+    </form>
+  </div>
+  
+  <p class="subtle" role="status">0 total · 0 matching · Showing 0–0</p>
+  <table class="assignments-table">
+    <thead><tr><th scope="col" aria-sort="none"><a href="?sort=course_asc">Course</a></th><th scope="col" aria-sort="none"><a href="?sort=section_asc">Section</a></th><th scope="col" aria-sort="none"><a href="?sort=faculty_asc">Faculty</a></th><th scope="col" aria-sort="none"><a href="?sort=term_asc">Term</a></th><th>Meetings</th><th class="assignment-actions" scope="col">Actions</th><th>Date Added</th><th>Last Modified</th></tr></thead>
+    <tbody>
+      
+      <tr><td colspan="10" class="table-empty">No records in this view.</td></tr>
+      
+    </tbody>
+  </table>
+</div>
+<nav class="record-pagination" aria-label="Record pages">
+  <span>Page 1 of 1</span>
+  <div class="toolbar">
+    
+    
+      <span class="button primary" aria-current="page">1</span>
+    
+    
+  </div>
+</nav>
+
+
+      </section></div><div data-page="resource_list{'resource': 'availability'}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Master Data</p>
+    <h1>Availability</h1>
+    <p class="subtle">Define preferred, available, and unavailable time windows for faculty or rooms.</p>
+  </div>
+  <a class="button primary" href="/schedules/manage/availability/new/">New</a>
+</div>
+
+
+<div class="panel table-wrap">
+  <div class="table-tools">
+    <form method="get" class="toolbar record-controls" data-auto-tooltips="false">
+      
+      <label class="table-search"><span class="icon search-icon"></span><input type="search" name="q" value="" aria-label="Search Availability" placeholder="Search Availability"></label>
+      <label>Sort <select name="sort" onchange="this.form.submit()">
+        <option value="modified_desc" selected>Recently Modified</option><option value="modified_asc">Least Recently Modified</option><option value="added_desc">Recently Added</option><option value="added_asc">Oldest Added</option><option value="record_asc">Record (ascending)</option><option value="record_desc">Record (descending)</option><option value="day_asc">Day (ascending)</option><option value="day_desc">Day (descending)</option><option value="start_asc">Start time (ascending)</option><option value="start_desc">Start time (descending)</option>
+      </select></label>
+      
+      <label>Day <select name="day">
+        <option value="">All</option>
+        
+        <option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option>
+      </select></label>
+      
+      <label>Availability kind <select name="kind">
+        <option value="">All</option>
+        
+        <option value="AVAILABLE">Available</option><option value="PREFERRED">Preferred</option><option value="UNAVAILABLE">Unavailable</option>
+      </select></label>
+      
+      <button class="button" type="submit">Search / Apply</button>
+      
+    </form>
+  </div>
+  
+  <p class="subtle" role="status">0 total · 0 matching · Showing 0–0</p>
+  <table>
+    <thead><tr><th scope="col" aria-sort="none"><a href="?sort=record_asc">Record</a></th><th>Actions</th></tr></thead>
+    <tbody>
+      
+      <tr><td colspan="10" class="table-empty">No records in this view.</td></tr>
+      
+    </tbody>
+  </table>
+</div>
+<nav class="record-pagination" aria-label="Record pages">
+  <span>Page 1 of 1</span>
+  <div class="toolbar">
+    
+    
+      <span class="button primary" aria-current="page">1</span>
+    
+    
+  </div>
+</nav>
+
+
+      </section></div><div data-page="resource_list{'resource': 'departments'}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Master Data</p>
+    <h1>Departments</h1>
+    <p class="subtle">Maintain college departments that own programs, courses, faculty, and sections.</p>
+  </div>
+  <a class="button primary" href="/schedules/manage/departments/new/">New</a>
+</div>
+
+
+<div class="panel table-wrap">
+  <div class="table-tools">
+    <form method="get" class="toolbar record-controls" data-auto-tooltips="false">
+      
+      <label class="table-search"><span class="icon search-icon"></span><input type="search" name="q" value="" aria-label="Search Departments" placeholder="Search Departments"></label>
+      <label>Sort <select name="sort" onchange="this.form.submit()">
+        <option value="modified_desc" selected>Recently Modified</option><option value="modified_asc">Least Recently Modified</option><option value="added_desc">Recently Added</option><option value="added_asc">Oldest Added</option><option value="record_asc">Record (ascending)</option><option value="record_desc">Record (descending)</option><option value="name_asc">Name (ascending)</option><option value="name_desc">Name (descending)</option>
+      </select></label>
+      
+      <button class="button" type="submit">Search / Apply</button>
+      
+    </form>
+  </div>
+  
+  <p class="subtle" role="status">0 total · 0 matching · Showing 0–0</p>
+  <table>
+    <thead><tr><th scope="col" aria-sort="none"><a href="?sort=record_asc">Record</a></th><th>Actions</th></tr></thead>
+    <tbody>
+      
+      <tr><td colspan="10" class="table-empty">No records in this view.</td></tr>
+      
+    </tbody>
+  </table>
+</div>
+<nav class="record-pagination" aria-label="Record pages">
+  <span>Page 1 of 1</span>
+  <div class="toolbar">
+    
+    
+      <span class="button primary" aria-current="page">1</span>
+    
+    
+  </div>
+</nav>
+
+
+      </section></div><div data-page="resource_list{'resource': 'programs'}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Master Data</p>
+    <h1>Programs</h1>
+    <p class="subtle">Manage academic programs and connect them to their departments.</p>
+  </div>
+  <a class="button primary" href="/schedules/manage/programs/new/">New</a>
+</div>
+
+
+<div class="panel table-wrap">
+  <div class="table-tools">
+    <form method="get" class="toolbar record-controls" data-auto-tooltips="false">
+      
+      <label class="table-search"><span class="icon search-icon"></span><input type="search" name="q" value="" aria-label="Search Programs" placeholder="Search Programs"></label>
+      <label>Sort <select name="sort" onchange="this.form.submit()">
+        <option value="modified_desc" selected>Recently Modified</option><option value="modified_asc">Least Recently Modified</option><option value="added_desc">Recently Added</option><option value="added_asc">Oldest Added</option><option value="record_asc">Record (ascending)</option><option value="record_desc">Record (descending)</option><option value="department_asc">Department (ascending)</option><option value="department_desc">Department (descending)</option>
+      </select></label>
+      
+      <label>Department <select name="department">
+        <option value="">All</option>
+        
+        
+      </select></label>
+      
+      <button class="button" type="submit">Search / Apply</button>
+      
+    </form>
+  </div>
+  
+  <p class="subtle" role="status">0 total · 0 matching · Showing 0–0</p>
+  <table>
+    <thead><tr><th scope="col" aria-sort="none"><a href="?sort=record_asc">Record</a></th><th>Actions</th></tr></thead>
+    <tbody>
+      
+      <tr><td colspan="10" class="table-empty">No records in this view.</td></tr>
+      
+    </tbody>
+  </table>
+</div>
+<nav class="record-pagination" aria-label="Record pages">
+  <span>Page 1 of 1</span>
+  <div class="toolbar">
+    
+    
+      <span class="button primary" aria-current="page">1</span>
+    
+    
+  </div>
+</nav>
+
+
+      </section></div><div data-page="resource_list{'resource': 'sections'}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Master Data</p>
+    <h1>Sections</h1>
+    <p class="subtle">Track section size, program, year level, and advising assignments.</p>
+  </div>
+  <a class="button primary" href="/schedules/manage/sections/new/">New</a>
+</div>
+
+
+<div class="panel table-wrap">
+  <div class="table-tools">
+    <form method="get" class="toolbar record-controls" data-auto-tooltips="false">
+      
+      <label class="table-search"><span class="icon search-icon"></span><input type="search" name="q" value="" aria-label="Search Sections" placeholder="Search Sections"></label>
+      <label>Sort <select name="sort" onchange="this.form.submit()">
+        <option value="modified_desc" selected>Recently Modified</option><option value="modified_asc">Least Recently Modified</option><option value="added_desc">Recently Added</option><option value="added_asc">Oldest Added</option><option value="record_asc">Record (ascending)</option><option value="record_desc">Record (descending)</option><option value="name_asc">Section name (ascending)</option><option value="name_desc">Section name (descending)</option><option value="program_asc">Program (ascending)</option><option value="program_desc">Program (descending)</option><option value="year_asc">Year level (ascending)</option><option value="year_desc">Year level (descending)</option>
+      </select></label>
+      
+      <label>Program <select name="program">
+        <option value="">All</option>
+        
+        
+      </select></label>
+      
+      <label>Year level <select name="year">
+        <option value="">All</option>
+        
+        
+      </select></label>
+      
+      <button class="button" type="submit">Search / Apply</button>
+      
+    </form>
+  </div>
+  
+  <p class="subtle" role="status">0 total · 0 matching · Showing 0–0</p>
+  <table>
+    <thead><tr><th scope="col" aria-sort="none"><a href="?sort=record_asc">Record</a></th><th>Actions</th></tr></thead>
+    <tbody>
+      
+      <tr><td colspan="10" class="table-empty">No records in this view.</td></tr>
+      
+    </tbody>
+  </table>
+</div>
+<nav class="record-pagination" aria-label="Record pages">
+  <span>Page 1 of 1</span>
+  <div class="toolbar">
+    
+    
+      <span class="button primary" aria-current="page">1</span>
+    
+    
+  </div>
+</nav>
+
+
+      </section></div><div data-page="resource_create{'resource': 'subjects'}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Record Editor</p>
+    <h1>New subjects</h1>
+    
+    <p class="subtle">Configure course hours, units, and room requirements used by the generator.</p>
+  </div>
+</div>
+
+<form method="post" class="panel form" data-tooltip-context="subjects" data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="subjects" data-draft-object-pk="" data-has-draft="false">
+  <input type="hidden" name="csrfmiddlewaretoken" value="TOdxthi7oSwZzAZB0cNOGjPrV4zE1k0iJspu47z7FpCMpq43zwj7sVysnQHuv2Vv">
+  
+  <p>
+    <label for="id_code">Course Code:</label>
+    <input type="text" name="code" maxlength="30" required id="id_code">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_title">Course Description:</label>
+    <input type="text" name="title" maxlength="180" required id="id_title">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_department">Department:</label>
+    <select name="department" required id="id_department">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_units">Units:</label>
+    <input type="number" name="units" value="3" step="0.1" required id="id_units">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_lecture_hours">Required Lecture Hours:</label>
+    <input type="number" name="lecture_hours" value="3" min="0" required id="id_lecture_hours">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_lab_hours">Required Lab Hours:</label>
+    <input type="number" name="lab_hours" value="0" min="0" required id="id_lab_hours">
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_required_room_type">Required room type:</label>
+    <select name="required_room_type" id="id_required_room_type">
+  <option value="LECTURE" selected>Lecture Room</option>
+
+  <option value="COMPUTER_LAB">Computer Laboratory</option>
+
+  <option value="SCIENCE_LAB">Science Laboratory</option>
+
+  <option value="GYM">Gym</option>
+
+  <option value="SPECIAL">Specialized Room</option>
+
+</select>
+    
+    
+      
+    
+  </p>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite">Changes are saved as a draft automatically</div>
+  <div class="toolbar form-actions">
+    
+    <button class="primary" data-loading-text="Saving">Save</button>
+    
+    <a class="button" href="/schedules/manage/subjects/">Cancel</a>
+  </div>
+  
+</form>
+
+
+      </section></div><div data-page="resource_create{'resource': 'assignments'}"><section class="content">
+        
+        
+<div class="page-hero"><div><p class="eyebrow">Scheduling Requirement</p><h1>New Assignment</h1><p class="subtle">Set the shared course, section, and faculty once, then define every independently scheduled meeting.</p></div></div>
+
+<form method="post" class="panel form assignment-editor" data-assignment-editor data-form-draft data-draft-save-url="/schedules/drafts/save/" data-draft-resource="assignments" data-draft-object-pk="">
+  
+  <input type="hidden" name="csrfmiddlewaretoken" value="fv7qoytkau1ccKtQqxLk277zsc2Mw4WW59jnZoKkr17Z2AyiZRhDOJQAUYaC0MR9">
+  <h2>Assignment Information</h2>
+  <p>
+    <label for="id_term">Term:</label>
+    <select name="term" required id="id_term">
+  <option value="" selected>---------</option>
+
+  <option value="1">First semester 2026</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_subject">Course:</label>
+    <select name="subject" required id="id_subject">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_section">Section:</label>
+    <select name="section" required id="id_section">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+  </p>
+
+  
+  <p>
+    <label for="id_faculty">Faculty:</label>
+    <select name="faculty" required id="id_faculty">
+  <option value="" selected>---------</option>
+
+</select>
+    
+    
+      
+    
+  </p>
+  <div class="form-section-heading"><div><h2>Meetings</h2><p class="subtle">Lecture and laboratory time must match the selected course requirements.</p></div></div>
+  <input type="hidden" name="meetings-TOTAL_FORMS" value="1" id="id_meetings-TOTAL_FORMS"><input type="hidden" name="meetings-INITIAL_FORMS" value="0" id="id_meetings-INITIAL_FORMS"><input type="hidden" name="meetings-MIN_NUM_FORMS" value="1" id="id_meetings-MIN_NUM_FORMS"><input type="hidden" name="meetings-MAX_NUM_FORMS" value="1000" id="id_meetings-MAX_NUM_FORMS">
+  
+  <div class="meeting-tab-toolbar" data-meeting-toolbar hidden><div class="meeting-tabs" role="tablist" aria-label="Assignment meetings" data-meeting-tabs></div><button class="button" type="button" data-add-meeting>+ Add Meeting</button></div>
+  <p class="subtle" data-meeting-status role="status" aria-live="polite"></p>
+  <div class="meeting-form-list" data-meeting-list>
+    
+    <fieldset class="meeting-form" data-meeting-form>
+  <legend>Meeting <span data-meeting-number>1</span></legend>
+  
+  <input type="hidden" name="meetings-0-id" id="id_meetings-0-id"><input type="hidden" name="meetings-0-assignment" id="id_meetings-0-assignment">
+  
+  <p>
+    <label for="id_meetings-0-meeting_index">Meeting index:</label> <input type="number" name="meetings-0-meeting_index" value="1" min="0" id="id_meetings-0-meeting_index">
+    
+  </p>
+  
+  <p>
+    <label for="id_meetings-0-component">Session Type:</label> <select name="meetings-0-component" id="id_meetings-0-component">
+  <option value="GENERAL" selected>General</option>
+
+  <option value="LECTURE">Lecture</option>
+
+  <option value="LABORATORY">Laboratory</option>
+
+</select>
+    
+  </p>
+  
+  <p>
+    <label for="id_meetings-0-duration_minutes">Required Duration (minutes):</label> <input type="number" name="meetings-0-duration_minutes" value="0" min="0" aria-describedby="id_meetings-0-duration_minutes_helptext" id="id_meetings-0-duration_minutes">
+    <span class="helptext">Per-meeting duration; zero uses the subject hours.</span>
+  </p>
+  
+  <p>
+    <label for="id_meetings-0-required_room_type_override">Required Room Type:</label> <select name="meetings-0-required_room_type_override" id="id_meetings-0-required_room_type_override">
+  <option value="" selected>---------</option>
+
+  <option value="LECTURE">Lecture Room</option>
+
+  <option value="COMPUTER_LAB">Computer Laboratory</option>
+
+  <option value="SCIENCE_LAB">Science Laboratory</option>
+
+  <option value="GYM">Gym</option>
+
+  <option value="SPECIAL">Specialized Room</option>
+
+</select>
+    
+  </p>
+  
+  <p class="meeting-delete">
+    <label for="id_meetings-0-DELETE">Delete:</label> <input type="checkbox" name="meetings-0-DELETE" id="id_meetings-0-DELETE">
+    
+  </p>
+  
+  <button class="button" type="button" data-remove-meeting hidden>Remove Meeting</button>
+</fieldset>
+
+    
+  </div>
+  <template data-empty-meeting><fieldset class="meeting-form" data-meeting-form>
+  <legend>Meeting <span data-meeting-number>__number__</span></legend>
+  
+  <input type="hidden" name="meetings-__prefix__-id" id="id_meetings-__prefix__-id"><input type="hidden" name="meetings-__prefix__-assignment" id="id_meetings-__prefix__-assignment">
+  
+  <p>
+    <label for="id_meetings-__prefix__-meeting_index">Meeting index:</label> <input type="number" name="meetings-__prefix__-meeting_index" value="1" min="0" id="id_meetings-__prefix__-meeting_index">
+    
+  </p>
+  
+  <p>
+    <label for="id_meetings-__prefix__-component">Session Type:</label> <select name="meetings-__prefix__-component" id="id_meetings-__prefix__-component">
+  <option value="GENERAL" selected>General</option>
+
+  <option value="LECTURE">Lecture</option>
+
+  <option value="LABORATORY">Laboratory</option>
+
+</select>
+    
+  </p>
+  
+  <p>
+    <label for="id_meetings-__prefix__-duration_minutes">Required Duration (minutes):</label> <input type="number" name="meetings-__prefix__-duration_minutes" value="0" min="0" aria-describedby="id_meetings-__prefix__-duration_minutes_helptext" id="id_meetings-__prefix__-duration_minutes">
+    <span class="helptext">Per-meeting duration; zero uses the subject hours.</span>
+  </p>
+  
+  <p>
+    <label for="id_meetings-__prefix__-required_room_type_override">Required Room Type:</label> <select name="meetings-__prefix__-required_room_type_override" id="id_meetings-__prefix__-required_room_type_override">
+  <option value="" selected>---------</option>
+
+  <option value="LECTURE">Lecture Room</option>
+
+  <option value="COMPUTER_LAB">Computer Laboratory</option>
+
+  <option value="SCIENCE_LAB">Science Laboratory</option>
+
+  <option value="GYM">Gym</option>
+
+  <option value="SPECIAL">Specialized Room</option>
+
+</select>
+    
+  </p>
+  
+  <p class="meeting-delete">
+    <label for="id_meetings-__prefix__-DELETE">Delete:</label> <input type="checkbox" name="meetings-__prefix__-DELETE" id="id_meetings-__prefix__-DELETE">
+    
+  </p>
+  
+  <button class="button" type="button" data-remove-meeting hidden>Remove Meeting</button>
+</fieldset>
+</template>
+  
+  <div class="draft-save-status" data-draft-status role="status" aria-live="polite"></div>
+  <div class="toolbar form-actions"><button class="primary" type="submit">Save Assignment</button><a class="button" href="/schedules/manage/assignments/">Cancel</a></div>
+</form>
+
+      </section></div><div data-page="resource_delete{'resource': 'rooms', 'pk': 1}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Delete Record</p>
+    <h1>Delete Computer laboratory (Lecture Room)?</h1>
+    <p class="subtle">This action cannot be undone. For schedules, related schedule entries will also be removed.</p>
+  </div>
+</div>
+<form method="post" class="panel form">
+  <input type="hidden" name="csrfmiddlewaretoken" value="OBVfyZSQlSrrto2btxyzXcC5jOu5Nts6Ef7c9P9QCpxeje7D2R4SJOl6LACVhbnj">
+  <div class="toast error">
+    <span class="toast-dot"></span>
+    <span>Please confirm that you want to delete this Rooms record.</span>
+  </div>
+  <div class="toolbar form-actions">
+    <button class="button button-danger" data-loading-text="Deleting">Delete</button>
+    <a class="button" href="/schedules/manage/rooms/">Cancel</a>
+  </div>
+</form>
+
+      </section></div><div data-page="schedule_detail{'pk': 1}"><section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Schedule Review</p>
+    <h1>Responsive draft</h1>
+    <p class="subtle">First semester 2026 | DRAFT | score 0.00</p>
+  </div>
+  <div class="actions">
+    
+    <a class="button" href="/schedules/1/entry/new/">Add Meeting</a>
+    
+    <a class="button" href="?check=1">Check Conflicts</a>
+    
+    <a class="button" href="/schedules/1/export/csv/">CSV</a>
+    <a class="button" href="/schedules/1/export/pdf/">PDF</a>
+    
+    <form method="post" action="/schedules/1/publish/" onsubmit="return confirm('Publish this schedule? Published schedules become visible to faculty and students.');">
+      <input type="hidden" name="csrfmiddlewaretoken" value="SyQAcZE8DCDT2J0CPkmbI1eqAAt5YWDFIc2xNPV8U9JGSz54oESuuDXr2mBVsEyS">
+      <button class="primary" type="submit" data-loading-text="Publishing">Publish</button>
+    </form>
+    
+  </div>
+</div>
+
+
+<div class="toast">
+  <span class="toast-dot"></span>
+  <span>No conflicts detected. This schedule is ready for approval or publishing.</span>
+</div>
+
+
+<form method="get" class="panel schedule-entry-filters" data-auto-tooltips="false">
+  <label><span class="field-label">Search</span><input type="search" name="q" placeholder="Section, course, faculty, or room" data-schedule-live-filter="true" id="id_q"></label>
+  <label><span class="field-label">Department</span><select name="department" id="id_department">
+  <option value="" selected>---------</option>
+
+</select></label>
+  <label><span class="field-label">Program</span><select name="program" id="id_program">
+  <option value="" selected>---------</option>
+
+</select></label>
+  <label><span class="field-label">Year Level</span><select name="year_level" id="id_year_level">
+  <option value="" selected>---------</option>
+
+</select></label>
+  <label><span class="field-label">Section</span><select name="section" id="id_section">
+  <option value="" selected>---------</option>
+
+</select></label>
+  <label><span class="field-label">Faculty</span><select name="faculty" id="id_faculty">
+  <option value="" selected>---------</option>
+
+</select></label>
+  <label><span class="field-label">Room</span><select name="room" id="id_room">
+  <option value="" selected>---------</option>
+
+  <option value="1">Computer laboratory (Lecture Room)</option>
+
+</select></label>
+  <label><span class="field-label">Day</span><select name="day" id="id_day">
+  <option value="" selected>All days</option>
+
+  <option value="0">Monday</option>
+
+  <option value="1">Tuesday</option>
+
+  <option value="2">Wednesday</option>
+
+  <option value="3">Thursday</option>
+
+  <option value="4">Friday</option>
+
+  <option value="5">Saturday</option>
+
+</select></label>
+  <label><span class="field-label">Class Type</span><select name="component" id="id_component">
+  <option value="" selected>All class types</option>
+
+  <option value="GENERAL">General</option>
+
+  <option value="LECTURE">Lecture</option>
+
+  <option value="LABORATORY">Laboratory</option>
+
+</select></label>
+  <div class="toolbar"><button class="primary" type="submit">Apply Filters</button><a class="button" href="/schedules/1/">Clear</a></div>
+</form>
+
+<div class="view-switcher" role="tablist" aria-label="Schedule view">
+  <button class="view-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="schedule-table-view" data-schedule-view-button="table">Table View</button>
+  <button class="view-tab" type="button" role="tab" aria-selected="false" aria-controls="schedule-timetable-view" data-schedule-view-button="timetable">Timetable View</button>
+</div>
+
+<section id="schedule-table-view" role="tabpanel" data-schedule-view-panel="table">
+  
+
+<div class="panel empty-state"><h2>No schedule entries found</h2><p>Try changing your schedule filters or generate a schedule first.</p></div>
+
+
+</section>
+<section id="schedule-timetable-view" role="tabpanel" data-schedule-view-panel="timetable" hidden>
+  <h2 class="view-heading">Timetable View</h2>
+<div class="panel empty-state"><h2>No schedule entries found</h2><p>Try changing your schedule filters.</p></div>
+<section class="schedule-board">
+  
+  <div class="day-column">
+    <header>Monday</header>
+    
+  </div>
+  
+  <div class="day-column">
+    <header>Tuesday</header>
+    
+  </div>
+  
+  <div class="day-column">
+    <header>Wednesday</header>
+    
+  </div>
+  
+  <div class="day-column">
+    <header>Thursday</header>
+    
+  </div>
+  
+  <div class="day-column">
+    <header>Friday</header>
+    
+  </div>
+  
+  <div class="day-column">
+    <header>Saturday</header>
+    
+  </div>
+  
+</section>
+
+</section>
+
+      </section></div><pre id="results">RUNNING</pre></div></div><script src="../../static/js/app.js"></script><script src="../../static/js/table-scroll.js"></script><script>
+setTimeout(()=>{const errors=[];for(const page of document.querySelectorAll('[data-page]'))if(page.scrollWidth>page.clientWidth+1)errors.push(page.dataset.page);
+const n=document.querySelectorAll('[data-page]').length;document.querySelector('#results').textContent=errors.length?'FAIL overflow: '+errors.join(', '):'PASS '+n+' rendered pages\nviewport width '+innerWidth;},500);
+</script></body></html>

@@ -1,0 +1,83 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Top navigation regression</title>
+<script>localStorage.setItem('schedease-theme',new URLSearchParams(location.search).get('theme'));</script>
+<link rel="stylesheet" href="../../static/css/app.css"></head><body><div class="app-shell"><aside class="sidebar" id="sidebar"><button data-sidebar-collapse>Navigation</button></aside><div class="workspace">      <header class="topbar">
+        <div class="topbar-left">
+          <a class="topbar-brand" href="" aria-label="SchedEase home">
+            <span class="brand-mark">SE</span>
+            <span>SchedEase</span>
+          </a>
+          <button class="icon-button mobile-only" type="button" data-sidebar-toggle aria-label="Open navigation">
+            <span class="icon menu-icon"></span>
+          </button>
+        </div>
+        <div class="topbar-search">
+          <span class="icon search-icon"></span>
+          <input type="search" data-global-filter aria-label="Filter table rows on this page" placeholder="Filter rows on this page">
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" type="button" data-theme-toggle aria-label="Toggle theme">
+            <span class="icon theme-icon"></span>
+          </button>
+          
+          <div class="user-menu" role="group" aria-label="Signed in as Alexandra Longaccountname">
+            <span class="avatar">A</span>
+            <span>
+              <strong>Alexandra Longaccountname</strong>
+              <small>Administrator</small>
+            </span>
+          </div>
+          <form method="post" action="">
+            
+            <button class="button button-ghost" data-loading-text="Signing out">Sign out</button>
+          </form>
+          
+        </div>
+      </header>
+
+
+<section class="content"><h1>A long academic scheduling page title that must remain below navigation</h1>
+<div class="table-wrap"><table><tbody><tr><td>Alpha</td></tr><tr><td>Beta</td></tr></tbody></table></div>
+<button class="info-icon" id="edge" data-tooltip="Helpful information near the viewport edge." style="position:fixed;z-index:30">i</button>
+<pre id="results" style="white-space:pre-wrap">RUNNING</pre><div style="height:1800px"></div></section></div></div>
+<script src="../../static/js/app.js"></script><script>
+(async()=>{const checks=[];const check=(ok,name)=>{if(!ok)throw Error(name);checks.push(name)};
+const wait=()=>new Promise(r=>setTimeout(r,180));
+try{
+check(innerWidth>=300,'viewport width '+innerWidth);
+const search=document.querySelector('[data-global-filter]'), header=document.querySelector('.topbar');
+check(search.getBoundingClientRect().width>=180,'search remains usable');
+check(search.getAttribute('aria-label').includes('this page'),'search names scope');
+check(Number(getComputedStyle(document.querySelector('.topbar-search .icon')).zIndex)>0,'search icon above input surface');
+check(document.documentElement.scrollWidth<=innerWidth,'no page overflow');
+check(document.querySelector('h1').getBoundingClientRect().top>=header.getBoundingClientRect().bottom,'title below header');
+const actions=[...document.querySelectorAll('.topbar-actions button')];
+check(actions.every(x=>x.getBoundingClientRect().right<=innerWidth),'actions within viewport');
+search.focus();await wait();const tip=document.querySelector('.app-tooltip');
+check(tip.classList.contains('is-visible')&&tip.textContent.includes('Other pages')&&tip.textContent.includes('without tables'),'search keyboard help and non-table scope');
+check(tip.parentElement===document.body&&Number(getComputedStyle(tip).zIndex)>Number(getComputedStyle(header).zIndex),'tooltip outside clipping containers and above header');
+check(getComputedStyle(search).outlineStyle!=='none','search focus visible');
+search.value='Alpha';search.dispatchEvent(new Event('input'));check(document.querySelectorAll('tbody tr')[1].hidden,'rendered-row filtering preserved');
+search.value='';search.dispatchEvent(new Event('input'));
+const theme=document.querySelector('[data-theme-toggle]'),before=document.documentElement.dataset.theme,w=header.offsetHeight;
+theme.click();check(document.documentElement.dataset.theme!==before&&localStorage.getItem('schedease-theme')!==before,'theme saved');
+check(header.offsetHeight===w,'theme causes no header shift');theme.click();
+const edge=document.querySelector('#edge');
+for(const position of [{top:'0px',left:'0px'},{top:'0px',right:'0px'},{bottom:'0px',left:'0px'},{bottom:'0px',right:'0px'}]){
+edge.blur();for(const key of ['top','bottom','left','right'])edge.style[key]='auto';Object.assign(edge.style,position);
+edge.dataset.tooltipPlacement=position.right?'right':'top';edge.focus({preventScroll:true});await wait();
+const t=tip.getBoundingClientRect(),e=edge.getBoundingClientRect();
+check(t.left>=7&&t.top>=7&&t.right<=innerWidth-7&&t.bottom<=innerHeight-7,'tooltip fits '+JSON.stringify(position));
+check(t.right<=e.left||t.left>=e.right||t.bottom<=e.top||t.top>=e.bottom,'tooltip clears trigger '+JSON.stringify(position));
+}
+edge.blur();edge.dataset.tooltip='Longword'.repeat(30);edge.focus();await wait();
+check(tip.getBoundingClientRect().width<=innerWidth-16&&tip.scrollWidth<=tip.clientWidth,'long tooltip words wrap');
+edge.setAttribute('aria-describedby','existing-help');edge.blur();edge.focus();
+document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+check(!tip.classList.contains('is-visible')&&edge.getAttribute('aria-describedby')==='existing-help','Escape preserves other descriptions');
+edge.click();check(tip.classList.contains('is-visible'),'touch click opens help');edge.blur();
+window.scrollTo(0,400);await wait();check(Math.abs(header.getBoundingClientRect().top)<1,'header remains sticky');
+window.scrollTo(0,0);await wait();edge.style.display='none';
+check(document.querySelector('.topbar-actions form').method==='post','logout POST preserved');
+document.querySelector('#results').textContent='PASS '+checks.length+' assertions\n'+checks.join('\n');
+}catch(e){document.querySelector('#results').textContent='FAIL '+e.stack;}
+})();</script></body></html>

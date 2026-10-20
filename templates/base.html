@@ -110,14 +110,14 @@
         </div>
         <div class="topbar-search">
           <span class="icon search-icon"></span>
-          <input type="search" data-global-filter placeholder="Search visible tables">
+          <input type="search" data-global-filter aria-label="Filter table rows on this page" placeholder="Filter rows on this page">
         </div>
         <div class="topbar-actions">
           <button class="icon-button" type="button" data-theme-toggle aria-label="Toggle theme">
             <span class="icon theme-icon"></span>
           </button>
           {% if user.is_authenticated %}
-          <div class="user-menu">
+          <div class="user-menu" role="group" aria-label="Signed in as {{ user.get_full_name|default:user.username }}">
             <span class="avatar">{{ user.username|slice:":1"|upper }}</span>
             <span>
               <strong>{{ user.get_full_name|default:user.username }}</strong>

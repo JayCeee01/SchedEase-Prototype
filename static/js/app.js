@@ -236,29 +236,27 @@
     const tooltipRect = appTooltip.getBoundingClientRect();
     const gap = 10;
     const margin = 8;
-    let placement = target.dataset.tooltipPlacement || "top";
-
-    if (target.closest(".nav-group") && document.body.classList.contains("sidebar-collapsed")) {
-      placement = "right";
-    } else if (targetRect.top < tooltipRect.height + gap + margin) {
-      placement = "bottom";
-    }
-
-    let top;
-    let left;
-    if (placement === "right") {
-      top = targetRect.top + targetRect.height / 2 - tooltipRect.height / 2;
-      left = targetRect.right + gap;
-    } else if (placement === "bottom") {
-      top = targetRect.bottom + gap;
-      left = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
-    } else {
-      top = targetRect.top - tooltipRect.height - gap;
-      left = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
-    }
-
-    top = Math.max(margin, Math.min(top, window.innerHeight - tooltipRect.height - margin));
-    left = Math.max(margin, Math.min(left, window.innerWidth - tooltipRect.width - margin));
+    const preferred = target.closest(".nav-group") && document.body.classList.contains("sidebar-collapsed")
+      ? "right" : target.dataset.tooltipPlacement || "top";
+    const positions = {
+      top: [targetRect.top - tooltipRect.height - gap, targetRect.left + (targetRect.width - tooltipRect.width) / 2],
+      bottom: [targetRect.bottom + gap, targetRect.left + (targetRect.width - tooltipRect.width) / 2],
+      right: [targetRect.top + (targetRect.height - tooltipRect.height) / 2, targetRect.right + gap],
+      left: [targetRect.top + (targetRect.height - tooltipRect.height) / 2, targetRect.left - tooltipRect.width - gap],
+    };
+    const opposite = {top: "bottom", bottom: "top", right: "left", left: "right"};
+    const order = [...new Set([preferred, opposite[preferred], "bottom", "top", "right", "left"])].filter(key => positions[key]);
+    // Keep the chosen side clear of its trigger; clamp only the cross axis.
+    const fits = key => {
+      const [y, x] = positions[key];
+      return key === "top" || key === "bottom"
+        ? y >= margin && y + tooltipRect.height <= innerHeight - margin
+        : x >= margin && x + tooltipRect.width <= innerWidth - margin;
+    };
+    const placement = order.find(fits) || order[0];
+    let [top, left] = positions[placement];
+    top = Math.max(margin, Math.min(top, innerHeight - tooltipRect.height - margin));
+    left = Math.max(margin, Math.min(left, innerWidth - tooltipRect.width - margin));
     appTooltip.style.top = `${top}px`;
     appTooltip.style.left = `${left}px`;
   }
@@ -534,7 +532,7 @@
   });
 
   document.querySelectorAll("[data-global-filter]").forEach((input) => {
-    input.closest(".topbar-search")?.setAttribute("data-tooltip", "Search the tables currently shown on this page.");
+    input.dataset.tooltip = "Filter rows loaded on this page only. Other pages and records are not searched. On pages without tables, this has no effect.";
     input.addEventListener("input", () => filterTables(input.value, document));
   });
 
