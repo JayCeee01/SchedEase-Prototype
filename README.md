@@ -304,7 +304,7 @@ Apply migration `0013_generationlease` with `python manage.py migrate` before ru
 
 Generation failures now retain explicit meeting and assignment references, including conflicts involving several meetings. Administrators can review all affected meetings in the Error Log and open their assignment records. Deleted references remain identifiable without breaking historical reports.
 
-Failed-run status and issue records save together. Opening the administrator Error Log also reconciles interrupted Running records against current database leases, preserving active requests. Apply migration `0014_generationissue_details_generationrun_lease_owner` with `python manage.py migrate` before restarting updated workers. See [GENERATION_DIAGNOSTICS.md](GENERATION_DIAGNOSTICS.md) for the data format, recovery rules, privacy safeguards and limitations.
+Failed-run status and issue records save together. Select **Review Interrupted Runs** in the administrator Error Log to reconcile interrupted Running records against current database leases, preserving active requests. Viewing the log does not change records. Apply migration `0014_generationissue_details_generationrun_lease_owner` with `python manage.py migrate` before restarting updated workers. See [GENERATION_DIAGNOSTICS.md](GENERATION_DIAGNOSTICS.md) for the data format, recovery rules, privacy safeguards and limitations.
 
 ### GA reproducibility information (Task 5.1)
 
@@ -355,3 +355,13 @@ Local setup is unchanged. Future production workers must explicitly set `SCHED_E
 ### Database backup and isolated restore (Task 8.2)
 
 Use `python manage.py backup_database --output <new-private-file.sqlite3>` for a verified SQLite online backup. Use `python manage.py restore_database --source <backup.sqlite3> --destination <new-disposable-file.sqlite3>` to verify recovery without replacing a live database. Existing files, configured database paths and public asset directories are rejected. See [DATABASE_BACKUP_RESTORE.md](DATABASE_BACKUP_RESTORE.md) for PowerShell examples, migration compatibility, storage security and synthetic recovery tests. No command activates a restored database or runs migrations automatically.
+
+### Admin permissions and publication safeguards (Task 8.3)
+
+Django admin requires an active staff account with the SchedEase administrator role (or superuser status) and the relevant Django model permissions. Publish schedules through the application workflow; schedule status is read-only in Django admin. Schedule entries and their audit records are also read-only there. Credential override approval records identify the administrator who creates them. See [ADMIN_PERMISSION_PUBLICATION_AUDIT.md](ADMIN_PERMISSION_PUBLICATION_AUDIT.md) for the role matrix, confirmed fixes, tests and remaining limitations.
+
+### Final regression and acceptance verification (Task 8.4)
+
+See [Final system verification report](FINAL_SYSTEM_VERIFICATION_REPORT.md) for the synthetic end-to-end workflows, reproducible PowerShell checks, benchmark evidence, migration investigation and remaining deployment prerequisites. The [Acceptance test matrix](FINAL_ACCEPTANCE_TEST_MATRIX.md) maps each scenario to its automated evidence and separates browser/infrastructure checks that still need verification.
+
+Run the focused workflows with `.\.venv\Scripts\python.exe manage.py test schedules.test_acceptance_workflows`, then the full suite with `.\.venv\Scripts\python.exe manage.py test`. Tests use disposable databases. The default `db.sqlite3` and the worksheet's `tertiary_sample.sqlite3` have different migration histories; confirm the effective database path before interpreting `showmigrations`. Task 8.4 does not migrate either real database or deploy the application.

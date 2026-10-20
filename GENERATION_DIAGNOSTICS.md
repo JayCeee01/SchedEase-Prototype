@@ -34,13 +34,13 @@ Detailed logs, detail pages and status recovery remain administrator-only. Stude
 
 ## Stale status recovery
 
-New HTTP runs record the exact lease token acquired by Task 4.4. On an authorized error-log visit, `recover_stale_runs()` considers only RUNNING records. Its conditional first write checks authoritative current lease state inside the transaction:
+New HTTP runs record the exact lease token acquired by Task 4.4. An administrator explicitly selects **Review Interrupted Runs** in the Error Log to submit a CSRF-protected POST. Viewing the log does not change run records. `recover_stale_runs()` considers only RUNNING records. Its conditional first write checks authoritative current lease state inside the transaction:
 
 - Token-bound runs remain running only while the same owner has an unexpired lease.
 - Legacy runs without tokens remain untouched while any unexpired owner holds their term, because original ownership cannot be reconstructed safely.
 - Expired, missing or replaced reservations cause the old run to be marked failed, with one structured recovery explanation in the same transaction.
 
-The recovery query rechecks lease state at the write, not just during discovery. It never renews, releases or replaces a lease. Successful/completed runs and audit history are preserved. If failure recording itself encounters a database error, it rolls back, returns a safe response and leaves the run recoverable on a later administrator visit.
+The recovery query rechecks lease state at the write, not just during discovery. It never renews, releases or replaces a lease. Successful/completed runs and audit history are preserved. If failure recording itself encounters a database error, it rolls back, returns a safe response and leaves the run recoverable on a later administrator recovery request.
 
 ## Regression coverage
 

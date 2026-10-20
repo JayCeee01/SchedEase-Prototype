@@ -233,12 +233,16 @@ class StructuredGenerationTests(SchedulingDefectFixture):
         self.assertEqual(row.details, {})
         self.assertEqual(row.reason, 'Legacy detail')
 
-    def test_admin_history_visit_recovers_stale_run_once(self):
+    def test_admin_recovery_post_recovers_stale_run_once(self):
         run = self.run_record(uuid4())
         self.assertEqual(self.client.get('/schedules/error-log/').status_code, 200)
         run.refresh_from_db()
+        self.assertEqual(run.status, 'RUNNING')
+        self.assertEqual(run.issues.count(), 0)
+        self.assertEqual(self.client.post('/schedules/error-log/', {'action': 'recover'}).status_code, 302)
+        run.refresh_from_db()
         self.assertEqual(run.status, 'FAILED')
-        self.client.get('/schedules/error-log/')
+        self.assertEqual(self.client.post('/schedules/error-log/', {'action': 'recover'}).status_code, 302)
         self.assertEqual(run.issues.count(), 1)
 
     def test_multiple_parent_assignments_keep_explicit_ids(self):
