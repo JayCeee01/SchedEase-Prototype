@@ -22,6 +22,6 @@
   <div class="draft-conflict" role="alert"><strong>Unqualified faculty assignment</strong><small>The selected faculty does not satisfy this course's credential requirements. An authorized credential override is required.</small><label><input type="checkbox" name="credential_override_confirm" value="yes" required> Confirm authorized override</label><label>Override reason<textarea name="credential_override_reason" required></textarea></label></div>
   {% endif %}
   <div class="draft-save-status" data-draft-status role="status" aria-live="polite">{% if draft %}Draft saved{% endif %}</div>
-  <div class="toolbar"><button class="primary" type="submit">Save Assignment</button><a class="button" href="{% url 'resource_list' 'assignments' %}">Cancel</a></div>
+  <div class="toolbar form-actions"><button class="primary" type="submit">Save Assignment</button><a class="button" href="{% url 'resource_list' 'assignments' %}">Cancel</a></div>
 </form>
 {% endblock %}

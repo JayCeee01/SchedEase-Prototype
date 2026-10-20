@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Table scrolling regression</title>
+<link rel="stylesheet" href="../../static/css/app.css"><style>html{scroll-behavior:auto}body{padding:24px}main{margin-left:180px}.wide{width:2000px;min-width:2000px}.long td{height:80px}.nav-group{position:fixed;left:8px;top:24px;width:160px;height:180px;min-height:0;background:var(--sidebar-accent)}#results{white-space:pre-wrap} @media(max-width:600px){main{margin-left:0}.nav-group{display:none}}</style>
+<script>document.documentElement.dataset.theme=new URLSearchParams(location.search).get('theme')||'light';</script></head><body>
+<nav class="nav-group"><div style="height:600px;color:var(--sidebar-text)">Sidebar scrollbar</div></nav>
+<main><h1>Table scrolling</h1><button class="primary">Primary</button><div class="table-wrap" id="short"><table class="wide"><tr><td>Short table</td></tr></table></div>
+<div class="table-wrap" id="first" aria-label="Courses"><table class="wide long"><tbody></tbody></table></div>
+<div style="height:500px"></div><div class="import-scroll" id="second" style="overflow:auto"><table class="wide long"><tbody></tbody></table></div><div style="height:1200px"></div><pre id="results">RUNNING</pre></main>
+<script>document.querySelectorAll('.long tbody').forEach(body=>{for(let i=0;i<30;i++){const row=body.insertRow();row.insertCell().textContent='Course '+i;row.insertCell().textContent='Last column';}});</script>
+<script src="../../static/js/table-scroll.js"></script>
+<script>
+(async()=>{const checks=[];const check=(ok,name)=>{if(!ok)throw Error(name);checks.push(name)};const wait=()=>new Promise(r=>setTimeout(r,120));
+try{check(innerWidth>=300,'viewport width '+innerWidth);await wait();const first=document.querySelector('#first'), second=document.querySelector('#second');const bar=first.parentElement.querySelector('.table-scroll-proxy');
+check(bar.parentElement===first.parentElement,'scrollbar belongs to table frame');
+check(!bar.hidden,'wide table has scrollbar');
+bar.scrollLeft=300;await wait();check(Math.abs(first.scrollLeft-300)<3,'bar moves table');
+first.scrollLeft=0;await wait();check(bar.scrollLeft<2,'native reverse scroll synchronizes');
+for(const y of [100,250,400,250,100,0]){window.scrollTo(0,y);await wait();const box=bar.getBoundingClientRect(), parent=first.parentElement.getBoundingClientRect();check(!bar.hidden && box.top>=parent.top && box.bottom<=innerHeight+1 && box.bottom<=parent.bottom+1,'steady table-bounded scrollbar at '+y);}
+const table=first.querySelector('table');table.classList.remove('wide');table.style.minWidth='0';table.style.width='100%';await wait();check(bar.hidden,'fitting table hides extra scrollbar');table.classList.add('wide');table.style.width='';table.style.minWidth='';await wait();check(!bar.hidden,'overflow restores scrollbar');
+first.style.width='65%';await wait();check(!bar.hidden,'container resize preserves scroll');first.style.width='';await wait();
+const rows=[...table.rows];rows.slice(2).forEach(row=>row.hidden=true);await wait();check(bar.getBoundingClientRect().bottom<=first.parentElement.getBoundingClientRect().bottom+1,'short filtered table footer stays inside frame');rows.forEach(row=>row.hidden=false);table.tBodies[0].appendChild(rows[0]);await wait();check(!bar.hidden,'sort/filter retains scrollbar');
+const other=second.parentElement.querySelector('.table-scroll-proxy');window.scrollTo(0,second.offsetTop);await wait();other.scrollLeft=400;await wait();check(second.scrollLeft>390 && first.scrollLeft===0,'tables scroll independently');
+window.scrollTo(0,document.body.scrollHeight);await wait();check(bar.getBoundingClientRect().bottom<0,'scrollbar leaves viewport with table');
+second.remove();await wait();check(!other.isConnected,'removed table scrollbar cleaned up');window.scrollTo(0,0);await wait();
+document.body.classList.add('modal-open');await wait();check(getComputedStyle(bar).visibility==='hidden','modal conceals footer');document.body.classList.remove('modal-open');await wait();
+check(bar.tabIndex===0 && bar.getAttribute('aria-label').includes('Courses'),'named native scroll control');
+document.querySelector('#results').textContent='PASS '+checks.length+' checks\n'+checks.join('\n');
+}catch(e){document.querySelector('#results').textContent='FAIL '+e.message;}})();
+</script></body></html>

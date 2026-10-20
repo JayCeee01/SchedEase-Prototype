@@ -33,7 +33,7 @@
   </div>
   {% endif %}
   {% if draft_resource %}<div class="draft-save-status" data-draft-status role="status" aria-live="polite">{% if draft %}Draft saved{% else %}Changes are saved as a draft automatically{% endif %}</div>{% endif %}
-  <div class="toolbar" style="justify-content:flex-start">
+  <div class="toolbar form-actions">
     {% if tooltip_context == 'generate-schedule' %}
     <button class="primary generation-submit" type="submit" data-loading-text="Generating schedule...">Generate Schedule</button>
     {% else %}

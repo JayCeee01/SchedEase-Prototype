@@ -216,12 +216,19 @@
 
   const appTooltip = document.createElement("div");
   appTooltip.className = "app-tooltip";
+  appTooltip.id = "schedease-tooltip";
+  let tooltipTarget = null;
   appTooltip.setAttribute("role", "tooltip");
   document.body.appendChild(appTooltip);
 
   function placeTooltip(target) {
     const text = target.dataset.tooltip;
     if (!text) return;
+    hideTooltip();
+    tooltipTarget = target;
+    const descriptions = new Set((target.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean));
+    descriptions.add(appTooltip.id);
+    target.setAttribute("aria-describedby", [...descriptions].join(" "));
     appTooltip.textContent = text;
     appTooltip.classList.add("is-visible");
 
@@ -257,13 +264,34 @@
   }
 
   function hideTooltip() {
+    if (tooltipTarget) {
+      const descriptions = (tooltipTarget.getAttribute("aria-describedby") || "").split(/\s+/).filter(id => id && id !== appTooltip.id);
+      if (descriptions.length) tooltipTarget.setAttribute("aria-describedby", descriptions.join(" "));
+      else tooltipTarget.removeAttribute("aria-describedby");
+      tooltipTarget = null;
+    }
     appTooltip.classList.remove("is-visible");
   }
 
-  window.addEventListener("scroll", hideTooltip, true);
+  window.addEventListener("scroll", () => {
+    const focusedNavigation = tooltipTarget === document.activeElement && tooltipTarget?.closest('.nav-group') ? tooltipTarget : null;
+    hideTooltip();
+    if (focusedNavigation) requestAnimationFrame(() => {
+      if (document.activeElement === focusedNavigation) placeTooltip(focusedNavigation);
+    });
+  }, true);
   window.addEventListener("resize", hideTooltip);
 
   function bindTooltips(scope = document) {
+    scope.querySelectorAll(".info-icon[data-tooltip]").forEach((icon) => {
+      if (icon.tagName === "BUTTON") return;
+      const button = document.createElement("button");
+      for (const attribute of icon.attributes) button.setAttribute(attribute.name, attribute.value);
+      button.type = "button";
+      button.textContent = icon.textContent;
+      button.setAttribute("aria-label", icon.getAttribute("aria-label") || "More information");
+      icon.replaceWith(button);
+    });
     scope.querySelectorAll("[data-tooltip]").forEach((target) => {
       if (target.dataset.tooltipBound === "true") return;
       target.dataset.tooltipBound = "true";
@@ -271,7 +299,12 @@
       target.addEventListener("focus", () => placeTooltip(target));
       target.addEventListener("mouseleave", hideTooltip);
       target.addEventListener("blur", hideTooltip);
-      target.addEventListener("click", hideTooltip);
+      target.addEventListener("click", (event) => {
+        if (target.classList.contains("info-icon")) {
+          event.preventDefault();
+          placeTooltip(target);
+        } else hideTooltip();
+      });
     });
   }
 
@@ -284,30 +317,79 @@
     });
   });
 
-  document.querySelectorAll("[data-sidebar-toggle]").forEach((button) => {
-    button.dataset.tooltip = "Open the navigation menu.";
-    button.addEventListener("click", () => document.body.classList.toggle("sidebar-open"));
-  });
-
-  if (sessionStorage.getItem("schedease-sidebar-collapsed") === "true") {
-    document.documentElement.classList.add("sidebar-collapsed");
-    document.body.classList.add("sidebar-collapsed");
+  const sidebar = document.querySelector('.sidebar');
+  const workspace = document.querySelector('.workspace');
+  const mobileNavigation = window.matchMedia('(max-width: 900px)');
+  let navigationTrigger = null;
+  function syncNavigation() {
+    const open = document.body.classList.contains('sidebar-open');
+    const collapsed = document.body.classList.contains('sidebar-collapsed');
+    if (sidebar) sidebar.inert = mobileNavigation.matches && !open;
+    if (workspace) workspace.inert = mobileNavigation.matches && open;
+    document.querySelectorAll('button[data-sidebar-toggle], [data-sidebar-collapse]').forEach(button => {
+      const expanded = mobileNavigation.matches ? open : !collapsed;
+      button.setAttribute('aria-controls', 'sidebar');
+      button.setAttribute('aria-expanded', String(expanded));
+      const label = mobileNavigation.matches ? (open ? 'Close navigation' : 'Open navigation') : (collapsed ? 'Expand navigation' : 'Collapse navigation');
+      button.setAttribute('aria-label', label);
+      button.dataset.tooltip = label;
+    });
   }
-  document.querySelectorAll("[data-sidebar-collapse]").forEach((button) => {
-    button.dataset.tooltip = "Open or close the sidebar menu.";
-    button.addEventListener("click", () => {
-      document.body.classList.toggle("sidebar-collapsed");
-      document.documentElement.classList.toggle("sidebar-collapsed", document.body.classList.contains("sidebar-collapsed"));
-      sessionStorage.setItem("schedease-sidebar-collapsed", document.body.classList.contains("sidebar-collapsed"));
+  function closeNavigation() {
+    if (!document.body.classList.contains('sidebar-open')) return;
+    document.body.classList.remove('sidebar-open');
+    syncNavigation();
+    hideTooltip();
+    navigationTrigger?.focus({preventScroll: true});
+  }
+  document.querySelectorAll('[data-sidebar-toggle]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (document.body.classList.contains('sidebar-open')) closeNavigation();
+      else {
+        navigationTrigger = button;
+        document.body.classList.add('sidebar-open');
+        syncNavigation();
+        sidebar?.querySelector('[data-sidebar-collapse]')?.focus({preventScroll: true});
+      }
     });
   });
+  if (sessionStorage.getItem('schedease-sidebar-collapsed') === 'true') {
+    document.documentElement.classList.add('sidebar-collapsed');
+    document.body.classList.add('sidebar-collapsed');
+  }
+  document.querySelectorAll('[data-sidebar-collapse]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (mobileNavigation.matches) { closeNavigation(); return; }
+      document.body.classList.toggle('sidebar-collapsed');
+      document.documentElement.classList.toggle('sidebar-collapsed', document.body.classList.contains('sidebar-collapsed'));
+      sessionStorage.setItem('schedease-sidebar-collapsed', document.body.classList.contains('sidebar-collapsed'));
+      syncNavigation();
+    });
+  });
+  mobileNavigation.addEventListener('change', () => {
+    const focusedInside = sidebar?.contains(document.activeElement);
+    document.body.classList.remove('sidebar-open');
+    syncNavigation();
+    if (mobileNavigation.matches && focusedInside) document.querySelector('button[data-sidebar-toggle]')?.focus({preventScroll: true});
+  });
+  document.addEventListener('keydown', event => {
+    if (!mobileNavigation.matches || !document.body.classList.contains('sidebar-open')) return;
+    if (event.key === 'Escape') { event.preventDefault(); closeNavigation(); }
+    if (event.key === 'Tab') {
+      const controls = [...sidebar.querySelectorAll('a[href], button, summary')].filter(control => !control.disabled && control.getClientRects().length);
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }
+  });
+  syncNavigation();
 
   const currentPath = window.location.pathname;
   const navLinks = Array.from(document.querySelectorAll(".nav-group a"));
   let bestMatch = null;
   navLinks.forEach((link) => {
     link.dataset.tooltip = link.textContent.trim();
-    link.setAttribute("title", link.textContent.trim());
+    link.setAttribute("aria-label", link.textContent.trim());
     link.dataset.tooltipPlacement = "right";
     const href = link.getAttribute("href");
     if (href === currentPath || (href && href !== "/" && currentPath.startsWith(href))) {
@@ -322,6 +404,9 @@
   document.querySelectorAll("[data-nav-group]").forEach((group) => {
     const key = `schedease-nav-group-${group.dataset.navGroup}`;
     const hasActiveItem = Boolean(group.querySelector("a.is-active"));
+    const summary = group.querySelector("summary");
+    summary?.setAttribute("aria-label", summary.textContent.trim());
+    summary?.setAttribute("data-tooltip-placement", "right");
     const saved = sessionStorage.getItem(key);
     if (hasActiveItem) group.open = true;
     else if (saved !== null) group.open = saved === "true";
@@ -330,9 +415,11 @@
 
   document.querySelectorAll(".nav-group").forEach((nav) => {
     const scrollKey = "schedease-sidebar-scroll";
-    const saveScroll = () => sessionStorage.setItem(scrollKey, String(nav.scrollTop));
+    const initialScroll = sessionStorage.getItem(scrollKey);
+    let restoring = true;
+    const saveScroll = () => { if (!restoring) sessionStorage.setItem(scrollKey, String(nav.scrollTop)); };
     const restoreScroll = () => {
-      const savedScroll = sessionStorage.getItem(scrollKey);
+      const savedScroll = initialScroll;
       if (savedScroll === null) return;
       const target = Number(savedScroll);
       if (Number.isFinite(target)) nav.scrollTop = target;
@@ -343,7 +430,7 @@
     restoreScroll();
     window.requestAnimationFrame(() => {
       restoreScroll();
-      window.requestAnimationFrame(restoreScroll);
+      window.requestAnimationFrame(() => { restoreScroll(); restoring = false; });
     });
 
     nav.addEventListener("scroll", saveScroll, { passive: true });
@@ -356,21 +443,34 @@
   });
 
   const loginModal = document.querySelector("[data-login-modal]");
+  let loginReturnFocus = null;
+  let autoModalClosed = false;
+  function loginFocusables() {
+    return [...loginModal.querySelectorAll("a[href], button, input, select, textarea, [tabindex]")]
+      .filter(control => !control.disabled && control.tabIndex >= 0 && control.getClientRects().length);
+  }
   function openLoginModal() {
     if (!loginModal) return;
+    if (!loginModal.classList.contains("is-open")) loginReturnFocus = document.activeElement;
     loginModal.classList.add("is-open");
     loginModal.classList.add("is-auto-opening");
     loginModal.setAttribute("aria-hidden", "false");
     document.body.classList.add("modal-open");
     window.setTimeout(() => loginModal.classList.remove("is-auto-opening"), 320);
-    window.setTimeout(() => loginModal.querySelector("input[name='username']")?.focus(), 80);
+    window.setTimeout(() => {
+      if (loginModal.classList.contains("is-open")) (loginModal.querySelector("input[name='username']") || loginFocusables()[0])?.focus();
+    }, 80);
   }
 
   function closeLoginModal() {
-    if (!loginModal) return;
+    if (!loginModal?.classList.contains("is-open")) return;
+    autoModalClosed = true;
+    hideTooltip();
     loginModal.classList.remove("is-open");
     loginModal.setAttribute("aria-hidden", "true");
     document.body.classList.remove("modal-open");
+    const target = loginReturnFocus?.isConnected && loginReturnFocus !== document.body ? loginReturnFocus : document.querySelector("[data-login-open]");
+    target?.focus();
   }
 
   document.querySelectorAll("[data-login-open]").forEach((button) => {
@@ -393,10 +493,9 @@
     });
   });
   if (loginModal?.classList.contains("is-open")) {
-    document.body.classList.add("modal-open");
+    openLoginModal();
   }
   if (loginModal?.dataset.loginAutoOpen === "true") {
-    let autoModalClosed = false;
     loginModal.querySelectorAll("[data-login-close]").forEach((button) => {
       button.addEventListener("click", () => {
         autoModalClosed = true;
@@ -409,7 +508,16 @@
     }, 420);
   }
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closeLoginModal();
+    if (event.key === "Escape") { hideTooltip(); closeLoginModal(); }
+    if (event.key === "Tab" && loginModal?.classList.contains("is-open")) {
+      const controls = loginFocusables();
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !loginModal.contains(document.activeElement))) {
+        event.preventDefault(); last?.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !loginModal.contains(document.activeElement))) {
+        event.preventDefault(); first?.focus();
+      }
+    }
   });
 
   function filterTables(value, scope) {
@@ -431,13 +539,21 @@
   });
 
   document.querySelectorAll("th[data-sort]").forEach((header) => {
-    header.dataset.tooltip = "Click to sort this column.";
+    const sortButton = document.createElement("button");
+    sortButton.type = "button";
+    sortButton.className = "sort-control";
+    sortButton.dataset.tooltip = "Sort this column.";
+    sortButton.setAttribute("aria-label", `Sort by ${header.textContent.trim()}`);
+    while (header.firstChild) sortButton.appendChild(header.firstChild);
+    header.appendChild(sortButton);
     header.addEventListener("click", () => {
       const table = header.closest("table");
       const tbody = table.querySelector("tbody");
       const index = Array.from(header.parentNode.children).indexOf(header);
       const direction = header.dataset.direction === "asc" ? "desc" : "asc";
       header.dataset.direction = direction;
+      table.querySelectorAll("th[aria-sort]").forEach(other => other.removeAttribute("aria-sort"));
+      header.setAttribute("aria-sort", direction === "asc" ? "ascending" : "descending");
       const rows = Array.from(tbody.querySelectorAll("tr")).filter((row) => row.children.length > 1);
       rows.sort((a, b) => {
         const left = a.children[index]?.textContent.trim().toLowerCase() || "";
@@ -455,6 +571,7 @@
         const text = label.textContent.trim().replace(":", "");
         const icon = document.createElement("span");
         icon.className = "info-icon";
+        icon.setAttribute("aria-label", `More information about ${text}`);
         icon.textContent = "i";
         icon.dataset.tooltip = tooltipForLabel(label);
         label.appendChild(icon);
@@ -818,6 +935,13 @@
     const key = normalize(control.textContent);
     if (actionTooltips[key]) control.dataset.tooltip = actionTooltips[key];
   });
+
+  document.addEventListener("click", (event) => {
+    if (event.target.closest("a[aria-disabled='true']")) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
 
   bindTooltips();
 })();
