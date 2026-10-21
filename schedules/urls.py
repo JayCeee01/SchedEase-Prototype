@@ -2,8 +2,11 @@ from django.urls import path
 from . import views, concern_views
 from . import import_views
 from . import workload_views
+from . import repair_views
 
 urlpatterns = [
+    path('<int:pk>/repair/', repair_views.repair_start, name='repair_start'),
+    path('<int:pk>/repair/review/', repair_views.repair_review, name='repair_review'),
     path("workload-proposals/", workload_views.workload_proposals, name="workload_proposals"),
     path("concerns/", concern_views.concern_list, name="concern_list"),
     path("concerns/new/", concern_views.concern_create, name="concern_create"),

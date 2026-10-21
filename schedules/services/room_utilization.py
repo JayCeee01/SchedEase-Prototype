@@ -2,7 +2,7 @@ import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from django.db.models import Max
+from django.db.models import Max, Q
 from django.utils import timezone
 
 from schedules.models import Room, RoomKind, Schedule, ScheduleEntry, Section, TeachingAssignment
@@ -87,9 +87,12 @@ def utilization_rows(schedule=None, department=None):
     rooms = Room.objects.all().prefetch_related("availability_set").order_by("name")
     entries = ScheduleEntry.objects.none()
     if schedule:
-        entries = schedule.entries.select_related("room", "assignment__section", "assignment__subject")
+        entries = schedule.entries.select_related("room", "assignment__section", "assignment__subject", "section_override")
         if department:
-            entries = entries.filter(assignment__section__program__department=department)
+            entries = entries.filter(
+                Q(section_override__program__department=department)
+                | Q(section_override__isnull=True, assignment__section__program__department=department)
+            )
     entries = list(entries)
     rows = []
     for room in rooms:
@@ -105,7 +108,7 @@ def utilization_rows(schedule=None, department=None):
         scheduled_hours = sum(entry_hours(entry) for entry in room_entries if entry.day in ALLOWED_DAYS)
         available_hours = sum(available_by_day)
         percentage = scheduled_hours / available_hours * 100 if available_hours else 0
-        seat_values = [min(100, entry.assignment.section.size / room.capacity * 100)
+        seat_values = [min(100, entry.effective_section.size / room.capacity * 100)
                        for entry in room_entries if room.capacity]
         seat_percentage = sum(seat_values) / len(seat_values) if seat_values else 0
         status, badge_class = utilization_status(percentage)

@@ -8,6 +8,7 @@
   </div>
   <div class="actions">
     {% if can_manage %}
+    {% if schedule.status == 'PUBLISHED' %}<a class="button" href="{% url 'repair_start' schedule.pk %}">Smart Repair</a>{% endif %}
     {% if schedule.status != 'PUBLISHED' and schedule.status != 'ARCHIVED' %}<a class="button" href="{% url 'entry_create' schedule.pk %}">Add Meeting</a>{% endif %}
     {% if schedule.status == 'PUBLISHED' or schedule.status == 'ARCHIVED' %}
     <form method="post" action="{% url 'copy_schedule_to_draft' schedule.pk %}">

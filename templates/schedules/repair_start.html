@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="record-editor record-editor--standard">
+<div class="page-hero"><div><p class="eyebrow">Schedule repair</p><h1>Create a repair draft</h1><p class="subtle">{{ source.name }} · {{ source.term }}</p></div></div>
+<section class="panel"><h2>1. Describe the recurring change</h2>
+<p>We will copy the published timetable into a draft. Preview changes before applying them, then publish through the usual review process.</p>
+<p>For instructor or room changes, choose the affected resource and weekly time window. For additional sections, choose sections with recorded teaching assignments.</p>
+<form method="post" class="form" data-auto-tooltips="false">{% csrf_token %}{{ form.non_field_errors }}
+{% for field in form %}
+{% if field.name == 'replacement_meetings' %}<details><summary>Optional instructor replacement authorization</summary><p>Only considered after same-instructor repair fails. Select meetings and alternatives from the affected instructor's department. Parent assignments remain unchanged.</p>{% endif %}
+<div data-repair-field="{{ field.name }}"><p>{{ field.label_tag }}{{ field }}</p>{{ field.errors }}{% if field.help_text %}<p class="subtle">{{ field.help_text }}</p>{% endif %}</div>
+{% if field.name == 'comparable' %}</details>{% endif %}
+{% endfor %}
+<div class="toolbar form-actions"><button class="primary" type="submit" data-loading-text="Creating draft">Create repair draft</button><a class="button" href="{% url 'schedule_detail' source.pk %}">Cancel</a></div>
+</form></section></div>
+<script src="{% static 'js/smart-repair.js' %}"></script>
+{% endblock %}

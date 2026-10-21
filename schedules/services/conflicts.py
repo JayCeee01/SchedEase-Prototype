@@ -64,6 +64,9 @@ def individual_entry_errors(entry, *, eligible=None, faculty_policy=None, room_p
         if reason:
             add(f"{label} {reason}", {"Faculty": "FACULTY_UNAVAILABLE", "Room": "ROOM_UNAVAILABLE", "Section": "INVALID_DATA"}[label])
 
+    from .repair_rules import entry_errors
+    for message in entry_errors(entry):
+        add(message)
     return errors
 
 
@@ -145,6 +148,8 @@ def conflict_messages(entries):
 
 def schedule_validation_issues(schedule):
     messages = []
+    from .repair_rules import windows
+    repair_windows = windows(schedule)
     entries = list(schedule.entries.select_related(*ENTRY_RELATIONS).prefetch_related(
         "assignment__section__availability_set", "section_override__availability_set"))
     scheduled_ids = {entry.assignment_id for entry in entries}
@@ -157,6 +162,7 @@ def schedule_validation_issues(schedule):
     for item in messages:
         item['issue'] = Diagnostic.for_meetings('UNSCHEDULED', item['message'], [item['assignment']])
     for entry in entries:
+        entry.schedule._repair_windows = repair_windows
         entry._generation_issue_sink = []
         try:
             entry.full_clean()
