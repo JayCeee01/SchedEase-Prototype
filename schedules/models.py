@@ -241,6 +241,13 @@ class SubjectCredentialRequirement(models.Model):
         return f"{self.subject.code} requires {self.required_credential.name}"
 
 
+class WorkloadApproval(models.Model):
+    """Append-only application audit; no editing or deletion endpoint."""
+    administrator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+    evidence = models.JSONField(default=dict)
+
+
 class Assignment(ProtectedContentMixin, models.Model):
     SHARED_FIELDS = ("term", "subject", "faculty", "section")
 
@@ -689,3 +696,55 @@ class FormDraft(models.Model):
     def __str__(self):
         target = f" record {self.object_pk}" if self.object_pk else " new record"
         return f"{self.user}: {self.resource}{target}"
+
+
+class ScheduleConcern(models.Model):
+    class Category(models.TextChoices):
+        TIME = 'TIME', 'Conflicting class times'
+        ROOM = 'ROOM', 'Room conflict or unavailable room'
+        SUBJECT = 'SUBJECT', 'Incorrect or missing subject'
+        ASSIGNMENT = 'ASSIGNMENT', 'Incorrect faculty or section'
+        OTHER = 'OTHER', 'Other scheduling concern'
+
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'Pending'
+        UNDER_REVIEW = 'UNDER_REVIEW', 'Under Review'
+        RESOLVED = 'RESOLVED', 'Resolved'
+        REJECTED = 'REJECTED', 'Rejected'
+
+    reporter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='schedule_concerns')
+    reporter_role = models.CharField(max_length=10, choices=[(Role.STUDENT, 'Student'), (Role.FACULTY, 'Faculty')])
+    schedule = models.ForeignKey(Schedule, null=True, on_delete=models.SET_NULL)
+    entry = models.ForeignKey(ScheduleEntry, null=True, blank=True, on_delete=models.SET_NULL)
+    reference = models.JSONField(default=dict, editable=False)
+    category = models.CharField(max_length=20, choices=Category.choices)
+    description = models.TextField(max_length=3000)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    response = models.TextField(max_length=3000, blank=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                    on_delete=models.SET_NULL, related_name='reviewed_schedule_concerns')
+    revision = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['-submitted_at', '-pk']
+
+    def clean(self):
+        if not 10 <= len(self.description.strip()) <= 3000:
+            raise ValidationError({'description': 'Enter between 10 and 3000 characters.'})
+        if len(self.response) > 3000:
+            raise ValidationError({'response': 'Use no more than 3000 characters.'})
+
+
+class ConcernReview(models.Model):
+    concern = models.ForeignKey(ScheduleConcern, on_delete=models.PROTECT, related_name='reviews')
+    administrator = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    reviewed_at = models.DateTimeField(auto_now_add=True)
+    previous_status = models.CharField(max_length=20, choices=ScheduleConcern.Status.choices)
+    status = models.CharField(max_length=20, choices=ScheduleConcern.Status.choices)
+    previous_response = models.TextField(blank=True)
+    response = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-reviewed_at', '-pk']

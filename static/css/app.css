@@ -2049,3 +2049,16 @@ body.modal-open .table-scroll-proxy, body.sidebar-open .table-scroll-proxy { vis
   .record-controls.assignment-filters { grid-template-columns: minmax(0, 1fr); }
   .assignment-filter-actions > .button { flex: 1 1 auto; text-align: center; }
 }
+
+/* Long reporter text must stay within concern panels on narrow screens. */
+.concern-text { white-space: normal; overflow-wrap: anywhere; }
+/* Workload discovery uses existing theme tokens and keeps checkbox lists local. */
+.workload-scope-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+#workload-scope, #workload-output { min-width: 0; overflow-wrap: anywhere; }
+.scope-picker { min-width: 0; margin-block: var(--space-4); }
+.workload-checkboxes { max-height: 16rem; overflow: auto; padding: var(--space-2); }
+.workload-checkboxes label { display: flex; align-items: flex-start; gap: var(--space-2); padding-block: var(--space-2); overflow-wrap: anywhere; }
+#workload-scope input[type="checkbox"], #workload-output input[type="checkbox"] { width: auto; flex: 0 0 auto; }
+[data-picker-summary] { flex-wrap: wrap; }
+[data-picker-summary] button { max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; }
+@media (max-width: 620px) { .workload-scope-grid { grid-template-columns: minmax(0, 1fr); } }

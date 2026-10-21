@@ -1,0 +1,793 @@
+<!doctype html><meta charset="utf-8"><style>body{margin:0}iframe{display:block;width:100%;height:1000px;border:0}#results{position:fixed;bottom:0;left:0;background:white;color:black;font-size:10px;z-index:9999}</style><script>localStorage.setItem('schedease-theme',new URLSearchParams(location.search).get('theme'));</script><iframe title="scope" data-page="scope" srcdoc="
+&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;utf-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+  &lt;title&gt;SchedEase&lt;/title&gt;
+  &lt;script&gt;
+    if (sessionStorage.getItem(&quot;schedease-sidebar-collapsed&quot;) === &quot;true&quot;) {
+      document.documentElement.classList.add(&quot;sidebar-collapsed&quot;);
+    }
+  &lt;/script&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+  &lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/css/app.css?v=20260906-assignments&quot;&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;app-shell&quot;&gt;
+    &lt;aside class=&quot;sidebar&quot; id=&quot;sidebar&quot;&gt;
+      &lt;div class=&quot;brand-lockup&quot;&gt;
+        &lt;button class=&quot;icon-button sidebar-menu-button&quot; type=&quot;button&quot; data-sidebar-collapse aria-label=&quot;Toggle navigation&quot; data-tooltip=&quot;Open or close the sidebar menu.&quot;&gt;
+          &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+        &lt;/button&gt;
+        &lt;a class=&quot;brand&quot; href=&quot;/dashboard/&quot;&gt;
+          &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+          &lt;span class=&quot;brand-text&quot;&gt;
+            &lt;strong&gt;SchedEase&lt;/strong&gt;
+            &lt;small&gt;Academic Scheduler&lt;/small&gt;
+          &lt;/span&gt;
+        &lt;/a&gt;
+      &lt;/div&gt;
+      
+      &lt;nav class=&quot;nav-group&quot; aria-label=&quot;Primary navigation&quot;&gt;
+        &lt;a href=&quot;/dashboard/&quot; data-icon=&quot;grid&quot;&gt;Dashboard&lt;/a&gt;
+        
+        
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;scheduling&quot;&gt;
+          &lt;summary data-tooltip=&quot;Scheduling&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;scheduling&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Scheduling&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/generate/&quot; data-icon=&quot;spark&quot;&gt;Generate Schedule&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/schedules/&quot; data-icon=&quot;calendar&quot;&gt;Manage Schedules&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/assignments/&quot; data-icon=&quot;check&quot;&gt;Assignments&lt;/a&gt;
+            &lt;a href=&quot;/schedules/error-log/&quot; data-icon=&quot;flag&quot;&gt;Error Log&lt;/a&gt;
+            &lt;a href=&quot;/schedules/browse/&quot; data-icon=&quot;calendar&quot;&gt;Browse Published&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/ga-settings/&quot; data-icon=&quot;sliders&quot;&gt;GA Settings&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;academic&quot;&gt;
+          &lt;summary data-tooltip=&quot;Academic Management&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;academic&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Academic Management&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/departments/&quot; data-icon=&quot;building&quot;&gt;Departments&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/programs/&quot; data-icon=&quot;book&quot;&gt;Programs&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/year-levels/&quot; data-icon=&quot;layers&quot;&gt;Year Levels&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/sections/&quot; data-icon=&quot;layers&quot;&gt;Sections&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/subjects/&quot; data-icon=&quot;file&quot;&gt;Courses&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/students/&quot; data-icon=&quot;users&quot;&gt;Students&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;people&quot;&gt;
+          &lt;summary data-tooltip=&quot;People and Credentials&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;people&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;People &amp;amp; Credentials&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/faculty/&quot; data-icon=&quot;user&quot;&gt;Faculty&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/credentials/&quot; data-icon=&quot;check&quot;&gt;Credentials&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/faculty-credentials/&quot; data-icon=&quot;user&quot;&gt;Faculty Credentials&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/subject-credential-requirements/&quot; data-icon=&quot;file&quot;&gt;Course Requirements&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/credential-overrides/&quot; data-icon=&quot;flag&quot;&gt;Credential Overrides&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/availability/&quot; data-icon=&quot;clock&quot;&gt;Availability&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;rooms&quot;&gt;
+          &lt;summary data-tooltip=&quot;Room Management&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;rooms&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Room Management&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/rooms/&quot; data-icon=&quot;door&quot;&gt;Rooms&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-utilization/&quot; data-icon=&quot;sliders&quot;&gt;Room Utilization&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-schedule/&quot; data-icon=&quot;calendar&quot;&gt;Room Schedule&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-capacity-planning/&quot; data-icon=&quot;layers&quot;&gt;Capacity Planning&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;administration&quot;&gt;
+          &lt;summary data-tooltip=&quot;Administration&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;administration&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Administration&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/terms/&quot; data-icon=&quot;flag&quot;&gt;Academic Terms&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+        
+        
+        &lt;a href=&quot;/schedules/concerns/&quot; data-icon=&quot;flag&quot;&gt;Schedule Concerns&lt;/a&gt;
+        
+      &lt;/nav&gt;
+      
+    &lt;/aside&gt;
+
+    &lt;div class=&quot;workspace&quot;&gt;
+      &lt;header class=&quot;topbar&quot;&gt;
+        &lt;div class=&quot;topbar-left&quot;&gt;
+          &lt;a class=&quot;topbar-brand&quot; href=&quot;/dashboard/&quot; aria-label=&quot;SchedEase home&quot;&gt;
+            &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+            &lt;span&gt;SchedEase&lt;/span&gt;
+          &lt;/a&gt;
+          &lt;button class=&quot;icon-button mobile-only&quot; type=&quot;button&quot; data-sidebar-toggle aria-label=&quot;Open navigation&quot;&gt;
+            &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-search&quot;&gt;
+          &lt;span class=&quot;icon search-icon&quot;&gt;&lt;/span&gt;
+          &lt;input type=&quot;search&quot; data-global-filter aria-label=&quot;Filter table rows on this page&quot; placeholder=&quot;Filter rows on this page&quot;&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-actions&quot;&gt;
+          &lt;button class=&quot;icon-button&quot; type=&quot;button&quot; data-theme-toggle aria-label=&quot;Toggle theme&quot;&gt;
+            &lt;span class=&quot;icon theme-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+          
+          &lt;div class=&quot;user-menu&quot; role=&quot;group&quot; aria-label=&quot;Signed in as balancer&quot;&gt;
+            &lt;span class=&quot;avatar&quot;&gt;B&lt;/span&gt;
+            &lt;span&gt;
+              &lt;strong&gt;balancer&lt;/strong&gt;
+              &lt;small&gt;Administrator&lt;/small&gt;
+            &lt;/span&gt;
+          &lt;/div&gt;
+          &lt;form method=&quot;post&quot; action=&quot;/accounts/logout/&quot;&gt;
+            &lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;WUz6XaUvCRQKvNGRoZCoNUxY9AMEq5y9sgsU7IfBghQ4pJoPB8GrJSCh3lcGznLO&quot;&gt;
+            &lt;button class=&quot;button button-ghost&quot; data-loading-text=&quot;Signing out&quot;&gt;Sign out&lt;/button&gt;
+          &lt;/form&gt;
+          
+        &lt;/div&gt;
+      &lt;/header&gt;
+
+      &lt;section class=&quot;content&quot;&gt;
+        
+        
+&lt;div class=&quot;page-hero&quot;&gt;&lt;div&gt;&lt;p class=&quot;eyebrow&quot;&gt;Assignments&lt;/p&gt;&lt;h1&gt;Workload Balancing Proposals&lt;/h1&gt;&lt;p class=&quot;subtle&quot;&gt;Review instructor changes before timetable generation. Nothing changes until you approve a batch.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;form method=&quot;post&quot; class=&quot;panel form&quot; id=&quot;workload-scope&quot;&gt;&lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;WUz6XaUvCRQKvNGRoZCoNUxY9AMEq5y9sgsU7IfBghQ4pJoPB8GrJSCh3lcGznLO&quot;&gt;
+&lt;h2&gt;1. Choose what to analyze&lt;/h2&gt;
+&lt;p&gt;Choose a term and department. Analysis finds candidates; it does not authorize or change assignments.&lt;/p&gt;
+
+&lt;div class=&quot;workload-scope-grid&quot;&gt;&lt;div&gt;&lt;label for=&quot;id_term&quot;&gt;Academic term:&lt;/label&gt;&lt;select name=&quot;term&quot; required id=&quot;id_term&quot;&gt;
+  &lt;option value=&quot;&quot; selected&gt;---------&lt;/option&gt;
+
+  &lt;option value=&quot;1&quot;&gt;First Term 2026-2027&lt;/option&gt;
+
+&lt;/select&gt;&lt;/div&gt;&lt;div&gt;&lt;label for=&quot;id_department&quot;&gt;Department:&lt;/label&gt;&lt;select name=&quot;department&quot; required id=&quot;id_department&quot;&gt;
+  &lt;option value=&quot;&quot; selected&gt;---------&lt;/option&gt;
+
+  &lt;option value=&quot;1&quot;&gt;REG&lt;/option&gt;
+
+&lt;/select&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;details id=&quot;workload-advanced&quot;&gt;&lt;summary&gt;Advanced Selection (optional)&lt;/summary&gt;
+&lt;p&gt;Use these filters to narrow the analysis. Leave them empty to discover candidates automatically.&lt;/p&gt;
+&lt;fieldset class=&quot;scope-picker&quot; data-picker=&quot;assignments&quot;&gt;&lt;legend&gt;Limit to assignments&lt;/legend&gt;
+&lt;p class=&quot;subtle&quot;&gt;Leave empty to analyze all assignments in the chosen term and department.&lt;/p&gt;
+&lt;label for=&quot;search-assignments&quot;&gt;Search limit to assignments&lt;/label&gt;&lt;input id=&quot;search-assignments&quot; type=&quot;search&quot; data-picker-search autocomplete=&quot;off&quot;&gt;
+&lt;p data-picker-count role=&quot;status&quot;&gt;&lt;/p&gt;&lt;div data-picker-summary class=&quot;toolbar&quot; aria-label=&quot;Selected limit to assignments&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;workload-checkboxes&quot;&gt;&lt;div id=&quot;id_assignments&quot;&gt;&lt;div&gt;
+    &lt;label for=&quot;id_assignments_0&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;assignments&quot; value=&quot;2&quot; id=&quot;id_assignments_0&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ BAL2 — Balance — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_assignments_1&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;assignments&quot; value=&quot;3&quot; id=&quot;id_assignments_1&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ BAL3 — Balance — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_assignments_2&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;assignments&quot; value=&quot;1&quot; id=&quot;id_assignments_2&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ REG101 — Regression Course — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;&lt;/div&gt;&lt;p data-picker-feedback role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;/fieldset&gt;&lt;fieldset class=&quot;scope-picker&quot; data-picker=&quot;faculty&quot;&gt;&lt;legend&gt;Limit to instructors&lt;/legend&gt;
+&lt;p class=&quot;subtle&quot;&gt;Leave empty to analyze instructors in the department. Include current instructors.&lt;/p&gt;
+&lt;label for=&quot;search-faculty&quot;&gt;Search limit to instructors&lt;/label&gt;&lt;input id=&quot;search-faculty&quot; type=&quot;search&quot; data-picker-search autocomplete=&quot;off&quot;&gt;
+&lt;p data-picker-count role=&quot;status&quot;&gt;&lt;/p&gt;&lt;div data-picker-summary class=&quot;toolbar&quot; aria-label=&quot;Selected limit to instructors&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;workload-checkboxes&quot;&gt;&lt;div id=&quot;id_faculty&quot;&gt;&lt;div&gt;
+    &lt;label for=&quot;id_faculty_0&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;faculty&quot; value=&quot;2&quot; id=&quot;id_faculty_0&quot; data-department=&quot;1&quot;&gt;
+ Alternative&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_faculty_1&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;faculty&quot; value=&quot;1&quot; id=&quot;id_faculty_1&quot; data-department=&quot;1&quot;&gt;
+ Original Teacher&lt;/label&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;&lt;/div&gt;&lt;p data-picker-feedback role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;/fieldset&gt;&lt;fieldset class=&quot;scope-picker&quot; data-picker=&quot;exclude_assignments&quot;&gt;&lt;legend&gt;Exclude assignments&lt;/legend&gt;
+&lt;p class=&quot;subtle&quot;&gt;&lt;/p&gt;
+&lt;label for=&quot;search-exclude_assignments&quot;&gt;Search exclude assignments&lt;/label&gt;&lt;input id=&quot;search-exclude_assignments&quot; type=&quot;search&quot; data-picker-search autocomplete=&quot;off&quot;&gt;
+&lt;p data-picker-count role=&quot;status&quot;&gt;&lt;/p&gt;&lt;div data-picker-summary class=&quot;toolbar&quot; aria-label=&quot;Selected exclude assignments&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;workload-checkboxes&quot;&gt;&lt;div id=&quot;id_exclude_assignments&quot;&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_assignments_0&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_assignments&quot; value=&quot;2&quot; id=&quot;id_exclude_assignments_0&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ BAL2 — Balance — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_assignments_1&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_assignments&quot; value=&quot;3&quot; id=&quot;id_exclude_assignments_1&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ BAL3 — Balance — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_assignments_2&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_assignments&quot; value=&quot;1&quot; id=&quot;id_exclude_assignments_2&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ REG101 — Regression Course — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;&lt;/div&gt;&lt;p data-picker-feedback role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;/fieldset&gt;&lt;fieldset class=&quot;scope-picker&quot; data-picker=&quot;exclude_faculty&quot;&gt;&lt;legend&gt;Exclude instructors&lt;/legend&gt;
+&lt;p class=&quot;subtle&quot;&gt;&lt;/p&gt;
+&lt;label for=&quot;search-exclude_faculty&quot;&gt;Search exclude instructors&lt;/label&gt;&lt;input id=&quot;search-exclude_faculty&quot; type=&quot;search&quot; data-picker-search autocomplete=&quot;off&quot;&gt;
+&lt;p data-picker-count role=&quot;status&quot;&gt;&lt;/p&gt;&lt;div data-picker-summary class=&quot;toolbar&quot; aria-label=&quot;Selected exclude instructors&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;workload-checkboxes&quot;&gt;&lt;div id=&quot;id_exclude_faculty&quot;&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_faculty_0&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_faculty&quot; value=&quot;2&quot; id=&quot;id_exclude_faculty_0&quot; data-department=&quot;1&quot;&gt;
+ Alternative&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_faculty_1&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_faculty&quot; value=&quot;1&quot; id=&quot;id_exclude_faculty_1&quot; data-department=&quot;1&quot;&gt;
+ Original Teacher&lt;/label&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;&lt;/div&gt;&lt;p data-picker-feedback role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;/fieldset&gt;&lt;/details&gt;
+&lt;p id=&quot;scope-notice&quot; role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;div class=&quot;toolbar form-actions&quot;&gt;&lt;button class=&quot;button primary&quot; name=&quot;action&quot; value=&quot;analyze&quot;&gt;Analyze Workload&lt;/button&gt;&lt;a class=&quot;button&quot; href=&quot;/schedules/manage/assignments/&quot;&gt;Cancel&lt;/a&gt;&lt;/div&gt;&lt;/form&gt;
+&lt;div id=&quot;workload-output&quot;&gt;
+
+
+&lt;/div&gt;&lt;section class=&quot;panel&quot;&gt;&lt;h2&gt;Recent approvals&lt;/h2&gt;&lt;p&gt;No approved batches yet.&lt;/p&gt;&lt;/section&gt;
+&lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/workload_balancing.js&quot; defer&gt;&lt;/script&gt;
+
+      &lt;/section&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;backdrop&quot; data-sidebar-toggle&gt;&lt;/div&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/app.js&quot;&gt;&lt;/script&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/table-scroll.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe><iframe title="analysis" data-page="analysis" srcdoc="
+&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;utf-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+  &lt;title&gt;SchedEase&lt;/title&gt;
+  &lt;script&gt;
+    if (sessionStorage.getItem(&quot;schedease-sidebar-collapsed&quot;) === &quot;true&quot;) {
+      document.documentElement.classList.add(&quot;sidebar-collapsed&quot;);
+    }
+  &lt;/script&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+  &lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/css/app.css?v=20260906-assignments&quot;&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;app-shell&quot;&gt;
+    &lt;aside class=&quot;sidebar&quot; id=&quot;sidebar&quot;&gt;
+      &lt;div class=&quot;brand-lockup&quot;&gt;
+        &lt;button class=&quot;icon-button sidebar-menu-button&quot; type=&quot;button&quot; data-sidebar-collapse aria-label=&quot;Toggle navigation&quot; data-tooltip=&quot;Open or close the sidebar menu.&quot;&gt;
+          &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+        &lt;/button&gt;
+        &lt;a class=&quot;brand&quot; href=&quot;/dashboard/&quot;&gt;
+          &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+          &lt;span class=&quot;brand-text&quot;&gt;
+            &lt;strong&gt;SchedEase&lt;/strong&gt;
+            &lt;small&gt;Academic Scheduler&lt;/small&gt;
+          &lt;/span&gt;
+        &lt;/a&gt;
+      &lt;/div&gt;
+      
+      &lt;nav class=&quot;nav-group&quot; aria-label=&quot;Primary navigation&quot;&gt;
+        &lt;a href=&quot;/dashboard/&quot; data-icon=&quot;grid&quot;&gt;Dashboard&lt;/a&gt;
+        
+        
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;scheduling&quot;&gt;
+          &lt;summary data-tooltip=&quot;Scheduling&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;scheduling&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Scheduling&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/generate/&quot; data-icon=&quot;spark&quot;&gt;Generate Schedule&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/schedules/&quot; data-icon=&quot;calendar&quot;&gt;Manage Schedules&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/assignments/&quot; data-icon=&quot;check&quot;&gt;Assignments&lt;/a&gt;
+            &lt;a href=&quot;/schedules/error-log/&quot; data-icon=&quot;flag&quot;&gt;Error Log&lt;/a&gt;
+            &lt;a href=&quot;/schedules/browse/&quot; data-icon=&quot;calendar&quot;&gt;Browse Published&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/ga-settings/&quot; data-icon=&quot;sliders&quot;&gt;GA Settings&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;academic&quot;&gt;
+          &lt;summary data-tooltip=&quot;Academic Management&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;academic&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Academic Management&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/departments/&quot; data-icon=&quot;building&quot;&gt;Departments&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/programs/&quot; data-icon=&quot;book&quot;&gt;Programs&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/year-levels/&quot; data-icon=&quot;layers&quot;&gt;Year Levels&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/sections/&quot; data-icon=&quot;layers&quot;&gt;Sections&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/subjects/&quot; data-icon=&quot;file&quot;&gt;Courses&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/students/&quot; data-icon=&quot;users&quot;&gt;Students&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;people&quot;&gt;
+          &lt;summary data-tooltip=&quot;People and Credentials&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;people&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;People &amp;amp; Credentials&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/faculty/&quot; data-icon=&quot;user&quot;&gt;Faculty&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/credentials/&quot; data-icon=&quot;check&quot;&gt;Credentials&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/faculty-credentials/&quot; data-icon=&quot;user&quot;&gt;Faculty Credentials&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/subject-credential-requirements/&quot; data-icon=&quot;file&quot;&gt;Course Requirements&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/credential-overrides/&quot; data-icon=&quot;flag&quot;&gt;Credential Overrides&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/availability/&quot; data-icon=&quot;clock&quot;&gt;Availability&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;rooms&quot;&gt;
+          &lt;summary data-tooltip=&quot;Room Management&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;rooms&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Room Management&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/rooms/&quot; data-icon=&quot;door&quot;&gt;Rooms&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-utilization/&quot; data-icon=&quot;sliders&quot;&gt;Room Utilization&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-schedule/&quot; data-icon=&quot;calendar&quot;&gt;Room Schedule&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-capacity-planning/&quot; data-icon=&quot;layers&quot;&gt;Capacity Planning&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;administration&quot;&gt;
+          &lt;summary data-tooltip=&quot;Administration&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;administration&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Administration&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/terms/&quot; data-icon=&quot;flag&quot;&gt;Academic Terms&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+        
+        
+        &lt;a href=&quot;/schedules/concerns/&quot; data-icon=&quot;flag&quot;&gt;Schedule Concerns&lt;/a&gt;
+        
+      &lt;/nav&gt;
+      
+    &lt;/aside&gt;
+
+    &lt;div class=&quot;workspace&quot;&gt;
+      &lt;header class=&quot;topbar&quot;&gt;
+        &lt;div class=&quot;topbar-left&quot;&gt;
+          &lt;a class=&quot;topbar-brand&quot; href=&quot;/dashboard/&quot; aria-label=&quot;SchedEase home&quot;&gt;
+            &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+            &lt;span&gt;SchedEase&lt;/span&gt;
+          &lt;/a&gt;
+          &lt;button class=&quot;icon-button mobile-only&quot; type=&quot;button&quot; data-sidebar-toggle aria-label=&quot;Open navigation&quot;&gt;
+            &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-search&quot;&gt;
+          &lt;span class=&quot;icon search-icon&quot;&gt;&lt;/span&gt;
+          &lt;input type=&quot;search&quot; data-global-filter aria-label=&quot;Filter table rows on this page&quot; placeholder=&quot;Filter rows on this page&quot;&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-actions&quot;&gt;
+          &lt;button class=&quot;icon-button&quot; type=&quot;button&quot; data-theme-toggle aria-label=&quot;Toggle theme&quot;&gt;
+            &lt;span class=&quot;icon theme-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+          
+          &lt;div class=&quot;user-menu&quot; role=&quot;group&quot; aria-label=&quot;Signed in as balancer&quot;&gt;
+            &lt;span class=&quot;avatar&quot;&gt;B&lt;/span&gt;
+            &lt;span&gt;
+              &lt;strong&gt;balancer&lt;/strong&gt;
+              &lt;small&gt;Administrator&lt;/small&gt;
+            &lt;/span&gt;
+          &lt;/div&gt;
+          &lt;form method=&quot;post&quot; action=&quot;/accounts/logout/&quot;&gt;
+            &lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;WoqUyx4FmS9Zqfb1UkIlFze0efKazMH5sKjII5pL0i9jkbTZ7tMoBxjj80acI4UK&quot;&gt;
+            &lt;button class=&quot;button button-ghost&quot; data-loading-text=&quot;Signing out&quot;&gt;Sign out&lt;/button&gt;
+          &lt;/form&gt;
+          
+        &lt;/div&gt;
+      &lt;/header&gt;
+
+      &lt;section class=&quot;content&quot;&gt;
+        
+        
+&lt;div class=&quot;page-hero&quot;&gt;&lt;div&gt;&lt;p class=&quot;eyebrow&quot;&gt;Assignments&lt;/p&gt;&lt;h1&gt;Workload Balancing Proposals&lt;/h1&gt;&lt;p class=&quot;subtle&quot;&gt;Review instructor changes before timetable generation. Nothing changes until you approve a batch.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;form method=&quot;post&quot; class=&quot;panel form&quot; id=&quot;workload-scope&quot;&gt;&lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;WoqUyx4FmS9Zqfb1UkIlFze0efKazMH5sKjII5pL0i9jkbTZ7tMoBxjj80acI4UK&quot;&gt;
+&lt;h2&gt;1. Choose what to analyze&lt;/h2&gt;
+&lt;p&gt;Choose a term and department. Analysis finds candidates; it does not authorize or change assignments.&lt;/p&gt;
+
+&lt;div class=&quot;workload-scope-grid&quot;&gt;&lt;div&gt;&lt;label for=&quot;id_term&quot;&gt;Academic term:&lt;/label&gt;&lt;select name=&quot;term&quot; required id=&quot;id_term&quot;&gt;
+  &lt;option value=&quot;&quot;&gt;---------&lt;/option&gt;
+
+  &lt;option value=&quot;1&quot; selected&gt;First Term 2026-2027&lt;/option&gt;
+
+&lt;/select&gt;&lt;/div&gt;&lt;div&gt;&lt;label for=&quot;id_department&quot;&gt;Department:&lt;/label&gt;&lt;select name=&quot;department&quot; required id=&quot;id_department&quot;&gt;
+  &lt;option value=&quot;&quot;&gt;---------&lt;/option&gt;
+
+  &lt;option value=&quot;1&quot; selected&gt;REG&lt;/option&gt;
+
+&lt;/select&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;details id=&quot;workload-advanced&quot;&gt;&lt;summary&gt;Advanced Selection (optional)&lt;/summary&gt;
+&lt;p&gt;Use these filters to narrow the analysis. Leave them empty to discover candidates automatically.&lt;/p&gt;
+&lt;fieldset class=&quot;scope-picker&quot; data-picker=&quot;assignments&quot;&gt;&lt;legend&gt;Limit to assignments&lt;/legend&gt;
+&lt;p class=&quot;subtle&quot;&gt;Leave empty to analyze all assignments in the chosen term and department.&lt;/p&gt;
+&lt;label for=&quot;search-assignments&quot;&gt;Search limit to assignments&lt;/label&gt;&lt;input id=&quot;search-assignments&quot; type=&quot;search&quot; data-picker-search autocomplete=&quot;off&quot;&gt;
+&lt;p data-picker-count role=&quot;status&quot;&gt;&lt;/p&gt;&lt;div data-picker-summary class=&quot;toolbar&quot; aria-label=&quot;Selected limit to assignments&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;workload-checkboxes&quot;&gt;&lt;div id=&quot;id_assignments&quot;&gt;&lt;div&gt;
+    &lt;label for=&quot;id_assignments_0&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;assignments&quot; value=&quot;2&quot; id=&quot;id_assignments_0&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ BAL2 — Balance — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_assignments_1&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;assignments&quot; value=&quot;3&quot; id=&quot;id_assignments_1&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ BAL3 — Balance — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_assignments_2&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;assignments&quot; value=&quot;1&quot; id=&quot;id_assignments_2&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ REG101 — Regression Course — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;&lt;/div&gt;&lt;p data-picker-feedback role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;/fieldset&gt;&lt;fieldset class=&quot;scope-picker&quot; data-picker=&quot;faculty&quot;&gt;&lt;legend&gt;Limit to instructors&lt;/legend&gt;
+&lt;p class=&quot;subtle&quot;&gt;Leave empty to analyze instructors in the department. Include current instructors.&lt;/p&gt;
+&lt;label for=&quot;search-faculty&quot;&gt;Search limit to instructors&lt;/label&gt;&lt;input id=&quot;search-faculty&quot; type=&quot;search&quot; data-picker-search autocomplete=&quot;off&quot;&gt;
+&lt;p data-picker-count role=&quot;status&quot;&gt;&lt;/p&gt;&lt;div data-picker-summary class=&quot;toolbar&quot; aria-label=&quot;Selected limit to instructors&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;workload-checkboxes&quot;&gt;&lt;div id=&quot;id_faculty&quot;&gt;&lt;div&gt;
+    &lt;label for=&quot;id_faculty_0&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;faculty&quot; value=&quot;2&quot; id=&quot;id_faculty_0&quot; data-department=&quot;1&quot;&gt;
+ Alternative&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_faculty_1&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;faculty&quot; value=&quot;1&quot; id=&quot;id_faculty_1&quot; data-department=&quot;1&quot;&gt;
+ Original Teacher&lt;/label&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;&lt;/div&gt;&lt;p data-picker-feedback role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;/fieldset&gt;&lt;fieldset class=&quot;scope-picker&quot; data-picker=&quot;exclude_assignments&quot;&gt;&lt;legend&gt;Exclude assignments&lt;/legend&gt;
+&lt;p class=&quot;subtle&quot;&gt;&lt;/p&gt;
+&lt;label for=&quot;search-exclude_assignments&quot;&gt;Search exclude assignments&lt;/label&gt;&lt;input id=&quot;search-exclude_assignments&quot; type=&quot;search&quot; data-picker-search autocomplete=&quot;off&quot;&gt;
+&lt;p data-picker-count role=&quot;status&quot;&gt;&lt;/p&gt;&lt;div data-picker-summary class=&quot;toolbar&quot; aria-label=&quot;Selected exclude assignments&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;workload-checkboxes&quot;&gt;&lt;div id=&quot;id_exclude_assignments&quot;&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_assignments_0&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_assignments&quot; value=&quot;2&quot; id=&quot;id_exclude_assignments_0&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ BAL2 — Balance — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_assignments_1&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_assignments&quot; value=&quot;3&quot; id=&quot;id_exclude_assignments_1&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ BAL3 — Balance — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_assignments_2&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_assignments&quot; value=&quot;1&quot; id=&quot;id_exclude_assignments_2&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ REG101 — Regression Course — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;&lt;/div&gt;&lt;p data-picker-feedback role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;/fieldset&gt;&lt;fieldset class=&quot;scope-picker&quot; data-picker=&quot;exclude_faculty&quot;&gt;&lt;legend&gt;Exclude instructors&lt;/legend&gt;
+&lt;p class=&quot;subtle&quot;&gt;&lt;/p&gt;
+&lt;label for=&quot;search-exclude_faculty&quot;&gt;Search exclude instructors&lt;/label&gt;&lt;input id=&quot;search-exclude_faculty&quot; type=&quot;search&quot; data-picker-search autocomplete=&quot;off&quot;&gt;
+&lt;p data-picker-count role=&quot;status&quot;&gt;&lt;/p&gt;&lt;div data-picker-summary class=&quot;toolbar&quot; aria-label=&quot;Selected exclude instructors&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;workload-checkboxes&quot;&gt;&lt;div id=&quot;id_exclude_faculty&quot;&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_faculty_0&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_faculty&quot; value=&quot;2&quot; id=&quot;id_exclude_faculty_0&quot; data-department=&quot;1&quot;&gt;
+ Alternative&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_faculty_1&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_faculty&quot; value=&quot;1&quot; id=&quot;id_exclude_faculty_1&quot; data-department=&quot;1&quot;&gt;
+ Original Teacher&lt;/label&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;&lt;/div&gt;&lt;p data-picker-feedback role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;/fieldset&gt;&lt;/details&gt;
+&lt;p id=&quot;scope-notice&quot; role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;div class=&quot;toolbar form-actions&quot;&gt;&lt;button class=&quot;button primary&quot; name=&quot;action&quot; value=&quot;analyze&quot;&gt;Analyze Workload&lt;/button&gt;&lt;a class=&quot;button&quot; href=&quot;/schedules/manage/assignments/&quot;&gt;Cancel&lt;/a&gt;&lt;/div&gt;&lt;/form&gt;
+&lt;div id=&quot;workload-output&quot;&gt;
+&lt;section class=&quot;panel&quot; aria-labelledby=&quot;eligibility-heading&quot;&gt;&lt;h2 id=&quot;eligibility-heading&quot; tabindex=&quot;-1&quot;&gt;2. Eligibility summary&lt;/h2&gt;
+&lt;p&gt;First Term 2026-2027 ? REG&lt;/p&gt;
+&lt;ul&gt;&lt;li&gt;3 assignments evaluated&lt;/li&gt;&lt;li&gt;3 eligible candidates ? authorization still required&lt;/li&gt;&lt;li&gt;0 excluded assignments&lt;/li&gt;&lt;li&gt;1 qualified alternative instructors with a feasible reassignment&lt;/li&gt;&lt;/ul&gt;
+
+&lt;p&gt;Ready for your review. These candidates passed the current checks, but they are not yet authorized for reassignment.&lt;/p&gt;
+&lt;h3&gt;Assignments to authorize&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;REG101 / REG 1-A - Original Teacher&lt;/li&gt;&lt;li&gt;BAL2 / REG 1-A - Original Teacher&lt;/li&gt;&lt;li&gt;BAL3 / REG 1-A - Original Teacher&lt;/li&gt;&lt;/ul&gt;
+&lt;h3&gt;Instructor group to confirm&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;Original Teacher ? weekly limit 12 hours&lt;/li&gt;&lt;li&gt;Alternative ? weekly limit 6 hours&lt;/li&gt;&lt;/ul&gt;
+&lt;form method=&quot;post&quot; class=&quot;form&quot;&gt;&lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;WoqUyx4FmS9Zqfb1UkIlFze0efKazMH5sKjII5pL0i9jkbTZ7tMoBxjj80acI4UK&quot;&gt;&lt;input type=&quot;hidden&quot; name=&quot;analysis_token&quot; value=&quot;.eJwlyDsOwyAMANC7eGbAEAzJVaoO5uMIqUEVkCGqevdW7fb0XnCO0mFDBbP04wfhdD7mBdsNlbkr4DHq3o7S5vifst-V2vbSn722CRusxJIxrY4WbYPVKYrEEJ215NkZvZAwRWQqBQP5mFMy6LWQFyMmE7w_fXwpKg:1xJYD3:m64Y_8jcfr7hqkh96-9bNl937bsusocPLQS6hFEmEZI&quot;&gt;&lt;input type=&quot;hidden&quot; name=&quot;scope_state&quot; value=&quot;eyJ0ZXJtIjoiMSIsImRlcGFydG1lbnQiOiIxIiwiYXNzaWdubWVudHMiOltdLCJmYWN1bHR5IjpbXSwiZXhjbHVkZV9hc3NpZ25tZW50cyI6W10sImV4Y2x1ZGVfZmFjdWx0eSI6W119:1xJYD3:IEoCSf8XLv2g_y5D64sRuOaaAg-Nro-DpefIHKccPqc&quot;&gt;
+&lt;p&gt;&lt;label&gt;&lt;input type=&quot;checkbox&quot; name=&quot;authorize_scope&quot; value=&quot;yes&quot; required&gt; I authorize the candidate assignments listed above to be considered for reassignment.&lt;/label&gt;&lt;/p&gt;
+&lt;p&gt;&lt;label&gt;&lt;input type=&quot;checkbox&quot; name=&quot;comparable&quot; value=&quot;yes&quot; required&gt; I confirm this instructor group has comparable teaching responsibilities and compatible workload policies.&lt;/label&gt;&lt;/p&gt;
+&lt;div class=&quot;toolbar form-actions&quot;&gt;&lt;button class=&quot;button primary&quot; name=&quot;action&quot; value=&quot;generate&quot;&gt;Generate proposals&lt;/button&gt;&lt;/div&gt;&lt;/form&gt;
+
+
+&lt;/section&gt;
+
+&lt;/div&gt;&lt;section class=&quot;panel&quot;&gt;&lt;h2&gt;Recent approvals&lt;/h2&gt;&lt;p&gt;No approved batches yet.&lt;/p&gt;&lt;/section&gt;
+&lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/workload_balancing.js&quot; defer&gt;&lt;/script&gt;
+
+      &lt;/section&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;backdrop&quot; data-sidebar-toggle&gt;&lt;/div&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/app.js&quot;&gt;&lt;/script&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/table-scroll.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe><iframe title="preview" data-page="preview" srcdoc="
+&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;utf-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+  &lt;title&gt;SchedEase&lt;/title&gt;
+  &lt;script&gt;
+    if (sessionStorage.getItem(&quot;schedease-sidebar-collapsed&quot;) === &quot;true&quot;) {
+      document.documentElement.classList.add(&quot;sidebar-collapsed&quot;);
+    }
+  &lt;/script&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+  &lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/css/app.css?v=20260906-assignments&quot;&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;app-shell&quot;&gt;
+    &lt;aside class=&quot;sidebar&quot; id=&quot;sidebar&quot;&gt;
+      &lt;div class=&quot;brand-lockup&quot;&gt;
+        &lt;button class=&quot;icon-button sidebar-menu-button&quot; type=&quot;button&quot; data-sidebar-collapse aria-label=&quot;Toggle navigation&quot; data-tooltip=&quot;Open or close the sidebar menu.&quot;&gt;
+          &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+        &lt;/button&gt;
+        &lt;a class=&quot;brand&quot; href=&quot;/dashboard/&quot;&gt;
+          &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+          &lt;span class=&quot;brand-text&quot;&gt;
+            &lt;strong&gt;SchedEase&lt;/strong&gt;
+            &lt;small&gt;Academic Scheduler&lt;/small&gt;
+          &lt;/span&gt;
+        &lt;/a&gt;
+      &lt;/div&gt;
+      
+      &lt;nav class=&quot;nav-group&quot; aria-label=&quot;Primary navigation&quot;&gt;
+        &lt;a href=&quot;/dashboard/&quot; data-icon=&quot;grid&quot;&gt;Dashboard&lt;/a&gt;
+        
+        
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;scheduling&quot;&gt;
+          &lt;summary data-tooltip=&quot;Scheduling&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;scheduling&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Scheduling&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/generate/&quot; data-icon=&quot;spark&quot;&gt;Generate Schedule&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/schedules/&quot; data-icon=&quot;calendar&quot;&gt;Manage Schedules&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/assignments/&quot; data-icon=&quot;check&quot;&gt;Assignments&lt;/a&gt;
+            &lt;a href=&quot;/schedules/error-log/&quot; data-icon=&quot;flag&quot;&gt;Error Log&lt;/a&gt;
+            &lt;a href=&quot;/schedules/browse/&quot; data-icon=&quot;calendar&quot;&gt;Browse Published&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/ga-settings/&quot; data-icon=&quot;sliders&quot;&gt;GA Settings&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;academic&quot;&gt;
+          &lt;summary data-tooltip=&quot;Academic Management&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;academic&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Academic Management&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/departments/&quot; data-icon=&quot;building&quot;&gt;Departments&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/programs/&quot; data-icon=&quot;book&quot;&gt;Programs&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/year-levels/&quot; data-icon=&quot;layers&quot;&gt;Year Levels&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/sections/&quot; data-icon=&quot;layers&quot;&gt;Sections&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/subjects/&quot; data-icon=&quot;file&quot;&gt;Courses&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/students/&quot; data-icon=&quot;users&quot;&gt;Students&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;people&quot;&gt;
+          &lt;summary data-tooltip=&quot;People and Credentials&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;people&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;People &amp;amp; Credentials&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/faculty/&quot; data-icon=&quot;user&quot;&gt;Faculty&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/credentials/&quot; data-icon=&quot;check&quot;&gt;Credentials&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/faculty-credentials/&quot; data-icon=&quot;user&quot;&gt;Faculty Credentials&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/subject-credential-requirements/&quot; data-icon=&quot;file&quot;&gt;Course Requirements&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/credential-overrides/&quot; data-icon=&quot;flag&quot;&gt;Credential Overrides&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/availability/&quot; data-icon=&quot;clock&quot;&gt;Availability&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;rooms&quot;&gt;
+          &lt;summary data-tooltip=&quot;Room Management&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;rooms&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Room Management&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/rooms/&quot; data-icon=&quot;door&quot;&gt;Rooms&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-utilization/&quot; data-icon=&quot;sliders&quot;&gt;Room Utilization&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-schedule/&quot; data-icon=&quot;calendar&quot;&gt;Room Schedule&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-capacity-planning/&quot; data-icon=&quot;layers&quot;&gt;Capacity Planning&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;administration&quot;&gt;
+          &lt;summary data-tooltip=&quot;Administration&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;administration&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Administration&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/terms/&quot; data-icon=&quot;flag&quot;&gt;Academic Terms&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+        
+        
+        &lt;a href=&quot;/schedules/concerns/&quot; data-icon=&quot;flag&quot;&gt;Schedule Concerns&lt;/a&gt;
+        
+      &lt;/nav&gt;
+      
+    &lt;/aside&gt;
+
+    &lt;div class=&quot;workspace&quot;&gt;
+      &lt;header class=&quot;topbar&quot;&gt;
+        &lt;div class=&quot;topbar-left&quot;&gt;
+          &lt;a class=&quot;topbar-brand&quot; href=&quot;/dashboard/&quot; aria-label=&quot;SchedEase home&quot;&gt;
+            &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+            &lt;span&gt;SchedEase&lt;/span&gt;
+          &lt;/a&gt;
+          &lt;button class=&quot;icon-button mobile-only&quot; type=&quot;button&quot; data-sidebar-toggle aria-label=&quot;Open navigation&quot;&gt;
+            &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-search&quot;&gt;
+          &lt;span class=&quot;icon search-icon&quot;&gt;&lt;/span&gt;
+          &lt;input type=&quot;search&quot; data-global-filter aria-label=&quot;Filter table rows on this page&quot; placeholder=&quot;Filter rows on this page&quot;&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-actions&quot;&gt;
+          &lt;button class=&quot;icon-button&quot; type=&quot;button&quot; data-theme-toggle aria-label=&quot;Toggle theme&quot;&gt;
+            &lt;span class=&quot;icon theme-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+          
+          &lt;div class=&quot;user-menu&quot; role=&quot;group&quot; aria-label=&quot;Signed in as balancer&quot;&gt;
+            &lt;span class=&quot;avatar&quot;&gt;B&lt;/span&gt;
+            &lt;span&gt;
+              &lt;strong&gt;balancer&lt;/strong&gt;
+              &lt;small&gt;Administrator&lt;/small&gt;
+            &lt;/span&gt;
+          &lt;/div&gt;
+          &lt;form method=&quot;post&quot; action=&quot;/accounts/logout/&quot;&gt;
+            &lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;fBYYmpv1tWBu1nsQl716MByFCN1B4CcHLXRMwXQ77mBOVjaOyg59IzDYwyrDdUpm&quot;&gt;
+            &lt;button class=&quot;button button-ghost&quot; data-loading-text=&quot;Signing out&quot;&gt;Sign out&lt;/button&gt;
+          &lt;/form&gt;
+          
+        &lt;/div&gt;
+      &lt;/header&gt;
+
+      &lt;section class=&quot;content&quot;&gt;
+        
+        
+&lt;div class=&quot;page-hero&quot;&gt;&lt;div&gt;&lt;p class=&quot;eyebrow&quot;&gt;Assignments&lt;/p&gt;&lt;h1&gt;Workload Balancing Proposals&lt;/h1&gt;&lt;p class=&quot;subtle&quot;&gt;Review instructor changes before timetable generation. Nothing changes until you approve a batch.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;form method=&quot;post&quot; class=&quot;panel form&quot; id=&quot;workload-scope&quot;&gt;&lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;fBYYmpv1tWBu1nsQl716MByFCN1B4CcHLXRMwXQ77mBOVjaOyg59IzDYwyrDdUpm&quot;&gt;
+&lt;h2&gt;1. Choose what to analyze&lt;/h2&gt;
+&lt;p&gt;Choose a term and department. Analysis finds candidates; it does not authorize or change assignments.&lt;/p&gt;
+
+&lt;div class=&quot;workload-scope-grid&quot;&gt;&lt;div&gt;&lt;label for=&quot;id_term&quot;&gt;Academic term:&lt;/label&gt;&lt;select name=&quot;term&quot; required id=&quot;id_term&quot;&gt;
+  &lt;option value=&quot;&quot;&gt;---------&lt;/option&gt;
+
+  &lt;option value=&quot;1&quot; selected&gt;First Term 2026-2027&lt;/option&gt;
+
+&lt;/select&gt;&lt;/div&gt;&lt;div&gt;&lt;label for=&quot;id_department&quot;&gt;Department:&lt;/label&gt;&lt;select name=&quot;department&quot; required id=&quot;id_department&quot;&gt;
+  &lt;option value=&quot;&quot;&gt;---------&lt;/option&gt;
+
+  &lt;option value=&quot;1&quot; selected&gt;REG&lt;/option&gt;
+
+&lt;/select&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;details id=&quot;workload-advanced&quot;&gt;&lt;summary&gt;Advanced Selection (optional)&lt;/summary&gt;
+&lt;p&gt;Use these filters to narrow the analysis. Leave them empty to discover candidates automatically.&lt;/p&gt;
+&lt;fieldset class=&quot;scope-picker&quot; data-picker=&quot;assignments&quot;&gt;&lt;legend&gt;Limit to assignments&lt;/legend&gt;
+&lt;p class=&quot;subtle&quot;&gt;Leave empty to analyze all assignments in the chosen term and department.&lt;/p&gt;
+&lt;label for=&quot;search-assignments&quot;&gt;Search limit to assignments&lt;/label&gt;&lt;input id=&quot;search-assignments&quot; type=&quot;search&quot; data-picker-search autocomplete=&quot;off&quot;&gt;
+&lt;p data-picker-count role=&quot;status&quot;&gt;&lt;/p&gt;&lt;div data-picker-summary class=&quot;toolbar&quot; aria-label=&quot;Selected limit to assignments&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;workload-checkboxes&quot;&gt;&lt;div id=&quot;id_assignments&quot;&gt;&lt;div&gt;
+    &lt;label for=&quot;id_assignments_0&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;assignments&quot; value=&quot;2&quot; id=&quot;id_assignments_0&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ BAL2 — Balance — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_assignments_1&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;assignments&quot; value=&quot;3&quot; id=&quot;id_assignments_1&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ BAL3 — Balance — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_assignments_2&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;assignments&quot; value=&quot;1&quot; id=&quot;id_assignments_2&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ REG101 — Regression Course — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;&lt;/div&gt;&lt;p data-picker-feedback role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;/fieldset&gt;&lt;fieldset class=&quot;scope-picker&quot; data-picker=&quot;faculty&quot;&gt;&lt;legend&gt;Limit to instructors&lt;/legend&gt;
+&lt;p class=&quot;subtle&quot;&gt;Leave empty to analyze instructors in the department. Include current instructors.&lt;/p&gt;
+&lt;label for=&quot;search-faculty&quot;&gt;Search limit to instructors&lt;/label&gt;&lt;input id=&quot;search-faculty&quot; type=&quot;search&quot; data-picker-search autocomplete=&quot;off&quot;&gt;
+&lt;p data-picker-count role=&quot;status&quot;&gt;&lt;/p&gt;&lt;div data-picker-summary class=&quot;toolbar&quot; aria-label=&quot;Selected limit to instructors&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;workload-checkboxes&quot;&gt;&lt;div id=&quot;id_faculty&quot;&gt;&lt;div&gt;
+    &lt;label for=&quot;id_faculty_0&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;faculty&quot; value=&quot;2&quot; id=&quot;id_faculty_0&quot; data-department=&quot;1&quot;&gt;
+ Alternative&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_faculty_1&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;faculty&quot; value=&quot;1&quot; id=&quot;id_faculty_1&quot; data-department=&quot;1&quot;&gt;
+ Original Teacher&lt;/label&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;&lt;/div&gt;&lt;p data-picker-feedback role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;/fieldset&gt;&lt;fieldset class=&quot;scope-picker&quot; data-picker=&quot;exclude_assignments&quot;&gt;&lt;legend&gt;Exclude assignments&lt;/legend&gt;
+&lt;p class=&quot;subtle&quot;&gt;&lt;/p&gt;
+&lt;label for=&quot;search-exclude_assignments&quot;&gt;Search exclude assignments&lt;/label&gt;&lt;input id=&quot;search-exclude_assignments&quot; type=&quot;search&quot; data-picker-search autocomplete=&quot;off&quot;&gt;
+&lt;p data-picker-count role=&quot;status&quot;&gt;&lt;/p&gt;&lt;div data-picker-summary class=&quot;toolbar&quot; aria-label=&quot;Selected exclude assignments&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;workload-checkboxes&quot;&gt;&lt;div id=&quot;id_exclude_assignments&quot;&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_assignments_0&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_assignments&quot; value=&quot;2&quot; id=&quot;id_exclude_assignments_0&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ BAL2 — Balance — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_assignments_1&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_assignments&quot; value=&quot;3&quot; id=&quot;id_exclude_assignments_1&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ BAL3 — Balance — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_assignments_2&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_assignments&quot; value=&quot;1&quot; id=&quot;id_exclude_assignments_2&quot; data-locked=&quot;false&quot; data-term=&quot;1&quot; data-department=&quot;1&quot;&gt;
+ REG101 — Regression Course — REG 1-A — Original Teacher - Candidate; analysis required&lt;/label&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;&lt;/div&gt;&lt;p data-picker-feedback role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;/fieldset&gt;&lt;fieldset class=&quot;scope-picker&quot; data-picker=&quot;exclude_faculty&quot;&gt;&lt;legend&gt;Exclude instructors&lt;/legend&gt;
+&lt;p class=&quot;subtle&quot;&gt;&lt;/p&gt;
+&lt;label for=&quot;search-exclude_faculty&quot;&gt;Search exclude instructors&lt;/label&gt;&lt;input id=&quot;search-exclude_faculty&quot; type=&quot;search&quot; data-picker-search autocomplete=&quot;off&quot;&gt;
+&lt;p data-picker-count role=&quot;status&quot;&gt;&lt;/p&gt;&lt;div data-picker-summary class=&quot;toolbar&quot; aria-label=&quot;Selected exclude instructors&quot;&gt;&lt;/div&gt;
+&lt;div class=&quot;workload-checkboxes&quot;&gt;&lt;div id=&quot;id_exclude_faculty&quot;&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_faculty_0&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_faculty&quot; value=&quot;2&quot; id=&quot;id_exclude_faculty_0&quot; data-department=&quot;1&quot;&gt;
+ Alternative&lt;/label&gt;
+
+&lt;/div&gt;&lt;div&gt;
+    &lt;label for=&quot;id_exclude_faculty_1&quot;&gt;&lt;input type=&quot;checkbox&quot; name=&quot;exclude_faculty&quot; value=&quot;1&quot; id=&quot;id_exclude_faculty_1&quot; data-department=&quot;1&quot;&gt;
+ Original Teacher&lt;/label&gt;
+
+&lt;/div&gt;
+&lt;/div&gt;&lt;/div&gt;&lt;p data-picker-feedback role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;/fieldset&gt;&lt;/details&gt;
+&lt;p id=&quot;scope-notice&quot; role=&quot;status&quot;&gt;&lt;/p&gt;
+&lt;div class=&quot;toolbar form-actions&quot;&gt;&lt;button class=&quot;button primary&quot; name=&quot;action&quot; value=&quot;analyze&quot;&gt;Analyze Workload&lt;/button&gt;&lt;a class=&quot;button&quot; href=&quot;/schedules/manage/assignments/&quot;&gt;Cancel&lt;/a&gt;&lt;/div&gt;&lt;/form&gt;
+&lt;div id=&quot;workload-output&quot;&gt;
+
+
+&lt;section class=&quot;panel&quot;&gt;&lt;h2 id=&quot;preview-heading&quot; tabindex=&quot;-1&quot;&gt;3. Review proposals&lt;/h2&gt;&lt;div data-batch-metrics&gt;&lt;p&gt;1 proposed · 1 selected · 0 alternatives need attention&lt;/p&gt;
+&lt;p&gt;Fairness uses the variance of workload percentages (lower is better). Limits are ceilings, not teaching targets. Only the administrator-selected group is compared.&lt;/p&gt;
+&lt;p&gt;Variance: 625.00 → 0.00. Percentage spread: 50.00 → 0.00.&lt;/p&gt;
+&lt;p&gt;Minimum utilization: 0.00% → 33.33%. Maximum: 50.00% → 33.33%.&lt;/p&gt;
+&lt;p&gt;Hard-constraint violations in the verified placement: 0. This preview does not save a timetable.&lt;/p&gt;
+&lt;p&gt;Recommended: the selected batch reduces utilization variance by 625.00.&lt;/p&gt;
+&lt;h3&gt;Combined proposed instructor loads&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;Original Teacher: 240 minutes / 4.00 hours (33.33%)&lt;/li&gt;&lt;li&gt;Alternative: 120 minutes / 2.00 hours (33.33%)&lt;/li&gt;&lt;/ul&gt;
+&lt;/div&gt;&lt;p id=&quot;selection-notice&quot; role=&quot;status&quot;&gt;&lt;/p&gt;&lt;form method=&quot;post&quot; class=&quot;form&quot; id=&quot;batch-selection&quot;&gt;&lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;fBYYmpv1tWBu1nsQl716MByFCN1B4CcHLXRMwXQ77mBOVjaOyg59IzDYwyrDdUpm&quot;&gt;&lt;input type=&quot;hidden&quot; name=&quot;scope_state&quot; value=&quot;eyJ0ZXJtIjoiMSIsImRlcGFydG1lbnQiOiIxIiwiYXNzaWdubWVudHMiOltdLCJmYWN1bHR5IjpbXSwiZXhjbHVkZV9hc3NpZ25tZW50cyI6W10sImV4Y2x1ZGVfZmFjdWx0eSI6W119:1xJYD3:IEoCSf8XLv2g_y5D64sRuOaaAg-Nro-DpefIHKccPqc&quot;&gt;&lt;input type=&quot;hidden&quot; name=&quot;token&quot; value=&quot;.eJwlikEOgyAQAP-yZw4s6KJ8pelhQdaaVNIAHozx7yXtbWYyFxw1FfCooKWy_4Br3da8p9wq-Acqo-xTgXA83u38l-7xxXlN_bgAwZu7H1sP5VO23MDDTCwLxnmkQdvJ6hhEwhRGa8nxaPRAwhSQKSWcyIUlRoNOCzkxYhaC-wumJS6G:1xJYD3:NHQvtFq66Fq1i2WC8crM2Dl20eEYpcitwZ3U-sP351w&quot;&gt;&lt;input type=&quot;hidden&quot; name=&quot;reviewed&quot; value=&quot;eyJ0b2tlbiI6Ijk5ZjRhZTAwYjBjNWFiNjRiNWU5MmM0NDkxMjc4MjY3NmNiMjBkM2Y4NThjYTVlYTkxMmI2ZTI3MzQ3ZmQ2ZDkiLCJzZWxlY3RlZCI6WyIxIl19:1xJYD3:T2zPNGaTlezCzZQl61xWxwmYjtkoMrCmJVm4nz6q4FA&quot;&gt;
+&lt;fieldset&gt;&lt;legend&gt;Include proposals&lt;/legend&gt;&lt;p&gt;After changing selections, click Preview selection to recalculate all combined results.&lt;/p&gt;
+&lt;button type=&quot;button&quot; class=&quot;button&quot; onclick=&quot;this.closest(&#x27;fieldset&#x27;).querySelectorAll(&#x27;input[type=checkbox]&#x27;).forEach(c =&gt; { c.checked = true; c.dispatchEvent(new Event(&#x27;change&#x27;, {bubbles: true})); })&quot;&gt;Select all&lt;/button&gt;
+&lt;p&gt;&lt;label&gt;&lt;input type=&quot;checkbox&quot; name=&quot;selected&quot; value=&quot;1&quot; checked&gt; REG101 / REG 1-A: Original Teacher -&amp;gt; Alternative&lt;/label&gt;&lt;/p&gt;&lt;/fieldset&gt;
+&lt;div class=&quot;toolbar form-actions&quot;&gt;&lt;button class=&quot;button&quot; name=&quot;action&quot; value=&quot;preview&quot;&gt;Preview selection&lt;/button&gt;&lt;a class=&quot;button&quot; href=&quot;/schedules/manage/assignments/&quot;&gt;Cancel&lt;/a&gt;&lt;/div&gt;
+&lt;p&gt;&lt;label&gt;&lt;input type=&quot;checkbox&quot; name=&quot;confirm&quot; value=&quot;yes&quot;&gt; I approve the selected instructor changes as one batch.&lt;/label&gt;&lt;/p&gt;&lt;button class=&quot;button primary&quot; name=&quot;action&quot; value=&quot;approve&quot;&gt;Approve selected batch&lt;/button&gt;
+&lt;/form&gt;
+&lt;article class=&quot;panel&quot; data-batch-metrics&gt;&lt;h3&gt;REG101 — REG 1-A&lt;/h3&gt;&lt;p&gt;Original Teacher → Alternative&lt;/p&gt;&lt;p&gt;Eligible: credential rules, weekly limits and common availability passed. A conflict-free placement exists for all term meetings, including checks against other published terms. Percentages below show the combined batch impact.&lt;/p&gt;&lt;p&gt;Contribution to this batch: 625.00 variance points lower than omitting this change (arithmetic comparison, not a separately validated batch).&lt;/p&gt;&lt;p&gt;Before:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Original Teacher: 360 minutes / 6.00 hours (50.00%)&lt;/li&gt;&lt;li&gt;Alternative: 0 minutes / 0.00 hours (0.00%)&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;After selected batch:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Original Teacher: 240 minutes / 4.00 hours (33.33%)&lt;/li&gt;&lt;li&gt;Alternative: 120 minutes / 2.00 hours (33.33%)&lt;/li&gt;&lt;/ul&gt;&lt;/article&gt;
+
+&lt;/section&gt;
+&lt;/div&gt;&lt;section class=&quot;panel&quot;&gt;&lt;h2&gt;Recent approvals&lt;/h2&gt;&lt;p&gt;No approved batches yet.&lt;/p&gt;&lt;/section&gt;
+&lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/workload_balancing.js&quot; defer&gt;&lt;/script&gt;
+
+      &lt;/section&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;backdrop&quot; data-sidebar-toggle&gt;&lt;/div&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/app.js&quot;&gt;&lt;/script&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/table-scroll.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe><pre id="results">RUNNING</pre><script>window.addEventListener('load',()=>setTimeout(()=>{
+let count=0;const errors=[];const check=(ok,text)=>{count++;if(!ok)errors.push(text)};
+for(const frame of document.querySelectorAll('iframe')){
+const d=frame.contentDocument,w=frame.contentWindow,name=frame.dataset.page;
+check(d.documentElement.dataset.theme===new URLSearchParams(location.search).get('theme'),name+' theme');
+check(d.documentElement.scrollWidth<=w.innerWidth+1,name+' no page overflow');
+check(d.querySelector('h1')?.innerText.length>0,name+' heading');
+check([...d.querySelectorAll('input:not([type=hidden]),select,textarea')].filter(e=>e.getClientRects().length).every(e=>e.getBoundingClientRect().right<=w.innerWidth+1),name+' controls contained');
+check(!d.querySelector('#workload-advanced').open,name+' advanced collapsed');
+check(!d.querySelector('select[name=assignments]'),name+' no native multiselect');
+if(name==='analysis'){
+check(d.querySelector('#eligibility-heading').textContent.includes('Eligibility'),'eligibility summary');
+check(!d.querySelector('[name=authorize_scope]').checked,'authorization not assumed');
+check(!d.querySelector('[name=comparable]').checked,'comparability not assumed');
+}
+if(name==='scope'){
+const term=d.querySelector('[name=term]'),dept=d.querySelector('[name=department]');
+term.selectedIndex=1;dept.selectedIndex=1;dept.dispatchEvent(new w.Event('change',{bubbles:true}));
+d.querySelector('#workload-advanced').open=true;
+const picker=d.querySelector('[data-picker=assignments]');
+const boxes=[...picker.querySelectorAll('input[type=checkbox]')];
+boxes[0].click();boxes[1].click();
+check(picker.querySelector('[data-picker-count]').textContent.startsWith('2 selected'),'selection count');
+check(picker.querySelectorAll('[data-picker-summary] button').length===2,'removable summaries');
+const search=picker.querySelector('[data-picker-search]');search.value='no such class';search.dispatchEvent(new w.Event('input',{bubbles:true}));
+check(boxes[0].checked&&boxes[1].checked,'search preserves choices');
+check(boxes[2].closest('label').parentElement.hidden,'search filters other rows');
+const teachers=d.querySelector('[data-picker=faculty]');teachers.querySelector('input[type=checkbox]').click();
+check(boxes[0].checked&&boxes[1].checked,'switching lists preserves choices');
+picker.querySelector('[data-picker-summary] button').click();
+check(picker.querySelector('[data-picker-count]').textContent.startsWith('1 selected'),'remove updates count');
+check(d.activeElement===search,'remove restores keyboard focus');
+const remaining=boxes.find(b=>b.checked);remaining.focus();check(d.activeElement===remaining,'checkbox focusable');
+dept.value='';dept.dispatchEvent(new w.Event('change',{bubbles:true}));
+check(remaining.getAttribute('aria-invalid')==='true','scope change marks invalid selection');
+check(picker.querySelector('[data-picker-feedback]').textContent.includes('outside'),'invalid scope feedback');
+check(d.querySelector('#workload-output').hidden,'scope change hides old output');
+check(d.documentElement.scrollWidth<=w.innerWidth+1,'expanded advanced no overflow');
+const form=d.querySelector('#workload-scope'),button=form.querySelector('[value=analyze]');
+form.addEventListener('submit',e=>e.preventDefault(),{once:true});
+form.dispatchEvent(new w.SubmitEvent('submit',{bubbles:true,cancelable:true,submitter:button}));
+check(form.getAttribute('aria-busy')==='true','loading announced');
+check(button.disabled,'duplicate submission disabled');
+check(new w.FormData(form).get('action')==='analyze','loading preserves submit action');
+}
+if(name==='preview'){
+const selected=d.querySelector('[name=selected]');check(!!selected,'selection checkbox');
+check(!d.querySelector('[value=approve]').disabled,'reviewed batch approvable');
+selected.checked=false;selected.dispatchEvent(new w.Event('change',{bubbles:true}));
+check(d.querySelector('[value=approve]').disabled,'changed selection cannot approve');
+check([...d.querySelectorAll('[data-batch-metrics]')].every(e=>e.hidden),'stale metrics hidden');
+check(d.querySelector('#selection-notice').textContent.includes('Preview'),'preview instruction');
+const dept=d.querySelector('[name=department]');dept.value='';dept.dispatchEvent(new w.Event('change',{bubbles:true}));
+check(d.querySelector('#workload-output').hidden,'changed filters invalidate proposal UI');
+}
+}
+document.querySelector('#results').textContent=errors.length?'FAIL '+errors.join('; '):'PASS '+count+' workload checks\nviewport width '+innerWidth;
+},800));</script>

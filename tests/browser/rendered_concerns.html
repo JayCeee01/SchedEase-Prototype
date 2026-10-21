@@ -1,0 +1,984 @@
+<!doctype html><meta charset="utf-8"><style>body{margin:0}iframe{display:block;width:100%;height:1000px;border:0}#results{position:fixed;bottom:0;left:0;background:white;color:black;font-size:10px;z-index:9999}</style><script>localStorage.setItem('schedease-theme',new URLSearchParams(location.search).get('theme'));</script><iframe title="student-new" data-page="student-new" srcdoc="
+&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;utf-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+  &lt;title&gt;SchedEase&lt;/title&gt;
+  &lt;script&gt;
+    if (sessionStorage.getItem(&quot;schedease-sidebar-collapsed&quot;) === &quot;true&quot;) {
+      document.documentElement.classList.add(&quot;sidebar-collapsed&quot;);
+    }
+  &lt;/script&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+  &lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/css/app.css?v=20260906-assignments&quot;&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;app-shell&quot;&gt;
+    &lt;aside class=&quot;sidebar&quot; id=&quot;sidebar&quot;&gt;
+      &lt;div class=&quot;brand-lockup&quot;&gt;
+        &lt;button class=&quot;icon-button sidebar-menu-button&quot; type=&quot;button&quot; data-sidebar-collapse aria-label=&quot;Toggle navigation&quot; data-tooltip=&quot;Open or close the sidebar menu.&quot;&gt;
+          &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+        &lt;/button&gt;
+        &lt;a class=&quot;brand&quot; href=&quot;/dashboard/&quot;&gt;
+          &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+          &lt;span class=&quot;brand-text&quot;&gt;
+            &lt;strong&gt;SchedEase&lt;/strong&gt;
+            &lt;small&gt;Academic Scheduler&lt;/small&gt;
+          &lt;/span&gt;
+        &lt;/a&gt;
+      &lt;/div&gt;
+      
+      &lt;nav class=&quot;nav-group&quot; aria-label=&quot;Primary navigation&quot;&gt;
+        
+        &lt;a href=&quot;/schedules/concerns/&quot; data-icon=&quot;flag&quot; class=&quot;is-active&quot; aria-current=&quot;page&quot;&gt;Schedule Concerns&lt;/a&gt;
+        
+        &lt;a href=&quot;/dashboard/&quot; data-icon=&quot;grid&quot;&gt;Dashboard&lt;/a&gt;
+        
+        &lt;a href=&quot;/schedules/browse/&quot; data-icon=&quot;calendar&quot;&gt;Browse Schedules&lt;/a&gt;
+        
+        
+      &lt;/nav&gt;
+      
+    &lt;/aside&gt;
+
+    &lt;div class=&quot;workspace&quot;&gt;
+      &lt;header class=&quot;topbar&quot;&gt;
+        &lt;div class=&quot;topbar-left&quot;&gt;
+          &lt;a class=&quot;topbar-brand&quot; href=&quot;/dashboard/&quot; aria-label=&quot;SchedEase home&quot;&gt;
+            &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+            &lt;span&gt;SchedEase&lt;/span&gt;
+          &lt;/a&gt;
+          &lt;button class=&quot;icon-button mobile-only&quot; type=&quot;button&quot; data-sidebar-toggle aria-label=&quot;Open navigation&quot;&gt;
+            &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-search&quot;&gt;
+          &lt;span class=&quot;icon search-icon&quot;&gt;&lt;/span&gt;
+          &lt;input type=&quot;search&quot; data-global-filter aria-label=&quot;Filter table rows on this page&quot; placeholder=&quot;Filter rows on this page&quot;&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-actions&quot;&gt;
+          &lt;button class=&quot;icon-button&quot; type=&quot;button&quot; data-theme-toggle aria-label=&quot;Toggle theme&quot;&gt;
+            &lt;span class=&quot;icon theme-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+          
+          &lt;div class=&quot;user-menu&quot; role=&quot;group&quot; aria-label=&quot;Signed in as concern-student&quot;&gt;
+            &lt;span class=&quot;avatar&quot;&gt;C&lt;/span&gt;
+            &lt;span&gt;
+              &lt;strong&gt;concern-student&lt;/strong&gt;
+              &lt;small&gt;Student&lt;/small&gt;
+            &lt;/span&gt;
+          &lt;/div&gt;
+          &lt;form method=&quot;post&quot; action=&quot;/accounts/logout/&quot;&gt;
+            &lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;osrZWliXCeK2LfOZLqBp2wmBWglTM44YDqXj7vwc1RTrAICU7C09nfZHMop2ShzX&quot;&gt;
+            &lt;button class=&quot;button button-ghost&quot; data-loading-text=&quot;Signing out&quot;&gt;Sign out&lt;/button&gt;
+          &lt;/form&gt;
+          
+        &lt;/div&gt;
+      &lt;/header&gt;
+
+      &lt;section class=&quot;content&quot;&gt;
+        
+        &lt;div class=&quot;page-hero&quot;&gt;&lt;div&gt;&lt;p class=&quot;eyebrow&quot;&gt;Schedule Concerns&lt;/p&gt;&lt;h1 id=&quot;concern-heading&quot;&gt;Report a concern&lt;/h1&gt;&lt;p class=&quot;subtle&quot;&gt;Reporting an issue does not change your schedule.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;form method=&quot;post&quot; class=&quot;panel form&quot; aria-labelledby=&quot;concern-heading&quot;&gt;&lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;osrZWliXCeK2LfOZLqBp2wmBWglTM44YDqXj7vwc1RTrAICU7C09nfZHMop2ShzX&quot;&gt;&lt;p&gt;
+    &lt;label for=&quot;id_schedule&quot;&gt;Published schedule:&lt;/label&gt;
+    &lt;select name=&quot;schedule&quot; required id=&quot;id_schedule&quot;&gt;
+  &lt;option value=&quot;&quot; selected&gt;---------&lt;/option&gt;
+
+  &lt;option value=&quot;1&quot;&gt;Concern timetable&lt;/option&gt;
+
+&lt;/select&gt;
+    
+    
+  &lt;/p&gt;
+
+  
+  &lt;p&gt;
+    &lt;label for=&quot;id_entry&quot;&gt;Affected class (optional):&lt;/label&gt;
+    &lt;select name=&quot;entry&quot; aria-describedby=&quot;id_entry_helptext&quot; id=&quot;id_entry&quot;&gt;
+  &lt;option value=&quot;&quot; selected&gt;---------&lt;/option&gt;
+
+  &lt;option value=&quot;1&quot;&gt;REG101 / REG 1-A - Monday 08:00 (Concern timetable)&lt;/option&gt;
+
+  &lt;option value=&quot;2&quot;&gt;REG101 / REG 1-A - Monday 09:00 (Concern timetable)&lt;/option&gt;
+
+&lt;/select&gt;
+    
+      &lt;span class=&quot;helptext&quot; id=&quot;id_entry_helptext&quot;&gt;Choose a class from the selected schedule. Leave blank for a missing subject or a schedule-wide concern.&lt;/span&gt;
+    
+    
+  &lt;/p&gt;
+
+  
+  &lt;p&gt;
+    &lt;label for=&quot;id_category&quot;&gt;Category:&lt;/label&gt;
+    &lt;select name=&quot;category&quot; id=&quot;id_category&quot;&gt;
+  &lt;option value=&quot;TIME&quot;&gt;Conflicting class times&lt;/option&gt;
+
+  &lt;option value=&quot;ROOM&quot;&gt;Room conflict or unavailable room&lt;/option&gt;
+
+  &lt;option value=&quot;SUBJECT&quot;&gt;Incorrect or missing subject&lt;/option&gt;
+
+  &lt;option value=&quot;ASSIGNMENT&quot;&gt;Incorrect faculty or section&lt;/option&gt;
+
+  &lt;option value=&quot;OTHER&quot;&gt;Other scheduling concern&lt;/option&gt;
+
+&lt;/select&gt;
+    
+    
+  &lt;/p&gt;
+
+  
+  &lt;p&gt;
+    &lt;label for=&quot;id_description&quot;&gt;Description:&lt;/label&gt;
+    &lt;textarea name=&quot;description&quot; cols=&quot;40&quot; rows=&quot;5&quot; maxlength=&quot;3000&quot; minlength=&quot;10&quot; required aria-describedby=&quot;id_description_helptext&quot; id=&quot;id_description&quot;&gt;
+&lt;/textarea&gt;
+    
+      &lt;span class=&quot;helptext&quot; id=&quot;id_description_helptext&quot;&gt;Explain the scheduling issue in 10-3000 characters.&lt;/span&gt;
+    
+    
+      
+    
+  &lt;/p&gt;&lt;div class=&quot;toolbar form-actions&quot;&gt;&lt;button type=&quot;submit&quot; class=&quot;button primary&quot;&gt;Submit concern&lt;/button&gt;&lt;a class=&quot;button&quot; href=&quot;/schedules/concerns/&quot;&gt;Cancel&lt;/a&gt;&lt;/div&gt;&lt;/form&gt;
+      &lt;/section&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;backdrop&quot; data-sidebar-toggle&gt;&lt;/div&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/app.js&quot;&gt;&lt;/script&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/table-scroll.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe><iframe title="student-list" data-page="student-list" srcdoc="
+&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;utf-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+  &lt;title&gt;SchedEase&lt;/title&gt;
+  &lt;script&gt;
+    if (sessionStorage.getItem(&quot;schedease-sidebar-collapsed&quot;) === &quot;true&quot;) {
+      document.documentElement.classList.add(&quot;sidebar-collapsed&quot;);
+    }
+  &lt;/script&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+  &lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/css/app.css?v=20260906-assignments&quot;&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;app-shell&quot;&gt;
+    &lt;aside class=&quot;sidebar&quot; id=&quot;sidebar&quot;&gt;
+      &lt;div class=&quot;brand-lockup&quot;&gt;
+        &lt;button class=&quot;icon-button sidebar-menu-button&quot; type=&quot;button&quot; data-sidebar-collapse aria-label=&quot;Toggle navigation&quot; data-tooltip=&quot;Open or close the sidebar menu.&quot;&gt;
+          &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+        &lt;/button&gt;
+        &lt;a class=&quot;brand&quot; href=&quot;/dashboard/&quot;&gt;
+          &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+          &lt;span class=&quot;brand-text&quot;&gt;
+            &lt;strong&gt;SchedEase&lt;/strong&gt;
+            &lt;small&gt;Academic Scheduler&lt;/small&gt;
+          &lt;/span&gt;
+        &lt;/a&gt;
+      &lt;/div&gt;
+      
+      &lt;nav class=&quot;nav-group&quot; aria-label=&quot;Primary navigation&quot;&gt;
+        
+        &lt;a href=&quot;/schedules/concerns/&quot; data-icon=&quot;flag&quot; class=&quot;is-active&quot; aria-current=&quot;page&quot;&gt;Schedule Concerns&lt;/a&gt;
+        
+        &lt;a href=&quot;/dashboard/&quot; data-icon=&quot;grid&quot;&gt;Dashboard&lt;/a&gt;
+        
+        &lt;a href=&quot;/schedules/browse/&quot; data-icon=&quot;calendar&quot;&gt;Browse Schedules&lt;/a&gt;
+        
+        
+      &lt;/nav&gt;
+      
+    &lt;/aside&gt;
+
+    &lt;div class=&quot;workspace&quot;&gt;
+      &lt;header class=&quot;topbar&quot;&gt;
+        &lt;div class=&quot;topbar-left&quot;&gt;
+          &lt;a class=&quot;topbar-brand&quot; href=&quot;/dashboard/&quot; aria-label=&quot;SchedEase home&quot;&gt;
+            &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+            &lt;span&gt;SchedEase&lt;/span&gt;
+          &lt;/a&gt;
+          &lt;button class=&quot;icon-button mobile-only&quot; type=&quot;button&quot; data-sidebar-toggle aria-label=&quot;Open navigation&quot;&gt;
+            &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-search&quot;&gt;
+          &lt;span class=&quot;icon search-icon&quot;&gt;&lt;/span&gt;
+          &lt;input type=&quot;search&quot; data-global-filter aria-label=&quot;Filter table rows on this page&quot; placeholder=&quot;Filter rows on this page&quot;&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-actions&quot;&gt;
+          &lt;button class=&quot;icon-button&quot; type=&quot;button&quot; data-theme-toggle aria-label=&quot;Toggle theme&quot;&gt;
+            &lt;span class=&quot;icon theme-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+          
+          &lt;div class=&quot;user-menu&quot; role=&quot;group&quot; aria-label=&quot;Signed in as concern-student&quot;&gt;
+            &lt;span class=&quot;avatar&quot;&gt;C&lt;/span&gt;
+            &lt;span&gt;
+              &lt;strong&gt;concern-student&lt;/strong&gt;
+              &lt;small&gt;Student&lt;/small&gt;
+            &lt;/span&gt;
+          &lt;/div&gt;
+          &lt;form method=&quot;post&quot; action=&quot;/accounts/logout/&quot;&gt;
+            &lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;U4RCICGwl0vmJerNHiBxV4MtIK4OBucS92nWTMULKDELyHfI3u0hgNpzyS8XHHHR&quot;&gt;
+            &lt;button class=&quot;button button-ghost&quot; data-loading-text=&quot;Signing out&quot;&gt;Sign out&lt;/button&gt;
+          &lt;/form&gt;
+          
+        &lt;/div&gt;
+      &lt;/header&gt;
+
+      &lt;section class=&quot;content&quot;&gt;
+        
+        
+&lt;div class=&quot;page-hero&quot;&gt;&lt;div&gt;&lt;p class=&quot;eyebrow&quot;&gt;Schedule Concerns&lt;/p&gt;&lt;h1&gt;My concerns&lt;/h1&gt;&lt;p class=&quot;subtle&quot;&gt;Track scheduling issues and administrator responses.&lt;/p&gt;&lt;/div&gt;&lt;a class=&quot;button primary&quot; href=&quot;/schedules/concerns/new/&quot;&gt;Report a concern&lt;/a&gt;&lt;/div&gt;
+
+&lt;article class=&quot;panel&quot;&gt;&lt;h2&gt;&lt;a href=&quot;/schedules/concerns/1/&quot;&gt;Concern #1: Conflicting class times&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;Concern timetable &amp;middot; First Term 2026-2027&lt;/p&gt;&lt;p&gt;&lt;span class=&quot;badge&quot;&gt;Under Review&lt;/span&gt; &amp;middot; Oct 21, 2026 6:22 PM&lt;/p&gt;&lt;/article&gt;
+&lt;nav class=&quot;toolbar&quot; aria-label=&quot;Concern pages&quot;&gt;&lt;span&gt;Page 1 of 1&lt;/span&gt;&lt;/nav&gt;
+
+      &lt;/section&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;backdrop&quot; data-sidebar-toggle&gt;&lt;/div&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/app.js&quot;&gt;&lt;/script&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/table-scroll.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe><iframe title="student-detail" data-page="student-detail" srcdoc="
+&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;utf-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+  &lt;title&gt;SchedEase&lt;/title&gt;
+  &lt;script&gt;
+    if (sessionStorage.getItem(&quot;schedease-sidebar-collapsed&quot;) === &quot;true&quot;) {
+      document.documentElement.classList.add(&quot;sidebar-collapsed&quot;);
+    }
+  &lt;/script&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+  &lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/css/app.css?v=20260906-assignments&quot;&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;app-shell&quot;&gt;
+    &lt;aside class=&quot;sidebar&quot; id=&quot;sidebar&quot;&gt;
+      &lt;div class=&quot;brand-lockup&quot;&gt;
+        &lt;button class=&quot;icon-button sidebar-menu-button&quot; type=&quot;button&quot; data-sidebar-collapse aria-label=&quot;Toggle navigation&quot; data-tooltip=&quot;Open or close the sidebar menu.&quot;&gt;
+          &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+        &lt;/button&gt;
+        &lt;a class=&quot;brand&quot; href=&quot;/dashboard/&quot;&gt;
+          &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+          &lt;span class=&quot;brand-text&quot;&gt;
+            &lt;strong&gt;SchedEase&lt;/strong&gt;
+            &lt;small&gt;Academic Scheduler&lt;/small&gt;
+          &lt;/span&gt;
+        &lt;/a&gt;
+      &lt;/div&gt;
+      
+      &lt;nav class=&quot;nav-group&quot; aria-label=&quot;Primary navigation&quot;&gt;
+        
+        &lt;a href=&quot;/schedules/concerns/&quot; data-icon=&quot;flag&quot; class=&quot;is-active&quot; aria-current=&quot;page&quot;&gt;Schedule Concerns&lt;/a&gt;
+        
+        &lt;a href=&quot;/dashboard/&quot; data-icon=&quot;grid&quot;&gt;Dashboard&lt;/a&gt;
+        
+        &lt;a href=&quot;/schedules/browse/&quot; data-icon=&quot;calendar&quot;&gt;Browse Schedules&lt;/a&gt;
+        
+        
+      &lt;/nav&gt;
+      
+    &lt;/aside&gt;
+
+    &lt;div class=&quot;workspace&quot;&gt;
+      &lt;header class=&quot;topbar&quot;&gt;
+        &lt;div class=&quot;topbar-left&quot;&gt;
+          &lt;a class=&quot;topbar-brand&quot; href=&quot;/dashboard/&quot; aria-label=&quot;SchedEase home&quot;&gt;
+            &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+            &lt;span&gt;SchedEase&lt;/span&gt;
+          &lt;/a&gt;
+          &lt;button class=&quot;icon-button mobile-only&quot; type=&quot;button&quot; data-sidebar-toggle aria-label=&quot;Open navigation&quot;&gt;
+            &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-search&quot;&gt;
+          &lt;span class=&quot;icon search-icon&quot;&gt;&lt;/span&gt;
+          &lt;input type=&quot;search&quot; data-global-filter aria-label=&quot;Filter table rows on this page&quot; placeholder=&quot;Filter rows on this page&quot;&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-actions&quot;&gt;
+          &lt;button class=&quot;icon-button&quot; type=&quot;button&quot; data-theme-toggle aria-label=&quot;Toggle theme&quot;&gt;
+            &lt;span class=&quot;icon theme-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+          
+          &lt;div class=&quot;user-menu&quot; role=&quot;group&quot; aria-label=&quot;Signed in as concern-student&quot;&gt;
+            &lt;span class=&quot;avatar&quot;&gt;C&lt;/span&gt;
+            &lt;span&gt;
+              &lt;strong&gt;concern-student&lt;/strong&gt;
+              &lt;small&gt;Student&lt;/small&gt;
+            &lt;/span&gt;
+          &lt;/div&gt;
+          &lt;form method=&quot;post&quot; action=&quot;/accounts/logout/&quot;&gt;
+            &lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;1IaFsQ0yRSVioumyR4fcdMVoSTwTyEsbgGGZD0eNgv4HdXatdgEWyvyuI1A2ERXa&quot;&gt;
+            &lt;button class=&quot;button button-ghost&quot; data-loading-text=&quot;Signing out&quot;&gt;Sign out&lt;/button&gt;
+          &lt;/form&gt;
+          
+        &lt;/div&gt;
+      &lt;/header&gt;
+
+      &lt;section class=&quot;content&quot;&gt;
+        
+        &lt;div class=&quot;page-hero&quot;&gt;&lt;div&gt;&lt;p class=&quot;eyebrow&quot;&gt;Schedule Concerns&lt;/p&gt;&lt;h1&gt;Concern #1&lt;/h1&gt;&lt;p&gt;&lt;span class=&quot;badge&quot;&gt;Under Review&lt;/span&gt; &amp;middot; Conflicting class times&lt;/p&gt;&lt;/div&gt;&lt;a class=&quot;button&quot; href=&quot;/schedules/concerns/&quot;&gt;Back to concerns&lt;/a&gt;&lt;/div&gt;
+&lt;section class=&quot;panel&quot;&gt;&lt;h2&gt;Reported schedule&lt;/h2&gt;&lt;p&gt;Concern timetable &amp;middot; First Term 2026-2027&lt;/p&gt;&lt;p&gt;REG101 - Regression Course &amp;middot; REG 1-A&lt;/p&gt;&lt;p&gt;Original Teacher &amp;middot; Regression Room&lt;/p&gt;&lt;p&gt;Monday 08:00-09:00&lt;/p&gt;&lt;p class=&quot;subtle&quot;&gt;Schedule details saved when the concern was submitted.&lt;/p&gt;&lt;a class=&quot;button&quot; href=&quot;/schedules/1/&quot;&gt;View schedule&lt;/a&gt;&lt;p&gt;Submitted by concern-student (Student) on Oct 21, 2026 6:22 PM&lt;/p&gt;&lt;h3&gt;Description&lt;/h3&gt;&lt;div class=&quot;concern-text&quot;&gt;A long concern: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&lt;/div&gt;&lt;/section&gt;
+&lt;section class=&quot;panel&quot;&gt;&lt;h2&gt;Administrator response&lt;/h2&gt;&lt;div class=&quot;concern-text&quot;&gt;We are reviewing the timetable.&lt;/div&gt;&lt;p class=&quot;subtle&quot;&gt;Last reviewed Oct 21, 2026 6:22 PM&lt;/p&gt;&lt;/section&gt;
+
+      &lt;/section&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;backdrop&quot; data-sidebar-toggle&gt;&lt;/div&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/app.js&quot;&gt;&lt;/script&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/table-scroll.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe><iframe title="faculty-new" data-page="faculty-new" srcdoc="
+&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;utf-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+  &lt;title&gt;SchedEase&lt;/title&gt;
+  &lt;script&gt;
+    if (sessionStorage.getItem(&quot;schedease-sidebar-collapsed&quot;) === &quot;true&quot;) {
+      document.documentElement.classList.add(&quot;sidebar-collapsed&quot;);
+    }
+  &lt;/script&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+  &lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/css/app.css?v=20260906-assignments&quot;&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;app-shell&quot;&gt;
+    &lt;aside class=&quot;sidebar&quot; id=&quot;sidebar&quot;&gt;
+      &lt;div class=&quot;brand-lockup&quot;&gt;
+        &lt;button class=&quot;icon-button sidebar-menu-button&quot; type=&quot;button&quot; data-sidebar-collapse aria-label=&quot;Toggle navigation&quot; data-tooltip=&quot;Open or close the sidebar menu.&quot;&gt;
+          &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+        &lt;/button&gt;
+        &lt;a class=&quot;brand&quot; href=&quot;/dashboard/&quot;&gt;
+          &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+          &lt;span class=&quot;brand-text&quot;&gt;
+            &lt;strong&gt;SchedEase&lt;/strong&gt;
+            &lt;small&gt;Academic Scheduler&lt;/small&gt;
+          &lt;/span&gt;
+        &lt;/a&gt;
+      &lt;/div&gt;
+      
+      &lt;nav class=&quot;nav-group&quot; aria-label=&quot;Primary navigation&quot;&gt;
+        
+        &lt;a href=&quot;/schedules/concerns/&quot; data-icon=&quot;flag&quot; class=&quot;is-active&quot; aria-current=&quot;page&quot;&gt;Schedule Concerns&lt;/a&gt;
+        
+        &lt;a href=&quot;/dashboard/&quot; data-icon=&quot;grid&quot;&gt;Dashboard&lt;/a&gt;
+        
+        &lt;a href=&quot;/schedules/browse/&quot; data-icon=&quot;calendar&quot;&gt;Browse Schedules&lt;/a&gt;
+        &lt;a href=&quot;/schedules/my-availability/&quot; data-icon=&quot;clock&quot;&gt;My Availability&lt;/a&gt;
+        
+        
+      &lt;/nav&gt;
+      
+    &lt;/aside&gt;
+
+    &lt;div class=&quot;workspace&quot;&gt;
+      &lt;header class=&quot;topbar&quot;&gt;
+        &lt;div class=&quot;topbar-left&quot;&gt;
+          &lt;a class=&quot;topbar-brand&quot; href=&quot;/dashboard/&quot; aria-label=&quot;SchedEase home&quot;&gt;
+            &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+            &lt;span&gt;SchedEase&lt;/span&gt;
+          &lt;/a&gt;
+          &lt;button class=&quot;icon-button mobile-only&quot; type=&quot;button&quot; data-sidebar-toggle aria-label=&quot;Open navigation&quot;&gt;
+            &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-search&quot;&gt;
+          &lt;span class=&quot;icon search-icon&quot;&gt;&lt;/span&gt;
+          &lt;input type=&quot;search&quot; data-global-filter aria-label=&quot;Filter table rows on this page&quot; placeholder=&quot;Filter rows on this page&quot;&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-actions&quot;&gt;
+          &lt;button class=&quot;icon-button&quot; type=&quot;button&quot; data-theme-toggle aria-label=&quot;Toggle theme&quot;&gt;
+            &lt;span class=&quot;icon theme-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+          
+          &lt;div class=&quot;user-menu&quot; role=&quot;group&quot; aria-label=&quot;Signed in as concern-teacher&quot;&gt;
+            &lt;span class=&quot;avatar&quot;&gt;C&lt;/span&gt;
+            &lt;span&gt;
+              &lt;strong&gt;concern-teacher&lt;/strong&gt;
+              &lt;small&gt;Faculty&lt;/small&gt;
+            &lt;/span&gt;
+          &lt;/div&gt;
+          &lt;form method=&quot;post&quot; action=&quot;/accounts/logout/&quot;&gt;
+            &lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;5GA3kg82EDil1OXnb3ElSb8iSeOdUa44kE6nvqmh3grKQhLixf35dULoImSm0nz3&quot;&gt;
+            &lt;button class=&quot;button button-ghost&quot; data-loading-text=&quot;Signing out&quot;&gt;Sign out&lt;/button&gt;
+          &lt;/form&gt;
+          
+        &lt;/div&gt;
+      &lt;/header&gt;
+
+      &lt;section class=&quot;content&quot;&gt;
+        
+        &lt;div class=&quot;page-hero&quot;&gt;&lt;div&gt;&lt;p class=&quot;eyebrow&quot;&gt;Schedule Concerns&lt;/p&gt;&lt;h1 id=&quot;concern-heading&quot;&gt;Report a concern&lt;/h1&gt;&lt;p class=&quot;subtle&quot;&gt;Reporting an issue does not change your schedule.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;form method=&quot;post&quot; class=&quot;panel form&quot; aria-labelledby=&quot;concern-heading&quot;&gt;&lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;5GA3kg82EDil1OXnb3ElSb8iSeOdUa44kE6nvqmh3grKQhLixf35dULoImSm0nz3&quot;&gt;&lt;p&gt;
+    &lt;label for=&quot;id_schedule&quot;&gt;Published schedule:&lt;/label&gt;
+    &lt;select name=&quot;schedule&quot; required id=&quot;id_schedule&quot;&gt;
+  &lt;option value=&quot;&quot; selected&gt;---------&lt;/option&gt;
+
+  &lt;option value=&quot;1&quot;&gt;Concern timetable&lt;/option&gt;
+
+&lt;/select&gt;
+    
+    
+  &lt;/p&gt;
+
+  
+  &lt;p&gt;
+    &lt;label for=&quot;id_entry&quot;&gt;Affected class (optional):&lt;/label&gt;
+    &lt;select name=&quot;entry&quot; aria-describedby=&quot;id_entry_helptext&quot; id=&quot;id_entry&quot;&gt;
+  &lt;option value=&quot;&quot; selected&gt;---------&lt;/option&gt;
+
+  &lt;option value=&quot;1&quot;&gt;REG101 / REG 1-A - Monday 08:00 (Concern timetable)&lt;/option&gt;
+
+  &lt;option value=&quot;2&quot;&gt;REG101 / REG 1-A - Monday 09:00 (Concern timetable)&lt;/option&gt;
+
+&lt;/select&gt;
+    
+      &lt;span class=&quot;helptext&quot; id=&quot;id_entry_helptext&quot;&gt;Choose a class from the selected schedule. Leave blank for a missing subject or a schedule-wide concern.&lt;/span&gt;
+    
+    
+  &lt;/p&gt;
+
+  
+  &lt;p&gt;
+    &lt;label for=&quot;id_category&quot;&gt;Category:&lt;/label&gt;
+    &lt;select name=&quot;category&quot; id=&quot;id_category&quot;&gt;
+  &lt;option value=&quot;TIME&quot;&gt;Conflicting class times&lt;/option&gt;
+
+  &lt;option value=&quot;ROOM&quot;&gt;Room conflict or unavailable room&lt;/option&gt;
+
+  &lt;option value=&quot;SUBJECT&quot;&gt;Incorrect or missing subject&lt;/option&gt;
+
+  &lt;option value=&quot;ASSIGNMENT&quot;&gt;Incorrect faculty or section&lt;/option&gt;
+
+  &lt;option value=&quot;OTHER&quot;&gt;Other scheduling concern&lt;/option&gt;
+
+&lt;/select&gt;
+    
+    
+  &lt;/p&gt;
+
+  
+  &lt;p&gt;
+    &lt;label for=&quot;id_description&quot;&gt;Description:&lt;/label&gt;
+    &lt;textarea name=&quot;description&quot; cols=&quot;40&quot; rows=&quot;5&quot; maxlength=&quot;3000&quot; minlength=&quot;10&quot; required aria-describedby=&quot;id_description_helptext&quot; id=&quot;id_description&quot;&gt;
+&lt;/textarea&gt;
+    
+      &lt;span class=&quot;helptext&quot; id=&quot;id_description_helptext&quot;&gt;Explain the scheduling issue in 10-3000 characters.&lt;/span&gt;
+    
+    
+      
+    
+  &lt;/p&gt;&lt;div class=&quot;toolbar form-actions&quot;&gt;&lt;button type=&quot;submit&quot; class=&quot;button primary&quot;&gt;Submit concern&lt;/button&gt;&lt;a class=&quot;button&quot; href=&quot;/schedules/concerns/&quot;&gt;Cancel&lt;/a&gt;&lt;/div&gt;&lt;/form&gt;
+      &lt;/section&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;backdrop&quot; data-sidebar-toggle&gt;&lt;/div&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/app.js&quot;&gt;&lt;/script&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/table-scroll.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe><iframe title="faculty-detail" data-page="faculty-detail" srcdoc="
+&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;utf-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+  &lt;title&gt;SchedEase&lt;/title&gt;
+  &lt;script&gt;
+    if (sessionStorage.getItem(&quot;schedease-sidebar-collapsed&quot;) === &quot;true&quot;) {
+      document.documentElement.classList.add(&quot;sidebar-collapsed&quot;);
+    }
+  &lt;/script&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+  &lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/css/app.css?v=20260906-assignments&quot;&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;app-shell&quot;&gt;
+    &lt;aside class=&quot;sidebar&quot; id=&quot;sidebar&quot;&gt;
+      &lt;div class=&quot;brand-lockup&quot;&gt;
+        &lt;button class=&quot;icon-button sidebar-menu-button&quot; type=&quot;button&quot; data-sidebar-collapse aria-label=&quot;Toggle navigation&quot; data-tooltip=&quot;Open or close the sidebar menu.&quot;&gt;
+          &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+        &lt;/button&gt;
+        &lt;a class=&quot;brand&quot; href=&quot;/dashboard/&quot;&gt;
+          &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+          &lt;span class=&quot;brand-text&quot;&gt;
+            &lt;strong&gt;SchedEase&lt;/strong&gt;
+            &lt;small&gt;Academic Scheduler&lt;/small&gt;
+          &lt;/span&gt;
+        &lt;/a&gt;
+      &lt;/div&gt;
+      
+      &lt;nav class=&quot;nav-group&quot; aria-label=&quot;Primary navigation&quot;&gt;
+        
+        &lt;a href=&quot;/schedules/concerns/&quot; data-icon=&quot;flag&quot; class=&quot;is-active&quot; aria-current=&quot;page&quot;&gt;Schedule Concerns&lt;/a&gt;
+        
+        &lt;a href=&quot;/dashboard/&quot; data-icon=&quot;grid&quot;&gt;Dashboard&lt;/a&gt;
+        
+        &lt;a href=&quot;/schedules/browse/&quot; data-icon=&quot;calendar&quot;&gt;Browse Schedules&lt;/a&gt;
+        &lt;a href=&quot;/schedules/my-availability/&quot; data-icon=&quot;clock&quot;&gt;My Availability&lt;/a&gt;
+        
+        
+      &lt;/nav&gt;
+      
+    &lt;/aside&gt;
+
+    &lt;div class=&quot;workspace&quot;&gt;
+      &lt;header class=&quot;topbar&quot;&gt;
+        &lt;div class=&quot;topbar-left&quot;&gt;
+          &lt;a class=&quot;topbar-brand&quot; href=&quot;/dashboard/&quot; aria-label=&quot;SchedEase home&quot;&gt;
+            &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+            &lt;span&gt;SchedEase&lt;/span&gt;
+          &lt;/a&gt;
+          &lt;button class=&quot;icon-button mobile-only&quot; type=&quot;button&quot; data-sidebar-toggle aria-label=&quot;Open navigation&quot;&gt;
+            &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-search&quot;&gt;
+          &lt;span class=&quot;icon search-icon&quot;&gt;&lt;/span&gt;
+          &lt;input type=&quot;search&quot; data-global-filter aria-label=&quot;Filter table rows on this page&quot; placeholder=&quot;Filter rows on this page&quot;&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-actions&quot;&gt;
+          &lt;button class=&quot;icon-button&quot; type=&quot;button&quot; data-theme-toggle aria-label=&quot;Toggle theme&quot;&gt;
+            &lt;span class=&quot;icon theme-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+          
+          &lt;div class=&quot;user-menu&quot; role=&quot;group&quot; aria-label=&quot;Signed in as concern-teacher&quot;&gt;
+            &lt;span class=&quot;avatar&quot;&gt;C&lt;/span&gt;
+            &lt;span&gt;
+              &lt;strong&gt;concern-teacher&lt;/strong&gt;
+              &lt;small&gt;Faculty&lt;/small&gt;
+            &lt;/span&gt;
+          &lt;/div&gt;
+          &lt;form method=&quot;post&quot; action=&quot;/accounts/logout/&quot;&gt;
+            &lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;6GBbjzyhNi9ClzBF1pLd2uKsG80IA8U7lE7vuJMwcVi1a2pAnBaXndnywg4RGlp6&quot;&gt;
+            &lt;button class=&quot;button button-ghost&quot; data-loading-text=&quot;Signing out&quot;&gt;Sign out&lt;/button&gt;
+          &lt;/form&gt;
+          
+        &lt;/div&gt;
+      &lt;/header&gt;
+
+      &lt;section class=&quot;content&quot;&gt;
+        
+        &lt;div class=&quot;page-hero&quot;&gt;&lt;div&gt;&lt;p class=&quot;eyebrow&quot;&gt;Schedule Concerns&lt;/p&gt;&lt;h1&gt;Concern #2&lt;/h1&gt;&lt;p&gt;&lt;span class=&quot;badge&quot;&gt;Pending&lt;/span&gt; &amp;middot; Conflicting class times&lt;/p&gt;&lt;/div&gt;&lt;a class=&quot;button&quot; href=&quot;/schedules/concerns/&quot;&gt;Back to concerns&lt;/a&gt;&lt;/div&gt;
+&lt;section class=&quot;panel&quot;&gt;&lt;h2&gt;Reported schedule&lt;/h2&gt;&lt;p&gt;Concern timetable &amp;middot; First Term 2026-2027&lt;/p&gt;&lt;p&gt;REG101 - Regression Course &amp;middot; REG 1-A&lt;/p&gt;&lt;p&gt;Original Teacher &amp;middot; Regression Room&lt;/p&gt;&lt;p&gt;Monday 08:00-09:00&lt;/p&gt;&lt;p class=&quot;subtle&quot;&gt;Schedule details saved when the concern was submitted.&lt;/p&gt;&lt;a class=&quot;button&quot; href=&quot;/schedules/1/&quot;&gt;View schedule&lt;/a&gt;&lt;p&gt;Submitted by concern-teacher (Faculty) on Oct 21, 2026 6:22 PM&lt;/p&gt;&lt;h3&gt;Description&lt;/h3&gt;&lt;div class=&quot;concern-text&quot;&gt;The displayed class time needs review.&lt;/div&gt;&lt;/section&gt;
+&lt;section class=&quot;panel&quot;&gt;&lt;h2&gt;Administrator response&lt;/h2&gt;&lt;p&gt;No response yet.&lt;/p&gt;&lt;/section&gt;
+
+      &lt;/section&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;backdrop&quot; data-sidebar-toggle&gt;&lt;/div&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/app.js&quot;&gt;&lt;/script&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/table-scroll.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe><iframe title="admin-list" data-page="admin-list" srcdoc="
+&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;utf-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+  &lt;title&gt;SchedEase&lt;/title&gt;
+  &lt;script&gt;
+    if (sessionStorage.getItem(&quot;schedease-sidebar-collapsed&quot;) === &quot;true&quot;) {
+      document.documentElement.classList.add(&quot;sidebar-collapsed&quot;);
+    }
+  &lt;/script&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+  &lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/css/app.css?v=20260906-assignments&quot;&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;app-shell&quot;&gt;
+    &lt;aside class=&quot;sidebar&quot; id=&quot;sidebar&quot;&gt;
+      &lt;div class=&quot;brand-lockup&quot;&gt;
+        &lt;button class=&quot;icon-button sidebar-menu-button&quot; type=&quot;button&quot; data-sidebar-collapse aria-label=&quot;Toggle navigation&quot; data-tooltip=&quot;Open or close the sidebar menu.&quot;&gt;
+          &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+        &lt;/button&gt;
+        &lt;a class=&quot;brand&quot; href=&quot;/dashboard/&quot;&gt;
+          &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+          &lt;span class=&quot;brand-text&quot;&gt;
+            &lt;strong&gt;SchedEase&lt;/strong&gt;
+            &lt;small&gt;Academic Scheduler&lt;/small&gt;
+          &lt;/span&gt;
+        &lt;/a&gt;
+      &lt;/div&gt;
+      
+      &lt;nav class=&quot;nav-group&quot; aria-label=&quot;Primary navigation&quot;&gt;
+        
+        &lt;a href=&quot;/schedules/concerns/&quot; data-icon=&quot;flag&quot; class=&quot;is-active&quot; aria-current=&quot;page&quot;&gt;Schedule Concerns&lt;/a&gt;
+        
+        &lt;a href=&quot;/dashboard/&quot; data-icon=&quot;grid&quot;&gt;Dashboard&lt;/a&gt;
+        
+        
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;scheduling&quot;&gt;
+          &lt;summary data-tooltip=&quot;Scheduling&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;scheduling&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Scheduling&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/generate/&quot; data-icon=&quot;spark&quot;&gt;Generate Schedule&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/schedules/&quot; data-icon=&quot;calendar&quot;&gt;Manage Schedules&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/assignments/&quot; data-icon=&quot;check&quot;&gt;Assignments&lt;/a&gt;
+            &lt;a href=&quot;/schedules/error-log/&quot; data-icon=&quot;flag&quot;&gt;Error Log&lt;/a&gt;
+            &lt;a href=&quot;/schedules/browse/&quot; data-icon=&quot;calendar&quot;&gt;Browse Published&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/ga-settings/&quot; data-icon=&quot;sliders&quot;&gt;GA Settings&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;academic&quot;&gt;
+          &lt;summary data-tooltip=&quot;Academic Management&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;academic&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Academic Management&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/departments/&quot; data-icon=&quot;building&quot;&gt;Departments&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/programs/&quot; data-icon=&quot;book&quot;&gt;Programs&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/year-levels/&quot; data-icon=&quot;layers&quot;&gt;Year Levels&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/sections/&quot; data-icon=&quot;layers&quot;&gt;Sections&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/subjects/&quot; data-icon=&quot;file&quot;&gt;Courses&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/students/&quot; data-icon=&quot;users&quot;&gt;Students&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;people&quot;&gt;
+          &lt;summary data-tooltip=&quot;People and Credentials&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;people&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;People &amp;amp; Credentials&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/faculty/&quot; data-icon=&quot;user&quot;&gt;Faculty&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/credentials/&quot; data-icon=&quot;check&quot;&gt;Credentials&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/faculty-credentials/&quot; data-icon=&quot;user&quot;&gt;Faculty Credentials&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/subject-credential-requirements/&quot; data-icon=&quot;file&quot;&gt;Course Requirements&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/credential-overrides/&quot; data-icon=&quot;flag&quot;&gt;Credential Overrides&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/availability/&quot; data-icon=&quot;clock&quot;&gt;Availability&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;rooms&quot;&gt;
+          &lt;summary data-tooltip=&quot;Room Management&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;rooms&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Room Management&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/rooms/&quot; data-icon=&quot;door&quot;&gt;Rooms&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-utilization/&quot; data-icon=&quot;sliders&quot;&gt;Room Utilization&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-schedule/&quot; data-icon=&quot;calendar&quot;&gt;Room Schedule&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-capacity-planning/&quot; data-icon=&quot;layers&quot;&gt;Capacity Planning&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;administration&quot;&gt;
+          &lt;summary data-tooltip=&quot;Administration&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;administration&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Administration&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/terms/&quot; data-icon=&quot;flag&quot;&gt;Academic Terms&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+        
+      &lt;/nav&gt;
+      
+    &lt;/aside&gt;
+
+    &lt;div class=&quot;workspace&quot;&gt;
+      &lt;header class=&quot;topbar&quot;&gt;
+        &lt;div class=&quot;topbar-left&quot;&gt;
+          &lt;a class=&quot;topbar-brand&quot; href=&quot;/dashboard/&quot; aria-label=&quot;SchedEase home&quot;&gt;
+            &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+            &lt;span&gt;SchedEase&lt;/span&gt;
+          &lt;/a&gt;
+          &lt;button class=&quot;icon-button mobile-only&quot; type=&quot;button&quot; data-sidebar-toggle aria-label=&quot;Open navigation&quot;&gt;
+            &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-search&quot;&gt;
+          &lt;span class=&quot;icon search-icon&quot;&gt;&lt;/span&gt;
+          &lt;input type=&quot;search&quot; data-global-filter aria-label=&quot;Filter table rows on this page&quot; placeholder=&quot;Filter rows on this page&quot;&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-actions&quot;&gt;
+          &lt;button class=&quot;icon-button&quot; type=&quot;button&quot; data-theme-toggle aria-label=&quot;Toggle theme&quot;&gt;
+            &lt;span class=&quot;icon theme-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+          
+          &lt;div class=&quot;user-menu&quot; role=&quot;group&quot; aria-label=&quot;Signed in as concern-admin&quot;&gt;
+            &lt;span class=&quot;avatar&quot;&gt;C&lt;/span&gt;
+            &lt;span&gt;
+              &lt;strong&gt;concern-admin&lt;/strong&gt;
+              &lt;small&gt;Administrator&lt;/small&gt;
+            &lt;/span&gt;
+          &lt;/div&gt;
+          &lt;form method=&quot;post&quot; action=&quot;/accounts/logout/&quot;&gt;
+            &lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;XkjKsVKA7sNPVraaWGis0ZbLIShsn4hNciP4D5YPw5WeKUY5iSHclIORy0lBthMM&quot;&gt;
+            &lt;button class=&quot;button button-ghost&quot; data-loading-text=&quot;Signing out&quot;&gt;Sign out&lt;/button&gt;
+          &lt;/form&gt;
+          
+        &lt;/div&gt;
+      &lt;/header&gt;
+
+      &lt;section class=&quot;content&quot;&gt;
+        
+        
+&lt;div class=&quot;page-hero&quot;&gt;&lt;div&gt;&lt;p class=&quot;eyebrow&quot;&gt;Schedule Concerns&lt;/p&gt;&lt;h1&gt;Review concerns&lt;/h1&gt;&lt;p class=&quot;subtle&quot;&gt;Track scheduling issues and administrator responses.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;form method=&quot;get&quot; class=&quot;panel form&quot; aria-label=&quot;Filter concerns&quot;&gt;&lt;p&gt;
+    &lt;label for=&quot;id_status&quot;&gt;Status:&lt;/label&gt;
+    &lt;select name=&quot;status&quot; id=&quot;id_status&quot;&gt;
+  &lt;option value=&quot;&quot; selected&gt;All statuses&lt;/option&gt;
+
+  &lt;option value=&quot;PENDING&quot;&gt;Pending&lt;/option&gt;
+
+  &lt;option value=&quot;UNDER_REVIEW&quot;&gt;Under Review&lt;/option&gt;
+
+  &lt;option value=&quot;RESOLVED&quot;&gt;Resolved&lt;/option&gt;
+
+  &lt;option value=&quot;REJECTED&quot;&gt;Rejected&lt;/option&gt;
+
+&lt;/select&gt;
+    
+    
+  &lt;/p&gt;
+
+  
+  &lt;p&gt;
+    &lt;label for=&quot;id_category&quot;&gt;Category:&lt;/label&gt;
+    &lt;select name=&quot;category&quot; id=&quot;id_category&quot;&gt;
+  &lt;option value=&quot;&quot; selected&gt;All categories&lt;/option&gt;
+
+  &lt;option value=&quot;TIME&quot;&gt;Conflicting class times&lt;/option&gt;
+
+  &lt;option value=&quot;ROOM&quot;&gt;Room conflict or unavailable room&lt;/option&gt;
+
+  &lt;option value=&quot;SUBJECT&quot;&gt;Incorrect or missing subject&lt;/option&gt;
+
+  &lt;option value=&quot;ASSIGNMENT&quot;&gt;Incorrect faculty or section&lt;/option&gt;
+
+  &lt;option value=&quot;OTHER&quot;&gt;Other scheduling concern&lt;/option&gt;
+
+&lt;/select&gt;
+    
+    
+  &lt;/p&gt;
+
+  
+  &lt;p&gt;
+    &lt;label for=&quot;id_reporter_role&quot;&gt;Reporter role:&lt;/label&gt;
+    &lt;select name=&quot;reporter_role&quot; id=&quot;id_reporter_role&quot;&gt;
+  &lt;option value=&quot;&quot; selected&gt;All reporter roles&lt;/option&gt;
+
+  &lt;option value=&quot;STUDENT&quot;&gt;Student&lt;/option&gt;
+
+  &lt;option value=&quot;FACULTY&quot;&gt;Faculty&lt;/option&gt;
+
+&lt;/select&gt;
+    
+    
+      
+    
+  &lt;/p&gt;&lt;div class=&quot;toolbar form-actions&quot;&gt;&lt;button class=&quot;button&quot; type=&quot;submit&quot;&gt;Apply filters&lt;/button&gt;&lt;a class=&quot;button&quot; href=&quot;/schedules/concerns/&quot;&gt;Clear&lt;/a&gt;&lt;/div&gt;&lt;/form&gt;
+&lt;article class=&quot;panel&quot;&gt;&lt;h2&gt;&lt;a href=&quot;/schedules/concerns/2/&quot;&gt;Concern #2: Conflicting class times&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;Concern timetable &amp;middot; First Term 2026-2027&lt;/p&gt;&lt;p&gt;&lt;span class=&quot;badge&quot;&gt;Pending&lt;/span&gt; &amp;middot; Oct 21, 2026 6:22 PM &amp;middot; concern-teacher (Faculty)&lt;/p&gt;&lt;/article&gt;&lt;article class=&quot;panel&quot;&gt;&lt;h2&gt;&lt;a href=&quot;/schedules/concerns/1/&quot;&gt;Concern #1: Conflicting class times&lt;/a&gt;&lt;/h2&gt;&lt;p&gt;Concern timetable &amp;middot; First Term 2026-2027&lt;/p&gt;&lt;p&gt;&lt;span class=&quot;badge&quot;&gt;Under Review&lt;/span&gt; &amp;middot; Oct 21, 2026 6:22 PM &amp;middot; concern-student (Student)&lt;/p&gt;&lt;/article&gt;
+&lt;nav class=&quot;toolbar&quot; aria-label=&quot;Concern pages&quot;&gt;&lt;span&gt;Page 1 of 1&lt;/span&gt;&lt;/nav&gt;
+
+      &lt;/section&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;backdrop&quot; data-sidebar-toggle&gt;&lt;/div&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/app.js&quot;&gt;&lt;/script&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/table-scroll.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe><iframe title="admin-review" data-page="admin-review" srcdoc="
+&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;utf-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+  &lt;title&gt;SchedEase&lt;/title&gt;
+  &lt;script&gt;
+    if (sessionStorage.getItem(&quot;schedease-sidebar-collapsed&quot;) === &quot;true&quot;) {
+      document.documentElement.classList.add(&quot;sidebar-collapsed&quot;);
+    }
+  &lt;/script&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;
+  &lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+  &lt;link href=&quot;https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+  &lt;link rel=&quot;stylesheet&quot; href=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/css/app.css?v=20260906-assignments&quot;&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;app-shell&quot;&gt;
+    &lt;aside class=&quot;sidebar&quot; id=&quot;sidebar&quot;&gt;
+      &lt;div class=&quot;brand-lockup&quot;&gt;
+        &lt;button class=&quot;icon-button sidebar-menu-button&quot; type=&quot;button&quot; data-sidebar-collapse aria-label=&quot;Toggle navigation&quot; data-tooltip=&quot;Open or close the sidebar menu.&quot;&gt;
+          &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+        &lt;/button&gt;
+        &lt;a class=&quot;brand&quot; href=&quot;/dashboard/&quot;&gt;
+          &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+          &lt;span class=&quot;brand-text&quot;&gt;
+            &lt;strong&gt;SchedEase&lt;/strong&gt;
+            &lt;small&gt;Academic Scheduler&lt;/small&gt;
+          &lt;/span&gt;
+        &lt;/a&gt;
+      &lt;/div&gt;
+      
+      &lt;nav class=&quot;nav-group&quot; aria-label=&quot;Primary navigation&quot;&gt;
+        
+        &lt;a href=&quot;/schedules/concerns/&quot; data-icon=&quot;flag&quot; class=&quot;is-active&quot; aria-current=&quot;page&quot;&gt;Schedule Concerns&lt;/a&gt;
+        
+        &lt;a href=&quot;/dashboard/&quot; data-icon=&quot;grid&quot;&gt;Dashboard&lt;/a&gt;
+        
+        
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;scheduling&quot;&gt;
+          &lt;summary data-tooltip=&quot;Scheduling&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;scheduling&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Scheduling&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/generate/&quot; data-icon=&quot;spark&quot;&gt;Generate Schedule&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/schedules/&quot; data-icon=&quot;calendar&quot;&gt;Manage Schedules&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/assignments/&quot; data-icon=&quot;check&quot;&gt;Assignments&lt;/a&gt;
+            &lt;a href=&quot;/schedules/error-log/&quot; data-icon=&quot;flag&quot;&gt;Error Log&lt;/a&gt;
+            &lt;a href=&quot;/schedules/browse/&quot; data-icon=&quot;calendar&quot;&gt;Browse Published&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/ga-settings/&quot; data-icon=&quot;sliders&quot;&gt;GA Settings&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;academic&quot;&gt;
+          &lt;summary data-tooltip=&quot;Academic Management&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;academic&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Academic Management&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/departments/&quot; data-icon=&quot;building&quot;&gt;Departments&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/programs/&quot; data-icon=&quot;book&quot;&gt;Programs&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/year-levels/&quot; data-icon=&quot;layers&quot;&gt;Year Levels&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/sections/&quot; data-icon=&quot;layers&quot;&gt;Sections&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/subjects/&quot; data-icon=&quot;file&quot;&gt;Courses&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/students/&quot; data-icon=&quot;users&quot;&gt;Students&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;people&quot;&gt;
+          &lt;summary data-tooltip=&quot;People and Credentials&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;people&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;People &amp;amp; Credentials&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/faculty/&quot; data-icon=&quot;user&quot;&gt;Faculty&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/credentials/&quot; data-icon=&quot;check&quot;&gt;Credentials&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/faculty-credentials/&quot; data-icon=&quot;user&quot;&gt;Faculty Credentials&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/subject-credential-requirements/&quot; data-icon=&quot;file&quot;&gt;Course Requirements&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/credential-overrides/&quot; data-icon=&quot;flag&quot;&gt;Credential Overrides&lt;/a&gt;
+            &lt;a href=&quot;/schedules/manage/availability/&quot; data-icon=&quot;clock&quot;&gt;Availability&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;rooms&quot;&gt;
+          &lt;summary data-tooltip=&quot;Room Management&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;rooms&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Room Management&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/rooms/&quot; data-icon=&quot;door&quot;&gt;Rooms&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-utilization/&quot; data-icon=&quot;sliders&quot;&gt;Room Utilization&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-schedule/&quot; data-icon=&quot;calendar&quot;&gt;Room Schedule&lt;/a&gt;
+            &lt;a href=&quot;/schedules/room-capacity-planning/&quot; data-icon=&quot;layers&quot;&gt;Capacity Planning&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+
+        &lt;details class=&quot;nav-disclosure&quot; data-nav-group=&quot;administration&quot;&gt;
+          &lt;summary data-tooltip=&quot;Administration&quot;&gt;&lt;span class=&quot;nav-category-icon&quot; data-group-icon=&quot;administration&quot;&gt;&lt;/span&gt;&lt;span class=&quot;nav-category-label&quot;&gt;Administration&lt;/span&gt;&lt;span class=&quot;nav-chevron&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/summary&gt;
+          &lt;div class=&quot;nav-children&quot;&gt;
+            &lt;a href=&quot;/schedules/manage/terms/&quot; data-icon=&quot;flag&quot;&gt;Academic Terms&lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/details&gt;
+        
+      &lt;/nav&gt;
+      
+    &lt;/aside&gt;
+
+    &lt;div class=&quot;workspace&quot;&gt;
+      &lt;header class=&quot;topbar&quot;&gt;
+        &lt;div class=&quot;topbar-left&quot;&gt;
+          &lt;a class=&quot;topbar-brand&quot; href=&quot;/dashboard/&quot; aria-label=&quot;SchedEase home&quot;&gt;
+            &lt;span class=&quot;brand-mark&quot;&gt;SE&lt;/span&gt;
+            &lt;span&gt;SchedEase&lt;/span&gt;
+          &lt;/a&gt;
+          &lt;button class=&quot;icon-button mobile-only&quot; type=&quot;button&quot; data-sidebar-toggle aria-label=&quot;Open navigation&quot;&gt;
+            &lt;span class=&quot;icon menu-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-search&quot;&gt;
+          &lt;span class=&quot;icon search-icon&quot;&gt;&lt;/span&gt;
+          &lt;input type=&quot;search&quot; data-global-filter aria-label=&quot;Filter table rows on this page&quot; placeholder=&quot;Filter rows on this page&quot;&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;topbar-actions&quot;&gt;
+          &lt;button class=&quot;icon-button&quot; type=&quot;button&quot; data-theme-toggle aria-label=&quot;Toggle theme&quot;&gt;
+            &lt;span class=&quot;icon theme-icon&quot;&gt;&lt;/span&gt;
+          &lt;/button&gt;
+          
+          &lt;div class=&quot;user-menu&quot; role=&quot;group&quot; aria-label=&quot;Signed in as concern-admin&quot;&gt;
+            &lt;span class=&quot;avatar&quot;&gt;C&lt;/span&gt;
+            &lt;span&gt;
+              &lt;strong&gt;concern-admin&lt;/strong&gt;
+              &lt;small&gt;Administrator&lt;/small&gt;
+            &lt;/span&gt;
+          &lt;/div&gt;
+          &lt;form method=&quot;post&quot; action=&quot;/accounts/logout/&quot;&gt;
+            &lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;kIsclxVWf7qFGBESSDtoims8xMX3M7sxzGYwwH9bEKz4v4sNePS8D55enU1cSkXw&quot;&gt;
+            &lt;button class=&quot;button button-ghost&quot; data-loading-text=&quot;Signing out&quot;&gt;Sign out&lt;/button&gt;
+          &lt;/form&gt;
+          
+        &lt;/div&gt;
+      &lt;/header&gt;
+
+      &lt;section class=&quot;content&quot;&gt;
+        
+        &lt;div class=&quot;page-hero&quot;&gt;&lt;div&gt;&lt;p class=&quot;eyebrow&quot;&gt;Schedule Concerns&lt;/p&gt;&lt;h1&gt;Concern #1&lt;/h1&gt;&lt;p&gt;&lt;span class=&quot;badge&quot;&gt;Under Review&lt;/span&gt; &amp;middot; Conflicting class times&lt;/p&gt;&lt;/div&gt;&lt;a class=&quot;button&quot; href=&quot;/schedules/concerns/&quot;&gt;Back to concerns&lt;/a&gt;&lt;/div&gt;
+&lt;section class=&quot;panel&quot;&gt;&lt;h2&gt;Reported schedule&lt;/h2&gt;&lt;p&gt;Concern timetable &amp;middot; First Term 2026-2027&lt;/p&gt;&lt;p&gt;REG101 - Regression Course &amp;middot; REG 1-A&lt;/p&gt;&lt;p&gt;Original Teacher &amp;middot; Regression Room&lt;/p&gt;&lt;p&gt;Monday 08:00-09:00&lt;/p&gt;&lt;p class=&quot;subtle&quot;&gt;Schedule details saved when the concern was submitted.&lt;/p&gt;&lt;a class=&quot;button&quot; href=&quot;/schedules/1/&quot;&gt;View schedule&lt;/a&gt;&lt;p&gt;Submitted by concern-student (Student) on Oct 21, 2026 6:22 PM&lt;/p&gt;&lt;h3&gt;Description&lt;/h3&gt;&lt;div class=&quot;concern-text&quot;&gt;A long concern: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&lt;/div&gt;&lt;/section&gt;
+&lt;section class=&quot;panel&quot;&gt;&lt;h2&gt;Administrator response&lt;/h2&gt;&lt;div class=&quot;concern-text&quot;&gt;We are reviewing the timetable.&lt;/div&gt;&lt;p class=&quot;subtle&quot;&gt;Last reviewed Oct 21, 2026 6:22 PM&lt;/p&gt;&lt;/section&gt;
+&lt;form method=&quot;post&quot; class=&quot;panel form&quot; aria-label=&quot;Review concern&quot;&gt;&lt;input type=&quot;hidden&quot; name=&quot;csrfmiddlewaretoken&quot; value=&quot;kIsclxVWf7qFGBESSDtoims8xMX3M7sxzGYwwH9bEKz4v4sNePS8D55enU1cSkXw&quot;&gt;&lt;h2&gt;Review concern&lt;/h2&gt;&lt;p class=&quot;subtle&quot;&gt;Use the existing schedule editing tools for corrections. Saving this review does not change the schedule.&lt;/p&gt;&lt;p&gt;
+    &lt;label for=&quot;id_status&quot;&gt;Status:&lt;/label&gt;
+    &lt;select name=&quot;status&quot; id=&quot;id_status&quot;&gt;
+  &lt;option value=&quot;PENDING&quot;&gt;Pending&lt;/option&gt;
+
+  &lt;option value=&quot;UNDER_REVIEW&quot; selected&gt;Under Review&lt;/option&gt;
+
+  &lt;option value=&quot;RESOLVED&quot;&gt;Resolved&lt;/option&gt;
+
+  &lt;option value=&quot;REJECTED&quot;&gt;Rejected&lt;/option&gt;
+
+&lt;/select&gt;
+    
+    
+  &lt;/p&gt;
+
+  
+  &lt;p&gt;
+    &lt;label for=&quot;id_response&quot;&gt;Administrator response:&lt;/label&gt;
+    &lt;textarea name=&quot;response&quot; cols=&quot;40&quot; rows=&quot;5&quot; maxlength=&quot;3000&quot; aria-describedby=&quot;id_response_helptext&quot; id=&quot;id_response&quot;&gt;
+We are reviewing the timetable.&lt;/textarea&gt;
+    
+      &lt;span class=&quot;helptext&quot; id=&quot;id_response_helptext&quot;&gt;This response is visible to the reporter.&lt;/span&gt;
+    
+    
+      &lt;input type=&quot;hidden&quot; name=&quot;revision&quot; value=&quot;1&quot; id=&quot;id_revision&quot;&gt;
+    
+  &lt;/p&gt;&lt;div class=&quot;toolbar form-actions&quot;&gt;&lt;button class=&quot;button primary&quot; type=&quot;submit&quot;&gt;Save review&lt;/button&gt;&lt;/div&gt;&lt;/form&gt;&lt;details class=&quot;panel&quot;&gt;&lt;summary&gt;Review history&lt;/summary&gt;&lt;article&gt;&lt;h3&gt;Under Review&lt;/h3&gt;&lt;p&gt;concern-admin &amp;middot; Oct 21, 2026 6:22 PM&lt;/p&gt;&lt;div class=&quot;concern-text&quot;&gt;We are reviewing the timetable.&lt;/div&gt;&lt;/article&gt;&lt;/details&gt;
+      &lt;/section&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;backdrop&quot; data-sidebar-toggle&gt;&lt;/div&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/app.js&quot;&gt;&lt;/script&gt;
+  &lt;script src=&quot;file:///C:/Users/JEROME/SchedEase-Prototype/static/js/table-scroll.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe><pre id="results">RUNNING</pre><script>window.addEventListener('load',()=>setTimeout(()=>{
+let count=0;const errors=[];const check=(ok,text)=>{count++;if(!ok)errors.push(text)};
+for(const frame of document.querySelectorAll('iframe')){
+const d=frame.contentDocument,w=frame.contentWindow,name=frame.dataset.page;
+check(d.documentElement.dataset.theme===new URLSearchParams(location.search).get('theme'),name+' theme');
+check(d.documentElement.scrollWidth<=w.innerWidth+1,name+' no page overflow');
+check(d.querySelector('h1')?.innerText.length>0,name+' heading');
+check([...d.querySelectorAll('input:not([type=hidden]),select,textarea')].filter(e=>e.getClientRects().length).every(e=>e.getBoundingClientRect().right<=w.innerWidth+1),name+' controls contained');
+check(!!d.querySelector('a[href="/schedules/concerns/"]'),name+' navigation');
+if(name==='admin-review')check(!!d.querySelector('[name=status]')&&!!d.querySelector('[name=response]'),'review controls');
+if(name==='student-detail')check(!d.querySelector('[name=status]')&&!d.querySelector('[name=response]'),'reporter read-only');
+}
+document.querySelector('#results').textContent=errors.length?'FAIL '+errors.join('; '):'PASS '+count+' concern checks\nviewport width '+innerWidth;
+},800));</script>

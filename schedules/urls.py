@@ -1,8 +1,13 @@
 from django.urls import path
-from . import views
+from . import views, concern_views
 from . import import_views
+from . import workload_views
 
 urlpatterns = [
+    path("workload-proposals/", workload_views.workload_proposals, name="workload_proposals"),
+    path("concerns/", concern_views.concern_list, name="concern_list"),
+    path("concerns/new/", concern_views.concern_create, name="concern_create"),
+    path("concerns/<int:pk>/", concern_views.concern_detail, name="concern_detail"),
     path("import/", import_views.academic_import, name="academic_import"),
     path("import/template/<str:kind>/", import_views.academic_import_template, name="academic_import_template"),
     path("import/<uuid:pk>/", import_views.academic_import_review, name="academic_import_review"),

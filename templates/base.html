@@ -93,6 +93,9 @@
           </div>
         </details>
         {% endif %}
+        {% if user.is_superuser or user.profile.role == "ADMIN" or user.profile.role == "FACULTY" or user.profile.role == "STUDENT" %}
+        <a href="{% url 'concern_list' %}" data-icon="flag"{% if 'concern_' in request.resolver_match.url_name %} class="is-active" aria-current="page"{% endif %}>Schedule Concerns</a>
+        {% endif %}
       </nav>
       {% endif %}
     </aside>
