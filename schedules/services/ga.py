@@ -65,6 +65,7 @@ class GeneticScheduler:
                 "subject__credential_requirements__required_credential",
                 "subject__credential_requirements__acceptable_equivalents",
                 "faculty__availability_set",
+                "section__availability_set",
                 "credential_overrides",
             )
             .order_by("id")
@@ -86,6 +87,7 @@ class GeneticScheduler:
         }
         faculty = {a.faculty_id: a.faculty for a in self.assignments}
         self.faculty_policies = {pk: AvailabilityPolicy.for_resource(item) for pk, item in faculty.items()}
+        self.section_policies = {a.section_id: AvailabilityPolicy.for_resource(a.section) for a in self.assignments}
         self.room_policies = {room.pk: AvailabilityPolicy.for_resource(room) for room in self.rooms}
         self.faculty_preferred = self._availability_map(AvailabilityKind.PREFERRED)
         self._placement_cache = {}
@@ -283,7 +285,7 @@ class GeneticScheduler:
                 effective_component=a.component, room=self.room_map[gene.room_id], day=gene.day,
                 start_time=gene.start_time, end_time=gene.end_time)
             individual_entry_errors(entry, eligible=self.qualification_cache[a.pk],
-                faculty_policy=self.faculty_policies[a.faculty_id], room_policy=self.room_policies[gene.room_id], issue_sink=issues)
+                faculty_policy=self.faculty_policies[a.faculty_id], room_policy=self.room_policies[gene.room_id], section_policy=self.section_policies[a.section_id], issue_sink=issues)
         return issues
 
     def placement_options(self, assignment):
@@ -292,7 +294,7 @@ class GeneticScheduler:
             domain_issues = []
             options, errors = feasible_placements(assignment, self.term, self.rooms,
                 eligible=self.qualification_cache[assignment.pk],
-                faculty_policy=self.faculty_policies[assignment.faculty_id], room_policies=self.room_policies,
+                faculty_policy=self.faculty_policies[assignment.faculty_id], room_policies=self.room_policies, section_policy=self.section_policies[assignment.section_id],
                 checkpoint=self._checkpoint, issue_sink=domain_issues)
             if not options:
                 message = f"{assignment.subject.code} / {assignment.section} / Meeting {assignment.meeting_index} ({assignment.faculty}): no individually feasible placement. " + " ".join(errors)
@@ -410,6 +412,9 @@ class GeneticScheduler:
             if self._blocked(assignment.faculty_id, gene):
                 hard_violations += 1
             if self._room_blocked(gene.room_id, gene):
+                hard_violations += 1
+            if (self.section_policies[assignment.section_id].configured and
+                    self.section_policies[assignment.section_id].rejection_reason(gene.day, gene.start_time, gene.end_time)):
                 hard_violations += 1
             if self._preferred(assignment.faculty_id, gene):
                 soft_penalty -= 12

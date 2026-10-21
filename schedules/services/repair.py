@@ -39,7 +39,8 @@ def candidate_issues(scheduler, chromosome):
             start_time=gene.start_time, end_time=gene.end_time)
         errors = individual_entry_errors(entry, eligible=scheduler.qualification_cache[assignment.pk],
             faculty_policy=scheduler.faculty_policies[assignment.faculty_id],
-            room_policy=scheduler.room_policies[gene.room_id])
+            room_policy=scheduler.room_policies[gene.room_id],
+            section_policy=scheduler.section_policies[assignment.section_id])
         if errors:
             individual[index] = tuple(errors)
     conflicts = overlap_conflicts(chromosome, scheduler.assignment_map)

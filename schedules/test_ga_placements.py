@@ -190,7 +190,7 @@ class FeasiblePlacementTests(SchedulingDefectFixture):
             with self.assertRaisesMessage(ValueError, 'Meeting 1') as caught:
                 ga.generate()
         self.assertIn('no individually feasible placement', str(caught.exception))
-        self.assertIn('common faculty and room availability', str(caught.exception))
+        self.assertIn('common faculty, section and room availability', str(caught.exception))
         initialize.assert_not_called()
         self.assertFalse(m.Schedule.objects.exists())
 

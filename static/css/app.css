@@ -2023,3 +2023,29 @@ body.modal-open .table-scroll-proxy, body.sidebar-open .table-scroll-proxy { vis
   color: var(--text-secondary);
   border-style: dashed;
 }
+
+/* Assignment list: aligned controls instead of content-sized flex wrapping. */
+.record-controls.assignment-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+  align-items: end;
+}
+.assignment-filters > label { display: grid; gap: var(--space-1); width: 100%; }
+.assignment-filters > .table-search { grid-column: span 3; max-width: none; }
+.assignment-filters input, .assignment-filters select { width: 100%; min-width: 0; }
+.assignment-filter-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-top: var(--space-1);
+}
+@media (max-width: 1100px) {
+  .record-controls.assignment-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .assignment-filters > .table-search { grid-column: auto; }
+}
+@media (max-width: 620px) {
+  .record-controls.assignment-filters { grid-template-columns: minmax(0, 1fr); }
+  .assignment-filter-actions > .button { flex: 1 1 auto; text-align: center; }
+}

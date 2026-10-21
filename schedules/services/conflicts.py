@@ -21,7 +21,7 @@ def effective_resource_filter(kind, pk):
         f'{kind}_override__isnull': True, f'assignment__{kind}_id': pk})
 
 
-def individual_entry_errors(entry, *, eligible=None, faculty_policy=None, room_policy=None, issue_sink=None):
+def individual_entry_errors(entry, *, eligible=None, faculty_policy=None, room_policy=None, section_policy=None, issue_sink=None):
     from .meetings import entry_requirement_errors
     errors = entry_requirement_errors(entry, issue_sink=issue_sink)
     def add(message, category='INVALID_DATA'):
@@ -56,11 +56,13 @@ def individual_entry_errors(entry, *, eligible=None, faculty_policy=None, room_p
     if not eligible:
         add(ValidationError(missing_credential_message(entry.effective_faculty, entry.effective_subject, entry.schedule.term), code="credential_qualification"), "FACULTY_CREDENTIAL")
 
-    for label, resource, policy in (("Faculty", entry.effective_faculty, faculty_policy), ("Room", entry.room, room_policy)):
+    for label, resource, policy in (("Faculty", entry.effective_faculty, faculty_policy), ("Room", entry.room, room_policy), ("Section", entry.effective_section, section_policy)):
         policy = policy if policy is not None else AvailabilityPolicy.for_resource(resource)
+        if label == "Section" and not policy.configured:
+            continue
         reason = policy.rejection_reason(entry.day, entry.start_time, entry.end_time)
         if reason:
-            add(f"{label} {reason}", "FACULTY_UNAVAILABLE" if label == "Faculty" else "ROOM_UNAVAILABLE")
+            add(f"{label} {reason}", {"Faculty": "FACULTY_UNAVAILABLE", "Room": "ROOM_UNAVAILABLE", "Section": "INVALID_DATA"}[label])
 
     return errors
 
@@ -73,21 +75,38 @@ def validate_entry(entry):
         if sink is not None:
             sink.append(Diagnostic.for_meetings(category, message, meetings, room_id=entry.room_id,
                 details={'day': entry.day, 'start_time': str(entry.start_time), 'end_time': str(entry.end_time)}))
-    # Keep the queryset's existing order and every relevant pair, while avoiding
-    # materializing unrelated meetings. Strict inequalities preserve adjacency.
-    qs = entry.schedule.entries.exclude(pk=entry.pk).filter(
+    from schedules.models import ScheduleEntry, ScheduleStatus
+    term = entry.schedule.term
+    local = Q(schedule_id=entry.schedule_id)
+    external = (Q(schedule__status=ScheduleStatus.PUBLISHED,
+                  schedule__term__starts_on__lte=term.ends_on,
+                  schedule__term__ends_on__gte=term.starts_on)
+                & ~Q(schedule__term_id=term.pk))
+    faculty_or_room = (effective_resource_filter('faculty', entry.effective_faculty.pk)
+                       | Q(room_id=entry.room_id))
+    # One query keeps schedule-wide validation's existing query budget. Only
+    # local entries participate in section conflicts; external drafts/archives
+    # and alternative versions of the same term do not consume occupancy.
+    qs = ScheduleEntry.objects.exclude(pk=entry.pk).filter(
         day=entry.day, start_time__lt=entry.end_time, end_time__gt=entry.start_time,
-    ).filter(effective_resource_filter('faculty', entry.effective_faculty.pk)
-             | effective_resource_filter('section', entry.effective_section.pk) | Q(room_id=entry.room_id))
-    for other in qs.select_related('assignment__faculty', 'assignment__subject', 'assignment__section',
-                                  'faculty_override', 'subject_override', 'section_override', 'room'):
+    ).filter((local & (faculty_or_room | effective_resource_filter('section', entry.effective_section.pk)))
+             | (external & faculty_or_room))
+    for other in qs.select_related('schedule__term', 'assignment__faculty', 'assignment__subject',
+                                  'assignment__section', 'faculty_override', 'subject_override',
+                                  'section_override', 'room'):
+        if other.schedule_id != entry.schedule_id:
+            # Inclusive date ranges must intersect on this meeting's weekday.
+            start = max(term.starts_on, other.schedule.term.starts_on)
+            end = min(term.ends_on, other.schedule.term.ends_on)
+            if start + timedelta(days=(entry.day - start.weekday()) % 7) > end:
+                continue
         if not overlaps(entry.start_time, entry.end_time, other.start_time, other.end_time):
             continue
         if other.effective_faculty.pk == entry.effective_faculty.pk:
             add(f"Faculty conflict with {other.effective_subject.code} ({other.start_time}-{other.end_time}).", "FACULTY_CONFLICT", [entry.assignment, other.assignment])
         if other.room_id == entry.room_id:
             add(f"Room conflict in {entry.room.name} with {other.effective_subject.code} ({other.start_time}-{other.end_time}).", "ROOM_CONFLICT", [entry.assignment, other.assignment])
-        if other.effective_section.pk == entry.effective_section.pk:
+        if other.schedule_id == entry.schedule_id and other.effective_section.pk == entry.effective_section.pk:
             add(f"Section conflict with {other.effective_subject.code} ({other.start_time}-{other.end_time}).", "SECTION_CONFLICT", [entry.assignment, other.assignment])
 
     weekly_minutes = 0
@@ -126,7 +145,8 @@ def conflict_messages(entries):
 
 def schedule_validation_issues(schedule):
     messages = []
-    entries = list(schedule.entries.select_related(*ENTRY_RELATIONS))
+    entries = list(schedule.entries.select_related(*ENTRY_RELATIONS).prefetch_related(
+        "assignment__section__availability_set", "section_override__availability_set"))
     scheduled_ids = {entry.assignment_id for entry in entries}
     missing = schedule.term.teachingassignment_set.exclude(id__in=scheduled_ids).select_related("subject", "section", "faculty")
     for assignment in missing:

@@ -1,0 +1,577 @@
+
+<!doctype html>
+<html lang="en">
+<head><script>
+localStorage.setItem('schedease-theme',new URLSearchParams(location.search).get('theme')||'light');
+</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SchedEase</title>
+  <script>
+    if (sessionStorage.getItem("schedease-sidebar-collapsed") === "true") {
+      document.documentElement.classList.add("sidebar-collapsed");
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="file:///C:/Users/JEROME/SchedEase-Prototype/static/css/app.css?v=20260906-assignments">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-lockup">
+        <button class="icon-button sidebar-menu-button" type="button" data-sidebar-collapse aria-label="Toggle navigation" data-tooltip="Open or close the sidebar menu.">
+          <span class="icon menu-icon"></span>
+        </button>
+        <a class="brand" href="/dashboard/">
+          <span class="brand-mark">SE</span>
+          <span class="brand-text">
+            <strong>SchedEase</strong>
+            <small>Academic Scheduler</small>
+          </span>
+        </a>
+      </div>
+      
+      <nav class="nav-group" aria-label="Primary navigation">
+        <a href="/dashboard/" data-icon="grid" class="is-active" aria-current="page">Dashboard</a>
+        
+        <a href="/schedules/browse/" data-icon="calendar">Browse Schedules</a>
+        <a href="/schedules/my-availability/" data-icon="clock">My Availability</a>
+        
+        
+      </nav>
+      
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <div class="topbar-left">
+          <a class="topbar-brand" href="/dashboard/" aria-label="SchedEase home">
+            <span class="brand-mark">SE</span>
+            <span>SchedEase</span>
+          </a>
+          <button class="icon-button mobile-only" type="button" data-sidebar-toggle aria-label="Open navigation">
+            <span class="icon menu-icon"></span>
+          </button>
+        </div>
+        <div class="topbar-search">
+          <span class="icon search-icon"></span>
+          <input type="search" data-global-filter aria-label="Filter table rows on this page" placeholder="Filter rows on this page">
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" type="button" data-theme-toggle aria-label="Toggle theme">
+            <span class="icon theme-icon"></span>
+          </button>
+          
+          <div class="user-menu" role="group" aria-label="Signed in as faculty-test">
+            <span class="avatar">F</span>
+            <span>
+              <strong>faculty-test</strong>
+              <small>Faculty</small>
+            </span>
+          </div>
+          <form method="post" action="/accounts/logout/">
+            <input type="hidden" name="csrfmiddlewaretoken" value="w6KuLT0ZS8pTvUE1nAg84idMw7Uw4oYIjW0gdwbztP793A2QRELxSu2nspoXBrGM">
+            <button class="button button-ghost" data-loading-text="Signing out">Sign out</button>
+          </form>
+          
+        </div>
+      </header>
+
+      <section class="content">
+        
+        
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Faculty Workspace</p>
+    <h1>Assigned teaching schedule</h1>
+    <p class="subtle">Review published class assignments and keep availability up to date for future schedule generation.</p>
+  </div>
+  <a class="button primary" href="/schedules/my-availability/">Update Availability</a>
+</div>
+<section class="panel" aria-labelledby="faculty-workload-heading">
+  <h2 id="faculty-workload-heading">Published teaching workload</h2>
+  <p class="subtle">Weekly teaching hours from your published meetings, shown separately for each schedule. These are contact hours, not academic units.</p>
+  <p>Current weekly teaching limit: <strong>24 hours</strong></p>
+  
+  <div class="panel">
+    <h3>Official teaching</h3>
+    <p class="subtle">First Term 2026-2027</p>
+    <p><strong>2.00 hours</strong> (120 minutes) per week</p>
+    <p>2 meetings &middot; 1 section</p>
+  </div>
+  
+</section>
+<h2>Weekly Teaching Timetable</h2>
+
+<div class="legend"><span><i class="legend-swatch occupied"></i> Scheduled class</span><span><i class="legend-swatch vacant"></i> No class</span></div>
+<div class="panel table-wrap personal-timetable-wrap">
+  <table class="room-schedule-grid personal-timetable">
+    <thead><tr><th>Time</th><th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th><th>Saturday</th></tr></thead>
+    <tbody><tr>
+      <th>7:00 AM<small>7:30 AM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>7:30 AM<small>8:00 AM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>8:00 AM<small>8:30 AM</small></th>
+      <td class="occupied-cell">
+        <div class="room-slot personal-class-slot" title="Regression Course · Original Teacher">
+          <strong><span tabindex="0" data-tooltip="Regression Course">REG101</span></strong>
+          <span>8:00 AM–9:00 AM</span>
+          
+          <span>Regression Room · REG 1-A</span>
+          <small>Lecture · First Term 2026-2027</small>
+        </div>
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>8:30 AM<small>9:00 AM</small></th>
+      <td class="occupied-cell">
+        <div class="room-slot personal-class-slot" title="Regression Course · Original Teacher">
+          <strong><span tabindex="0" data-tooltip="Regression Course">REG101</span></strong>
+          <span>8:00 AM–9:00 AM</span>
+          
+          <span>Regression Room · REG 1-A</span>
+          <small>Lecture · First Term 2026-2027</small>
+        </div>
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>9:00 AM<small>9:30 AM</small></th>
+      <td class="occupied-cell">
+        <div class="room-slot personal-class-slot" title="Regression Course · Original Teacher">
+          <strong><span tabindex="0" data-tooltip="Regression Course">REG101</span></strong>
+          <span>9:00 AM–10:00 AM</span>
+          
+          <span>Regression Room · REG 1-A</span>
+          <small>Lecture · First Term 2026-2027</small>
+        </div>
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>9:30 AM<small>10:00 AM</small></th>
+      <td class="occupied-cell">
+        <div class="room-slot personal-class-slot" title="Regression Course · Original Teacher">
+          <strong><span tabindex="0" data-tooltip="Regression Course">REG101</span></strong>
+          <span>9:00 AM–10:00 AM</span>
+          
+          <span>Regression Room · REG 1-A</span>
+          <small>Lecture · First Term 2026-2027</small>
+        </div>
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>10:00 AM<small>10:30 AM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>10:30 AM<small>11:00 AM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>11:00 AM<small>11:30 AM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>11:30 AM<small>12:00 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>12:00 PM<small>12:30 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>12:30 PM<small>1:00 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>1:00 PM<small>1:30 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>1:30 PM<small>2:00 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>2:00 PM<small>2:30 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>2:30 PM<small>3:00 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>3:00 PM<small>3:30 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>3:30 PM<small>4:00 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>4:00 PM<small>4:30 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>4:30 PM<small>5:00 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>5:00 PM<small>5:30 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>5:30 PM<small>6:00 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>6:00 PM<small>6:30 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr><tr>
+      <th>6:30 PM<small>7:00 PM</small></th>
+      <td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td><td class="vacant-cell">
+        
+      </td>
+    </tr></tbody>
+  </table>
+</div>
+
+
+<details class="panel schedule-list-disclosure"><summary>View schedule as a list</summary><div class="panel table-wrap">
+  <div class="table-tools">
+    <label class="table-search">
+      <span class="icon search-icon"></span>
+      <input type="search" data-table-filter placeholder="Search schedules">
+    </label>
+    <span class="badge">2 entries</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th data-sort>Day</th>
+        <th data-sort>Time</th>
+        <th data-sort>Course</th>
+        <th data-sort>Section</th>
+        <th data-sort>Faculty</th>
+        <th data-sort>Room</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      
+      <tr>
+        <td><span class="badge">Monday</span></td>
+        <td>8:00 AM - 9:00 AM</td>
+        <td><span class="subject-chip" tabindex="0" data-tooltip="Regression Course">REG101</span></td>
+        <td>REG 1-A</td>
+        <td>Original Teacher</td>
+        <td>Regression Room</td>
+        <td class="actions-cell"></td>
+      </tr>
+      
+      <tr>
+        <td><span class="badge">Monday</span></td>
+        <td>9:00 AM - 10:00 AM</td>
+        <td><span class="subject-chip" tabindex="0" data-tooltip="Regression Course">REG101</span></td>
+        <td>REG 1-A</td>
+        <td>Original Teacher</td>
+        <td>Regression Room</td>
+        <td class="actions-cell"></td>
+      </tr>
+      
+    </tbody>
+  </table>
+</div>
+</details>
+
+      </section>
+    </div>
+  </div>
+  <div class="backdrop" data-sidebar-toggle></div>
+  <script src="file:///C:/Users/JEROME/SchedEase-Prototype/static/js/app.js"></script>
+  <script src="file:///C:/Users/JEROME/SchedEase-Prototype/static/js/table-scroll.js"></script>
+<pre id="results" style="position:fixed;bottom:0;left:0;z-index:9999;font-size:10px">RUNNING</pre>
+<script>setTimeout(async()=>{
+const errors=[];let checks=0;const check=(ok,text)=>{checks++;if(!ok)errors.push(text)};
+const theme=new URLSearchParams(location.search).get('theme');
+check(document.documentElement.dataset.theme===theme,'requested theme');
+check(document.documentElement.scrollWidth<=innerWidth+1,'no horizontal page overflow');
+const wrap=document.querySelector('.personal-timetable-wrap'), slot=document.querySelector('.personal-class-slot');
+check(!!wrap&&!!slot,'populated Django timetable');
+check(document.body.innerText.includes('2.00 hours')&&document.body.innerText.includes('120 minutes'),'published workload');
+check(slot.innerText.includes('REG101')&&slot.innerText.includes('Regression Room'),'course and room');
+check(slot.innerText.includes('First Term')&&slot.innerText.includes('2026-2027'),'term context');
+check(slot.innerText.includes('8:00 AM'),'class time');
+check(getComputedStyle(wrap).overflowX==='auto'||getComputedStyle(wrap).overflowX==='scroll','table scrolling contained');
+if(wrap.scrollWidth>wrap.clientWidth){wrap.scrollLeft=100;check(wrap.scrollLeft>0,'timetable scrolls');wrap.scrollLeft=0;}
+const details=document.querySelector('.schedule-list-disclosure');details.open=true;
+check(details.innerText.includes('Original Teacher'),'readable alternate list');
+check(document.documentElement.scrollWidth<=innerWidth+1,'list does not widen page');
+const toggle=document.querySelector('[data-theme-toggle]');toggle.click();
+check(document.documentElement.dataset.theme!==theme,'theme toggle works');toggle.click();
+const fg=getComputedStyle(slot.querySelector('strong')).color;
+check(fg!==getComputedStyle(slot).backgroundColor,'instructor foreground distinct');
+document.querySelector('#results').textContent=errors.length?'FAIL '+errors.join('; '):'PASS '+checks+' faculty checks\nviewport width '+innerWidth;
+},600);</script></body>
+</html>

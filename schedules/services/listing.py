@@ -15,7 +15,7 @@ SEARCH = {
     'faculty': ('full_name', 'employee_id'), 'students': ('full_name', 'student_number', 'section__name', 'section__program__code'),
     'rooms': ('name', 'room_type'), 'terms': ('name', 'school_year'),
     'assignments': ('subject__code', 'subject__title', 'section__name', 'section__program__code', 'faculty__full_name', 'faculty__employee_id', 'term__name', 'term__school_year'),
-    'availability': ('faculty__full_name', 'faculty__employee_id', 'room__name', 'kind'),
+    'availability': ('faculty__full_name', 'faculty__employee_id', 'room__name', 'section__name', 'kind'),
     'ga-settings': ('name',), 'schedules': ('name', 'term__name', 'term__school_year', 'status'),
     'credential-overrides': ('faculty__full_name', 'faculty__employee_id', 'subject__code', 'subject__title'),
 }
@@ -24,7 +24,7 @@ RELATED = {
     'faculty-credentials': ('faculty', 'credential'),
     'subject-credential-requirements': ('subject', 'required_credential'),
     'students': ('section__program', 'section__year_level'),
-    'availability': ('faculty', 'room'), 'schedules': ('term',),
+    'availability': ('faculty', 'room', 'section__program', 'section__year_level'), 'schedules': ('term',),
     'credential-overrides': ('faculty', 'subject'),
     'assignments': ('subject', 'section__program', 'section__year_level', 'faculty', 'term'),
 }

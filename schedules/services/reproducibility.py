@@ -83,7 +83,7 @@ def canonical_inputs(ga):
     from schedules.models import Subject
     parent_subjects = {s.pk: s for s in Subject.objects.filter(pk__in=[p[1] for p in parents])}
     parent_subjects.update(subjects)
-    return {'schema': 'schedease-inputs-v1',
+    return {'schema': 'schedease-inputs-v2',
         'term': {'id': ga.term.pk, 'start': str(ga.term.starts_on), 'end': str(ga.term.ends_on)},
         'operating_days': list(ALLOWED_DAYS), 'operating_hours': [str(SCHOOL_START), str(SCHOOL_END)],
         'assignments': parents,
@@ -91,7 +91,7 @@ def canonical_inputs(ga):
             a.meeting_index, a.duration_minutes, a.required_duration_minutes, a.effective_room_type,
             ga.qualification_cache[a.pk]) for a in ga.assignments),
         'subjects': sorted((pk, s.lecture_hours, s.lab_hours, s.required_room_type) for pk, s in parent_subjects.items()),
-        'sections': sorted((pk, s.size) for pk, s in sections.items()),
+        'sections': sorted((pk, s.size, periods(s), policy(ga.section_policies[pk])) for pk, s in sections.items()),
         'faculty': [(pk, f.max_weekly_hours, periods(f), policy(ga.faculty_policies[pk])) for pk, f in sorted(faculty.items())],
         'rooms': [(r.pk, r.room_type, r.capacity, r.is_active, periods(r), policy(ga.room_policies[r.pk])) for r in sorted(ga.rooms, key=lambda r: r.pk)],
         'credentials': held, 'requirements': requirements, 'overrides': overrides}

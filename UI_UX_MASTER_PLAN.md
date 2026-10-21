@@ -2,9 +2,12 @@
 
 ## Purpose and status
 
+> Historical UI/UX roadmap. The single active roadmap is now [SCHEDEASE_THESIS_DEVELOPMENT_PLAN.md](SCHEDEASE_THESIS_DEVELOPMENT_PLAN.md). Completed work and the 9/24 UI/UX count below are preserved; future UI tasks require prioritization through thesis task T15.
+
+
 Official planning reference for a six-phase, 24-task refinement of SchedEase's existing interface. Preserve its dark navy and teal/cyan identity, Django architecture and light/dark behavior. This is modernization of the existing system, not a replacement frontend.
 
-**8 of 24 UI/UX tasks completed.** Tasks 1.1-1.4 and 2.1-2.4 are **Completed**; **Phases 1 and 2 are Completed**; all remaining tasks are **Not Started**. See [Component audit](UI_UX_COMPONENT_AUDIT.md) and [Design tokens](UI_UX_DESIGN_TOKENS.md) for findings, measured contrast, 554 passing tests and browser-verification limitations. See [Shared component guide](UI_UX_SHARED_COMPONENTS.md) for Task 1.3 changes and verification. See [Interaction states](UI_UX_INTERACTION_STATES.md) for Task 1.4 verification and remaining manual accessibility checks. See [Sidebar navigation](UI_UX_SIDEBAR_NAVIGATION.md) for Task 2.1 results. See [Top navigation and tooltips](UI_UX_TOP_NAVIGATION.md) for Task 2.2 results. See [Responsive layouts](UI_UX_RESPONSIVE_LAYOUTS.md) for Task 2.3 evidence. See [Page spacing](UI_UX_PAGE_SPACING.md) for Task 2.4 measurements and verification. Await approval before Task 3.1.
+**9 of 24 UI/UX tasks completed.** Tasks 1.1-1.4, 2.1-2.4 and 3.1 are **Completed**; **Phases 1 and 2 are Completed**; **Phase 3 is In Progress**; all remaining tasks are **Not Started**. See [Component audit](UI_UX_COMPONENT_AUDIT.md) and [Design tokens](UI_UX_DESIGN_TOKENS.md) for findings, measured contrast, 554 passing tests and browser-verification limitations. See [Shared component guide](UI_UX_SHARED_COMPONENTS.md) for Task 1.3 changes and verification. See [Interaction states](UI_UX_INTERACTION_STATES.md) for Task 1.4 verification and remaining manual accessibility checks. See [Sidebar navigation](UI_UX_SIDEBAR_NAVIGATION.md) for Task 2.1 results. See [Top navigation and tooltips](UI_UX_TOP_NAVIGATION.md) for Task 2.2 results. See [Responsive layouts](UI_UX_RESPONSIVE_LAYOUTS.md) for Task 2.3 evidence. See [Page spacing](UI_UX_PAGE_SPACING.md) for Task 2.4 measurements and verification. See [Record editors](UI_UX_RECORD_EDITORS.md) for Task 3.1 results. Await approval before Task 3.2.
 
 The earlier 34-task improvement plan is a separate completed milestone with **conditional system acceptance**. Its documented baseline is **551 passing automated tests**; these were not rerun for this documentation-only task. See [final system verification](FINAL_SYSTEM_VERIFICATION_REPORT.md) and [acceptance matrix](FINAL_ACCEPTANCE_TEST_MATRIX.md). Outstanding browser, infrastructure, supported-framework upgrade and academic clarification requirements remain outstanding; this initiative does not authorize deployment.
 
@@ -417,7 +420,7 @@ No tasks are removed, merged or renumbered. Recommended refinements within the o
 
 Statuses: **Not Started**, **In Progress**, **Completed**, **Blocked**, **Deferred**. A blocked/deferred task needs a reason and next action. Mark Completed only after its acceptance evidence is recorded; do not count this planning document as Task 1.1 completion.
 
-**8 of 24 UI/UX tasks completed.**
+**9 of 24 UI/UX tasks completed.**
 
 | Task | Title | Phase | Status | Dependencies | Verification / completion notes |
 | --- | --- | --- | --- | --- | --- |
@@ -429,7 +432,7 @@ Statuses: **Not Started**, **In Progress**, **Completed**, **Blocked**, **Deferr
 | 2.2 | Improve Top Navigation and Tooltips | 2 | Completed | 1.3, 1.4, 2.1 | Responsive top bar and viewport-aware tooltips; 208 new browser checks, prior browser suites and 557 Django tests passed. See UI_UX_TOP_NAVIGATION.md. |
 | 2.3 | Responsive Layout Improvements | 2 | Completed | 2.1, 2.2 | Shared responsive fixes; 294 component assertions and 294 rendered-page checks across both themes/seven widths; 557 Django tests passed. See UI_UX_RESPONSIVE_LAYOUTS.md. |
 | 2.4 | Optimize Page Spacing and Content Density | 2 | Completed | 1.2, 1.3, 2.3 | Token-based density refinements; before/after measurements, both themes/seven widths, browser regressions and 557 Django tests passed. See UI_UX_PAGE_SPACING.md. |
-| 3.1 | Standardize Record Editors | 3 | Not Started | 1.3, 1.4, 2.3, 2.4 | Await explicit assignment; no implementation or task verification yet. |
+| 3.1 | Standardize Record Editors | 3 | Completed | 1.3, 1.4, 2.3, 2.4 | Shared editor heading/container, preserved fields and specialized workflows; 561 Django tests and 1,120 editor browser assertions passed. See UI_UX_RECORD_EDITORS.md. |
 | 3.2 | Improve Field Guidance and Validation | 3 | Not Started | 3.1 | Await explicit assignment; no implementation or task verification yet. |
 | 3.3 | Clarify Draft Saving and Form Actions | 3 | Not Started | 3.1, 3.2, 1.4 | Await explicit assignment; no implementation or task verification yet. |
 | 3.4 | Improve Record Tables and Controls | 3 | Not Started | 1.3, 2.2, 2.3, 2.4 | Await explicit assignment; no implementation or task verification yet. |
@@ -452,5 +455,5 @@ The original planning session created only `UI_UX_MASTER_PLAN.md`; no template, 
 
 Original planning acceptance checks: six phases, 24 uniquely numbered sequential task definitions, eight required planning fields per task, 24 matching Not Started tracker rows, actual referenced source paths, no application changes and Git whitespace checks. A full test run is unnecessary for documentation creation; baseline evidence is linked above rather than claimed as rerun.
 
-For a future session: read this plan, inspect current Git changes, locate the explicitly assigned task, confirm its dependencies and source contracts, execute only that task, record evidence and update its row. **Tasks 1.1-1.4 and 2.1-2.4 are complete. Phase 2 is Completed. Await separate approval/instructions before beginning Task 3.1.**
+For a future session: read this plan, inspect current Git changes, locate the explicitly assigned task, confirm its dependencies and source contracts, execute only that task, record evidence and update its row. **Tasks 1.1-1.4, 2.1-2.4 and 3.1 are complete. Phase 2 is Completed; Phase 3 is In Progress. Await separate approval/instructions before beginning Task 3.2.**
 

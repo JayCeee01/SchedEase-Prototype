@@ -403,6 +403,7 @@ class AvailabilityKind(models.TextChoices):
 class Availability(models.Model):
     faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE, null=True, blank=True)
     room = models.ForeignKey(Room, on_delete=models.CASCADE, null=True, blank=True)
+    section = models.ForeignKey(Section, on_delete=models.CASCADE, null=True, blank=True)
     day = models.PositiveSmallIntegerField(choices=Weekday.choices)
     start_time = models.TimeField()
     end_time = models.TimeField()
@@ -412,14 +413,24 @@ class Availability(models.Model):
         ordering = ["day", "start_time"]
         constraints = [
             models.CheckConstraint(
-                check=(Q(faculty__isnull=False, room__isnull=True) | Q(faculty__isnull=True, room__isnull=False)),
+                check=(Q(faculty__isnull=False, room__isnull=True, section__isnull=True)
+                       | Q(faculty__isnull=True, room__isnull=False, section__isnull=True)
+                       | Q(faculty__isnull=True, room__isnull=True, section__isnull=False)),
                 name="availability_exactly_one_owner",
             )
         ]
 
+    def __str__(self):
+        if self.section_id:
+            return (f"{self.section} - {self.get_day_display()} "
+                    f"{self.start_time:%H:%M}-{self.end_time:%H:%M} - {self.get_kind_display()}")
+        return super().__str__()
+
     def clean(self):
-        if bool(self.faculty) == bool(self.room):
-            raise ValidationError("Availability must belong to exactly one faculty member or room.")
+        if sum(bool(value) for value in (self.faculty_id, self.room_id, self.section_id)) != 1:
+            raise ValidationError("Choose exactly one faculty member, room, or section.")
+        if self.section_id and self.kind == AvailabilityKind.PREFERRED:
+            raise ValidationError("Section availability must be Available or Unavailable.")
         if self.start_time >= self.end_time:
             raise ValidationError("Start time must be earlier than end time.")
 

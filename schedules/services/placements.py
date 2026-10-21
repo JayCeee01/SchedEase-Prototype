@@ -11,7 +11,7 @@ from .meetings import entry_requirement_errors
 from .time import ALLOWED_DAYS, add_minutes, overlaps, slot_starts
 
 
-def feasible_placements(assignment, term, rooms, *, eligible=None, faculty_policy=None, room_policies=None, checkpoint=None, issue_sink=None):
+def feasible_placements(assignment, term, rooms, *, eligible=None, faculty_policy=None, room_policies=None, section_policy=None, checkpoint=None, issue_sink=None):
     """Return immutable (room, day, start, end) options and failure explanations.
 
     No inter-meeting conflicts are checked here. Inputs are a run-local snapshot;
@@ -40,6 +40,7 @@ def feasible_placements(assignment, term, rooms, *, eligible=None, faculty_polic
     faculty_policy = faculty_policy or AvailabilityPolicy.for_resource(assignment.faculty)
     room_policies = room_policies if room_policies is not None else {
         room.pk: AvailabilityPolicy.for_resource(room) for room in rooms}
+    section_policy = section_policy or AvailabilityPolicy.for_resource(assignment.section)
     duration = assignment.required_duration_minutes
     grid = tuple(slot_starts(duration))
     options = set()
@@ -55,16 +56,18 @@ def feasible_placements(assignment, term, rooms, *, eligible=None, faculty_polic
                         continue
                     # Include interval boundaries so narrow/non-grid windows work.
                     starts = set(grid) | {start, add_minutes(end, -duration)}
+                    for left, right in section_policy.effective_intervals(day):
+                        starts.update((left, add_minutes(right, -duration)))
                     for candidate in sorted(starts):
                         finish = add_minutes(candidate, duration)
                         if not (start <= candidate < finish <= end):
                             continue
                         entry.room, entry.day, entry.start_time, entry.end_time = room, day, candidate, finish
                         if not individual_entry_errors(entry, eligible=eligible,
-                                faculty_policy=faculty_policy, room_policy=policy):
+                                faculty_policy=faculty_policy, room_policy=policy, section_policy=section_policy):
                             options.add((room.pk, day, candidate, finish))
     if not options:
-        return (), (f'No common faculty and room availability window fits the required {duration} minutes '
+        return (), (f'No common faculty, section and room availability window fits the required {duration} minutes '
                     'within operating hours. Review available and unavailable periods.',)
     return tuple(sorted(options)), ()
 

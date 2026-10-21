@@ -20,6 +20,7 @@ def merge_intervals(intervals):
 class AvailabilityPolicy:
     def __init__(self, periods, *, active=True):
         periods = list(periods)
+        self.configured = bool(periods)
         self.active = active
         explicit = any(item.kind == AvailabilityKind.AVAILABLE for item in periods)
         self.allowed = {}

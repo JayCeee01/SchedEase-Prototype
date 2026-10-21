@@ -96,7 +96,7 @@ RESOURCE_DESCRIPTIONS = {
     "rooms": "Maintain room capacity, availability, and specialized room types.",
     "terms": "Configure academic terms for schedule generation and publishing.",
     "assignments": "Assign faculty to courses and sections, with one or more schedulable meetings.",
-    "availability": "Define preferred, available, and unavailable time windows for faculty or rooms.",
+    "availability": "Define preferred, available, and unavailable time windows for faculty or rooms; available/unavailable windows for sections.",
     "ga-settings": "Adjust how schedules are created and improved.",
     "schedules": "Review, edit, publish, and delete generated schedule records.",
     "credential-overrides": "Audit admin-approved exceptions for unqualified faculty assignments.",
@@ -237,7 +237,10 @@ def dashboard(request):
             "subject_override", "section_override", "faculty_override").order_by("day", "start_time")
         context["entries"] = historical_entries(context["entries"])
         context["timetable_grid"] = personal_schedule_grid(context["entries"])
-        context["availability"] = Availability.objects.filter(faculty=faculty)
+        from .services.faculty_workload import published_workload
+        context["faculty"] = faculty
+        context["workloads"] = published_workload(context["entries"])
+        context["availability"] = Availability.objects.filter(faculty=faculty) if faculty else Availability.objects.none()
         return render(request, "schedules/faculty_dashboard.html", context)
     student = Student.objects.filter(user=request.user).select_related("section").first()
     context["student"] = student
@@ -305,10 +308,12 @@ def my_availability_create(request):
     form.fields["faculty"].initial = faculty
     form.fields["faculty"].disabled = True
     form.fields["room"].disabled = True
+    form.fields["section"].disabled = True
     if request.method == "POST" and form.is_valid():
         item = form.save(commit=False)
         item.faculty = faculty
         item.room = None
+        item.section = None
         item.save()
         messages.success(request, "Availability saved.")
         return redirect("my_availability")
@@ -324,10 +329,12 @@ def my_availability_update(request, pk):
     form = form_class(request.POST or None, instance=item)
     form.fields["faculty"].disabled = True
     form.fields["room"].disabled = True
+    form.fields["section"].disabled = True
     if request.method == "POST" and form.is_valid():
         item = form.save(commit=False)
         item.faculty = faculty
         item.room = None
+        item.section = None
         item.save()
         messages.success(request, "Availability updated.")
         return redirect("my_availability")

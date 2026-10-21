@@ -11,14 +11,14 @@ from urllib.request import Request, urlopen
 from cdp_browser import DevTools
 
 root = Path(__file__).resolve().parents[2]
-fixture = 'rendered_editors.html' if '--editors' in sys.argv else 'rendered_responsive.html' if '--rendered' in sys.argv else 'responsive_layout.html' if '--responsive' in sys.argv else 'top_navigation.html' if '--topbar' in sys.argv else 'sidebar_navigation.html' if '--sidebar' in sys.argv else ('table_scrolling.html' if '--tables' in sys.argv else 'interaction_states.html')
+fixture = 'rendered_faculty.html' if '--faculty' in sys.argv else 'rendered_student.html' if '--student' in sys.argv else 'rendered_editors.html' if '--editors' in sys.argv else 'rendered_responsive.html' if '--rendered' in sys.argv else 'responsive_layout.html' if '--responsive' in sys.argv else 'top_navigation.html' if '--topbar' in sys.argv else 'sidebar_navigation.html' if '--sidebar' in sys.argv else ('table_scrolling.html' if '--tables' in sys.argv else 'interaction_states.html')
 candidates = [Path(os.environ.get('PROGRAMFILES', '')) / 'Google/Chrome/Application/chrome.exe',
               Path(os.environ.get('PROGRAMFILES(X86)', '')) / 'Microsoft/Edge/Application/msedge.exe']
 browser = next((p for p in candidates if p.is_file()), None)
 if browser is None:
     raise SystemExit('Chrome/Edge unavailable: run the documented manual checklist.')
 for theme in ('light', 'dark'):
-    for width in ((1360, 1024, 901, 768, 621, 500, 390) if '--responsive' in sys.argv or '--rendered' in sys.argv or '--editors' in sys.argv else (1360, 768, 500, 390) if '--sidebar' in sys.argv or '--topbar' in sys.argv else (1360, 390)):
+    for width in ((1360, 1024, 901, 768, 621, 500, 390) if '--responsive' in sys.argv or '--rendered' in sys.argv or '--editors' in sys.argv else (1360, 768, 500, 390) if '--faculty' in sys.argv or '--student' in sys.argv or '--sidebar' in sys.argv or '--topbar' in sys.argv else (1360, 390)):
         with tempfile.TemporaryDirectory(prefix='schedease-ui-', dir=root/'tests/browser') as profile:
             assert Path(profile).resolve().parent == (root/'tests/browser').resolve()
             process = subprocess.Popen([str(browser), '--headless=new', '--disable-gpu', '--no-first-run',

@@ -59,7 +59,7 @@ MODEL_FORMS = {
     "rooms": modelform_factory(Room, fields=["name", "room_type", "capacity", "is_active"]),
     "terms": modelform_factory(AcademicTerm, fields=["name", "school_year", "starts_on", "ends_on", "is_active"], widgets={"starts_on": forms.DateInput(attrs={"type": "date"}), "ends_on": forms.DateInput(attrs={"type": "date"})}),
     "assignments": modelform_factory(Assignment, fields=["term", "subject", "faculty", "section"]),
-    "availability": modelform_factory(Availability, fields=["faculty", "room", "day", "start_time", "end_time", "kind"], widgets={"start_time": forms.TimeInput(attrs={"type": "time"}), "end_time": forms.TimeInput(attrs={"type": "time"})}),
+    "availability": modelform_factory(Availability, fields=["faculty", "room", "section", "day", "start_time", "end_time", "kind"], widgets={"start_time": forms.TimeInput(attrs={"type": "time"}), "end_time": forms.TimeInput(attrs={"type": "time"})}),
     "ga-settings": modelform_factory(GASettings, fields=["name", "population_size", "generations", "mutation_rate", "crossover_rate", "elitism"]),
     "schedules": modelform_factory(Schedule, fields=["term", "name"]),
     "credential-overrides": modelform_factory(CredentialOverride, fields=["assignment", "subject", "faculty", "reason", "missing_credentials"], labels={"subject": "Course"}),

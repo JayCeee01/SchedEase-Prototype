@@ -89,7 +89,8 @@ class ValidationProfilingTests(TestCase):
                     self.assertEqual(after['validation_calls'], size)
                     self.assertEqual(after['subject_selects'], 0)
                     self.assertLess(after['queries'], before['queries'])
-                    self.assertLessEqual(after['queries'], (16 if scenario == 'invalid' else 11) * size + 4)
+                    # Up to two batch queries load default/overridden section availability.
+                    self.assertLessEqual(after['queries'], (16 if scenario == 'invalid' else 11) * size + 6)
                     self.assertEqual(after['overlap_comparisons'], 3 * size if scenario == 'conflicts' else 0)
                     records.append(dict(meetings=size, scenario=scenario, before=before, after=after))
         output = os.environ.get('VALIDATION_PROFILE_OUTPUT')
