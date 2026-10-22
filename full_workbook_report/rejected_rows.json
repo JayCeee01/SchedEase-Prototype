@@ -1,0 +1,36 @@
+[
+  {
+    "sheet": "TER SCHED 2T2526",
+    "row": 156,
+    "reason": "day/time/room occurrence counts do not match",
+    "values": {
+      "A": "BSCPE 2-201",
+      "B": "ENGR1014",
+      "C": "Fundamentals of Electronic Circuits LAB",
+      "D": "1.5",
+      "E": "F",
+      "F": "0.29166666666666669",
+      "G": "0.41666666666666669",
+      "H": "204/PHYLAB",
+      "I": "JOAQUIN",
+      "J": ""
+    }
+  },
+  {
+    "sheet": "TER SCHED 2T2526",
+    "row": 516,
+    "reason": "day/time/room occurrence counts do not match",
+    "values": {
+      "A": "BSTM 3-203",
+      "B": "TOUR1022",
+      "C": "Travel Writing and Photography (LEC)",
+      "D": "2",
+      "E": "Th",
+      "F": "10:00/2:30:00 PM",
+      "G": "11:00/3:30",
+      "H": "211/209",
+      "I": "RESURRECCION",
+      "J": ""
+    }
+  }
+]

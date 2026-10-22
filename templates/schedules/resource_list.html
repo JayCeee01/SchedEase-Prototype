@@ -3,35 +3,74 @@
 <div class="page-hero">
   <div>
     <p class="eyebrow">Master Data</p>
-    <h1>{{ resource|title }}</h1>
+    <h1>{{ resource_label }}</h1>
     <p class="subtle">{{ description|default:"Search, sort, and maintain records used by the schedule generator." }}</p>
   </div>
-  <a class="button primary" href="{% url 'resource_create' resource %}">New</a>
+  {% if resource == 'assignments' %}<a class="button" href="{% url 'workload_proposals' %}">Workload Balancing Proposals</a>{% endif %}
+  {% if resource != 'schedules' %}<a class="button primary" href="{% url 'resource_create' resource %}">New</a>{% endif %}
 </div>
+{% if resource == 'schedules' %}<div class="view-switcher" role="navigation" aria-label="Schedule status"><a class="view-tab{% if schedule_tab == 'active' %} is-active{% endif %}" href="{{ tab_links.active }}">Active</a><a class="view-tab{% if schedule_tab == 'drafts' %} is-active{% endif %}" href="{{ tab_links.drafts }}">Drafts</a><a class="view-tab{% if schedule_tab == 'archived' %} is-active{% endif %}" href="{{ tab_links.archived }}">Archived</a></div>{% endif %}
+{% if drafts %}
+<section class="panel draft-list" aria-labelledby="draft-list-title">
+  <div><h2 id="draft-list-title">Unfinished drafts</h2><p class="subtle">Resume your saved work or discard it without changing official records.</p></div>
+  {% for draft in drafts %}
+  <div class="draft-list-item">
+    <span><strong>{% if draft.object_pk %}Edit draft for record #{{ draft.object_pk }}{% else %}New {{ resource|slice:":-1" }} draft{% endif %}</strong><small>Saved {{ draft.updated_at|timesince }} ago</small></span>
+    <span class="actions-cell">
+      {% if draft.object_pk %}<a class="button" href="{% url 'resource_update' resource draft.object_pk %}">Resume</a>{% else %}<a class="button" href="{% url 'resource_create' resource %}">Resume</a>{% endif %}
+      <form method="post" action="{% url 'discard_form_draft' draft.pk %}" data-auto-tooltips="false">{% csrf_token %}<button class="button" type="submit">Discard</button></form>
+    </span>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
 <div class="panel table-wrap">
   <div class="table-tools">
-    <label class="table-search">
-      <span class="icon search-icon"></span>
-      <input type="search" data-table-filter placeholder="Search {{ resource }}">
-    </label>
-    <span class="badge">{{ objects|length }} records</span>
+    <form method="get" class="toolbar record-controls{% if resource == 'assignments' %} assignment-filters{% endif %}" data-auto-tooltips="false">
+      {% if resource == 'schedules' %}<input type="hidden" name="tab" value="{{ schedule_tab }}">{% endif %}
+      <label class="table-search"><span class="icon search-icon"></span><input type="search" name="q" value="{{ q }}" aria-label="Search {{ resource_label }}" placeholder="Search {{ resource_label }}"></label>
+      <label>Sort <select name="sort" onchange="this.form.submit()">
+        {% for value, label in sort_options %}<option value="{{ value }}"{% if sort == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select></label>
+      {% for filter in filters %}
+      <label>{{ filter.label }} <select name="{{ filter.name }}"{% if filter.invalid %} aria-invalid="true"{% endif %}>
+        <option value="">All</option>
+        {% if filter.invalid %}<option value="{{ filter.value }}" selected>Unavailable selection</option>{% endif %}
+        {% for value, label in filter.options %}<option value="{{ value }}"{% if filter.value == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select></label>
+      {% endfor %}
+      {% if resource == 'assignments' %}<div class="assignment-filter-actions">{% endif %}
+      <button class="button" type="submit">Search / Apply</button>
+      {% if q or filters_active %}<a class="button" href="{{ clear_url }}">Clear search and filters</a>{% endif %}
+      {% if resource == 'assignments' %}</div>{% endif %}
+    </form>
   </div>
-  <table>
-    <thead><tr><th data-sort>Record</th><th>Actions</th></tr></thead>
+  {% for error in filter_errors %}<p class="badge danger" role="alert">{{ error }}</p>{% endfor %}
+  <p class="subtle" role="status">{{ total_count }} total{% if resource == 'schedules' %} in this tab{% endif %} · {{ filtered_count }} matching · Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}{% if filters_active %} · Filters applied{% endif %}</p>
+  <table{% if resource == 'assignments' %} class="assignments-table"{% endif %}>
+    <thead><tr>{% for header in column_headers %}<th scope="col" aria-sort="{{ header.direction }}"><a href="{{ header.url }}">{{ header.label }}</a></th>{% endfor %}{% if resource == 'assignments' %}<th>Meetings</th><th class="assignment-actions" scope="col">Actions</th>{% endif %}{% if has_created_at %}<th>Date Added</th>{% endif %}{% if has_updated_at %}<th>Last Modified</th>{% endif %}{% if resource != 'assignments' %}<th>Actions</th>{% endif %}</tr></thead>
     <tbody>
       {% for obj in objects %}
       <tr>
-        <td>{{ obj }}</td>
-        <td class="actions-cell">
-          {% if resource == "schedules" %}<a class="button" href="{% url 'schedule_detail' obj.pk %}">Open</a>{% endif %}
-          <a class="button" href="{% url 'resource_update' resource obj.pk %}">Edit</a>
+        {% if resource == 'subjects' %}<td><strong>{{ obj.code }}</strong></td><td>{{ obj.title }}</td>{% elif resource == 'assignments' %}
+        <td class="assignment-course"><span class="subject-chip" tabindex="0" data-tooltip="{{ obj.subject.title }}">{{ obj.subject.code }}</span><small>{{ obj.subject.title }}</small></td>
+        <td><strong>{{ obj.section }}</strong></td>
+        <td>{{ obj.faculty }}</td>
+        <td><span class="assignment-term">{{ obj.term.name }}</span><small>{{ obj.term.school_year }}</small></td>
+        <td><div class="meeting-badges">{% for meeting in obj.meetings.all %}<span class="badge"><strong>{{ meeting.get_component_display }}</strong> · {{ meeting.required_duration_minutes }} min <small>#{{ meeting.meeting_index }}</small></span>{% empty %}<span class="badge danger">No meetings</span>{% endfor %}</div></td>
+        {% else %}<td>{{ obj }}</td>{% endif %}
+        {% if resource != 'assignments' %}{% if has_created_at %}<td>{% if resource == 'schedules' %}{{ obj.generated_at|date:"M j, Y g:i A" }}{% else %}{{ obj.created_at|date:"M j, Y g:i A" }}{% endif %}</td>{% endif %}{% if has_updated_at %}<td>{{ obj.updated_at|date:"M j, Y g:i A" }}</td>{% endif %}{% endif %}
+        <td class="actions-cell{% if resource == 'assignments' %} assignment-actions{% endif %}">
+          {% if resource == "schedules" %}<a class="button primary" href="{% url 'schedule_detail' obj.pk %}">{% if obj.status == 'ARCHIVED' %}View Timetable{% else %}Edit Schedule{% endif %}</a><a class="button" href="{% url 'resource_update' resource obj.pk %}">Edit Details</a>{% else %}<a class="button" href="{% url 'resource_update' resource obj.pk %}">Edit</a>{% endif %}
           <a class="button" href="{% url 'resource_delete' resource obj.pk %}">Delete</a>
         </td>
+        {% if resource == 'assignments' %}{% if has_created_at %}<td>{{ obj.created_at|date:"M j, Y g:i A" }}</td>{% endif %}{% if has_updated_at %}<td>{{ obj.updated_at|date:"M j, Y g:i A" }}</td>{% endif %}{% endif %}
       </tr>
       {% empty %}
-      <tr><td colspan="2" class="table-empty">No records yet.</td></tr>
+      <tr><td colspan="10" class="table-empty">{% if filter_errors %}Check the selections above to see matching records.{% elif filters_active %}No records match your filters{% if q %} and search{% endif %}.{% elif q %}No records match your search.{% else %}No records in this view.{% endif %}</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+{% include "schedules/_pagination.html" %}
 {% endblock %}

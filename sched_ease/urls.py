@@ -5,6 +5,7 @@ from schedules import views
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("django.contrib.auth.urls")),
-    path("", views.dashboard, name="dashboard"),
+    path("", views.landing_page, name="landing"),
+    path("dashboard/", views.dashboard, name="dashboard"),
     path("schedules/", include("schedules.urls")),
 ]

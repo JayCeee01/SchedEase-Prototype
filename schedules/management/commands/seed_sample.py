@@ -22,13 +22,15 @@ from schedules.models import (
     TeachingAssignment,
     YearLevel,
 )
+from schedules.services.time import SCHOOL_END, SCHOOL_START
 
 
 class Command(BaseCommand):
     help = "Seed sample academic data for local testing."
 
     def handle(self, *args, **options):
-        admin, _ = User.objects.get_or_create(username="admin", defaults={"is_staff": True, "is_superuser": True})
+        admin, _ = User.objects.get_or_create(username="admin", defaults={"is_staff": True, "is_superuser": True, "email": "admin@schedease.local"})
+        admin.email = admin.email or "admin@schedease.local"
         admin.set_password("admin12345")
         admin.save()
         Profile.objects.get_or_create(user=admin, defaults={"role": Role.ADMIN})
@@ -42,7 +44,8 @@ class Command(BaseCommand):
         faculty_rows = [("F001", "Ada Santos"), ("F002", "Grace Reyes"), ("F003", "Alan Cruz")]
         faculty = []
         for username, full_name in faculty_rows:
-            user, _ = User.objects.get_or_create(username=username.lower())
+            user, _ = User.objects.get_or_create(username=username.lower(), defaults={"email": f"{username.lower()}@schedease.local"})
+            user.email = user.email or f"{username.lower()}@schedease.local"
             user.set_password("password123")
             user.save()
             Profile.objects.get_or_create(user=user, defaults={"role": Role.FACULTY})
@@ -52,16 +55,23 @@ class Command(BaseCommand):
         sec_a, _ = Section.objects.get_or_create(program=it, year_level=y1, name="A", defaults={"size": 36})
         sec_b, _ = Section.objects.get_or_create(program=it, year_level=y2, name="A", defaults={"size": 32})
 
-        student_user, _ = User.objects.get_or_create(username="student")
+        student_user, _ = User.objects.get_or_create(username="student", defaults={"email": "student@schedease.local"})
+        student_user.email = student_user.email or "student@schedease.local"
         student_user.set_password("password123")
         student_user.save()
         Profile.objects.get_or_create(user=student_user, defaults={"role": Role.STUDENT})
         Student.objects.get_or_create(user=student_user, student_number="S2026-0001", defaults={"section": sec_a, "full_name": "Juan Dela Cruz"})
 
-        Room.objects.get_or_create(name="Lec 101", defaults={"room_type": RoomKind.LECTURE, "capacity": 45})
-        Room.objects.get_or_create(name="Lec 102", defaults={"room_type": RoomKind.LECTURE, "capacity": 35})
-        Room.objects.get_or_create(name="Comp Lab 1", defaults={"room_type": RoomKind.COMPUTER_LAB, "capacity": 40})
-        Room.objects.get_or_create(name="Sci Lab 1", defaults={"room_type": RoomKind.SCIENCE_LAB, "capacity": 35})
+        lec_101, _ = Room.objects.get_or_create(name="Lec 101", defaults={"room_type": RoomKind.LECTURE, "capacity": 45})
+        lec_102, _ = Room.objects.get_or_create(name="Lec 102", defaults={"room_type": RoomKind.LECTURE, "capacity": 35})
+        comp_lab, _ = Room.objects.get_or_create(name="Comp Lab 1", defaults={"room_type": RoomKind.COMPUTER_LAB, "capacity": 40})
+        sci_lab, _ = Room.objects.get_or_create(name="Sci Lab 1", defaults={"room_type": RoomKind.SCIENCE_LAB, "capacity": 35})
+        for room in (lec_101, lec_102, comp_lab, sci_lab):
+            for day in range(6):
+                Availability.objects.get_or_create(
+                    room=room, day=day, start_time=SCHOOL_START, end_time=SCHOOL_END,
+                    kind=AvailabilityKind.AVAILABLE,
+                )
 
         subjects = [
             ("IT101", "Computer Programming 1", 2, 3, RoomKind.COMPUTER_LAB),

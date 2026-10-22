@@ -1,0 +1,12 @@
+<details class="panel import-card"><summary>Column guide and examples</summary>
+<p>Required columns need a value on every row. New records need extra details. Keep headings as shown in the template.</p>
+<div class="import-guide-tools"><label>Find a column<input type="search" data-guide-search placeholder="Try course, room, or duration"></label><label>Category<select data-guide-category><option value="">All categories</option>{% for group in groups %}<option>{{ group }}</option>{% endfor %}</select></label></div>
+<div class="import-scroll"><table class="import-guide"><thead><tr><th>Column</th><th>When needed</th><th>Example</th><th>What to enter</th></tr></thead><tbody>{% for item in guide %}<tr data-guide-row data-category="{{ item.group }}"><td><strong>{{ item.label }}</strong><small>{{ item.key }} · {{ item.group }}</small></td><td><span class="badge">{{ item.requirement }}</span></td><td>{{ item.example }}</td><td>{{ item.help }}</td></tr>{% endfor %}</tbody></table></div><p data-guide-empty hidden>No columns match. Try another search or category.</p>
+</details>
+<details class="panel import-card"><summary>More Information</summary><ul>
+<li>Use one Excel sheet. Remove merged cells and replace formulas with their values.</li>
+<li>Repeat shared details consistently. For example, use the same course name on its lecture and lab rows.</li>
+<li>Lecture and lab minutes must add up to the course’s weekly hours.</li>
+<li>Only enter qualifications the teacher holds. Original timetable columns are kept for reference.</li>
+<li>Review links work for two hours. If a link expires, upload your file again.</li>
+</ul></details>

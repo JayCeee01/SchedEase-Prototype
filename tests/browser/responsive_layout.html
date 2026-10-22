@@ -1,0 +1,66 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Top navigation regression</title>
+<script>localStorage.setItem('schedease-theme',new URLSearchParams(location.search).get('theme'));</script>
+<link rel="stylesheet" href="../../static/css/app.css"></head><body><div class="app-shell"><aside class="sidebar" id="sidebar"><button data-sidebar-collapse>Navigation</button></aside><div class="workspace">      <header class="topbar">
+        <div class="topbar-left">
+          <a class="topbar-brand" href="" aria-label="SchedEase home">
+            <span class="brand-mark">SE</span>
+            <span>SchedEase</span>
+          </a>
+          <button class="icon-button mobile-only" type="button" data-sidebar-toggle aria-label="Open navigation">
+            <span class="icon menu-icon"></span>
+          </button>
+        </div>
+        <div class="topbar-search">
+          <span class="icon search-icon"></span>
+          <input type="search" data-global-filter aria-label="Filter table rows on this page" placeholder="Filter rows on this page">
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" type="button" data-theme-toggle aria-label="Toggle theme">
+            <span class="icon theme-icon"></span>
+          </button>
+          
+          <div class="user-menu" role="group" aria-label="Signed in as Alexandra Longaccountname">
+            <span class="avatar">A</span>
+            <span>
+              <strong>Alexandra Longaccountname</strong>
+              <small>Administrator</small>
+            </span>
+          </div>
+          <form method="post" action="">
+            
+            <button class="button button-ghost" data-loading-text="Signing out">Sign out</button>
+          </form>
+          
+        </div>
+      </header>
+
+
+<section class="content"><div class="page-hero"><div><h1>Academic scheduling requirements with a very long heading</h1></div></div>
+<div class="metrics"><article><span class="metric-icon">AV</span><span><strong>123456</strong><span>Available teaching hours</span></span></article><article>Faculty</article><article>Rooms</article><article>Sections</article></div>
+<form class="panel planning-assumptions" data-auto-tooltips="false"><label>Planning input<select><option>A very long academic term or department name used for responsive testing</option></select></label><label>Planning input<select><option>A very long academic term or department name used for responsive testing</option></select></label><label>Planning input<select><option>A very long academic term or department name used for responsive testing</option></select></label><label>Planning input<select><option>A very long academic term or department name used for responsive testing</option></select></label><label>Planning input<select><option>A very long academic term or department name used for responsive testing</option></select></label><button>Recalculate</button></form>
+<form class="panel utilization-filters" data-auto-tooltips="false"><label>Room filter<input></label><label>Room filter<input></label><label>Room filter<input></label><button>Apply filters</button></form>
+<div class="schedule-board"><article class="day-column"><header>Monday</header><p>Lecture meeting</p></article><article class="day-column"><header>Monday</header><p>Lecture meeting</p></article><article class="day-column"><header>Monday</header><p>Lecture meeting</p></article><article class="day-column"><header>Monday</header><p>Lecture meeting</p></article><article class="day-column"><header>Monday</header><p>Lecture meeting</p></article><article class="day-column"><header>Monday</header><p>Lecture meeting</p></article></div>
+<div class="detail-grid"><section class="panel form"><h2>Shared record editor</h2><p><label for="course">Course description and teaching requirements</label><select id="course"><option>LongCourseLabelLongCourseLabelLongCourseLabelLongCourseLabelLongCourseLabelLongCourseLabelLongCourseLabelLongCourseLabelLongCourseLabelLongCourseLabelLongCourseLabelLongCourseLabel</option></select></p><ul class="errorlist"><li>ValidationReferenceValidationReferenceValidationReferenceValidationReferenceValidationReferenceValidationReferenceValidationReferenceValidationReferenceValidationReferenceValidationReferenceValidationReferenceValidationReferenceValidationReferenceValidationReferenceValidationReference</li></ul><div class="grid"><p><label>Faculty<input></label></p><p><label>Section<input></label></p></div><div class="toolbar form-actions"><button>Save assignment</button><a class="button" href="#">Cancel</a></div></section><aside class="panel">Credential details and audit information</aside></div>
+<div class="panel"><div class="toolbar"><input placeholder="Search records"><button>Export records</button><button>Add record</button></div><div class="table-wrap" aria-label="Academic records"><table><thead><tr><th>Course</th><th>Faculty</th><th>Section</th></tr></thead><tbody><tr><td>Long course description</td><td>Faculty member</td><td>Section 1</td></tr></tbody></table></div><nav class="record-pagination"><span>Page 1 of 20</span><div class="toolbar"><a class="button">Previous</a><a class="button">1</a><a class="button">2</a><a class="button">Next</a></div></nav></div>
+<a class="button" href="#login" data-login-open>Open dialog</a><pre id="results" style="white-space:pre-wrap;overflow-wrap:anywhere">RUNNING</pre></section></div></div>
+<div class="login-modal-shell" data-login-modal aria-hidden="true"><section class="login-modal-card" role="dialog" aria-modal="true" aria-label="Sign in"><button data-login-close>Close</button><form><label>Username<input name="username"></label><div style="height:1100px">Long modal content</div><button type="submit">Sign in</button></form></section></div>
+<script src="../../static/js/app.js"></script><script src="../../static/js/table-scroll.js"></script><script>
+(async()=>{const results=[],errors=[];const check=(ok,name)=>{results.push(name);if(!ok)errors.push(name)};const wait=()=>new Promise(r=>setTimeout(r,250));
+await wait();check(true,'viewport width '+innerWidth);
+check(document.querySelector('.form-actions button').getBoundingClientRect().height>=42,'save target remains comfortable');
+check(document.querySelector('#course').getBoundingClientRect().height>=40,'select remains usable');
+check(parseFloat(getComputedStyle(document.querySelector('.content')).paddingTop)>=(innerWidth<=900?16:24),'page breathing room retained');
+check(parseFloat(getComputedStyle(document.querySelector('.form')).rowGap)>=12,'fields remain separated');
+for(const selector of ['.planning-assumptions','.utilization-filters','.schedule-board','.detail-grid','.form','.grid','.toolbar','.record-pagination','.metrics']){
+for(const item of document.querySelectorAll(selector)){check(item.scrollWidth<=item.clientWidth+1,selector+' contained');}}
+check(document.documentElement.scrollWidth<=innerWidth,'no page horizontal overflow');
+check(document.querySelector('.metrics strong').getBoundingClientRect().height<=parseFloat(getComputedStyle(document.querySelector('.metrics strong')).lineHeight)+1,'summary number stays together');
+const wrap=document.querySelector('.table-wrap');check(wrap.scrollWidth>wrap.clientWidth||innerWidth>1200,'wide table retains internal overflow');
+wrap.scrollLeft=100;await wait();check(wrap.scrollLeft>0||wrap.scrollWidth===wrap.clientWidth,'table scroll works');
+check(document.querySelector('.table-scroll-proxy')!==null,'existing table footer reused');
+check(document.querySelector('#course').getBoundingClientRect().right<=document.querySelector('.form').getBoundingClientRect().right,'long select fits form');
+const opener=document.querySelector('[data-login-open]');opener.click();await wait();const modal=document.querySelector('.login-modal-card'),r=modal.getBoundingClientRect();
+check(r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight,'modal fits viewport');check(modal.scrollHeight>modal.clientHeight,'modal scrolls internally');
+document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));check(document.activeElement===opener,'modal restores focus');
+window.scrollTo(0,0);await wait();document.querySelector('#results').textContent=errors.length?'FAIL '+errors.join('; '):'PASS '+results.length+' checks\n'+results.join('\n');
+})();</script></body></html>

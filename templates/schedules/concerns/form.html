@@ -1,0 +1,4 @@
+{% extends "base.html" %}
+{% block content %}<div class="page-hero"><div><p class="eyebrow">Schedule Concerns</p><h1 id="concern-heading">Report a concern</h1><p class="subtle">Reporting an issue does not change your schedule.</p></div></div>
+{% if not has_schedules %}<div class="panel empty-state"><h2>No published schedule available</h2><p>You can report a concern once a published schedule is assigned to you. Contact your administrator if your schedule is missing.</p></div>{% endif %}
+<form method="post" class="panel form" aria-labelledby="concern-heading">{% csrf_token %}{{ form.as_p }}<div class="toolbar form-actions"><button type="submit" class="button primary"{% if not has_schedules %} disabled{% endif %}>Submit concern</button><a class="button" href="{% url 'concern_list' %}">Cancel</a></div></form>{% endblock %}

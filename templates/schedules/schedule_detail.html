@@ -4,22 +4,45 @@
   <div>
     <p class="eyebrow">Schedule Review</p>
     <h1>{{ schedule.name }}</h1>
-    <p class="subtle">{{ schedule.term }} | {{ schedule.status }} | score {{ schedule.fitness_score|floatformat:2 }}</p>
+    <p class="subtle">{{ historical_term|default:schedule.term }} | {{ schedule.status }} | score {{ schedule.fitness_score|floatformat:2 }}</p>
   </div>
   <div class="actions">
-    <a class="button" href="{% url 'entry_create' schedule.pk %}">Add Entry</a>
+    {% if can_manage %}
+    {% if schedule.status == 'PUBLISHED' %}<a class="button" href="{% url 'repair_start' schedule.pk %}">Smart Repair</a>{% endif %}
+    {% if schedule.status != 'PUBLISHED' and schedule.status != 'ARCHIVED' %}<a class="button" href="{% url 'entry_create' schedule.pk %}">Add Meeting</a>{% endif %}
+    {% if schedule.status == 'PUBLISHED' or schedule.status == 'ARCHIVED' %}
+    <form method="post" action="{% url 'copy_schedule_to_draft' schedule.pk %}">
+      {% csrf_token %}<button class="primary" type="submit" data-loading-text="Creating draft">Copy to Draft</button>
+    </form>
+    {% endif %}
+    <a class="button" href="?check=1">Check Conflicts</a>
+    {% endif %}
     <a class="button" href="{% url 'export_csv' schedule.pk %}">CSV</a>
     <a class="button" href="{% url 'export_pdf' schedule.pk %}">PDF</a>
-    <a class="button primary" href="{% url 'publish_schedule' schedule.pk %}">Publish</a>
+    {% if can_manage and schedule.status != "PUBLISHED" and schedule.status != "ARCHIVED" %}
+    <form method="post" action="{% url 'publish_schedule' schedule.pk %}" onsubmit="return confirm('Publish this schedule? Published schedules become visible to faculty and students.');">
+      {% csrf_token %}
+      <button class="primary" type="submit" data-loading-text="Publishing">Publish</button>
+    </form>
+    {% endif %}
   </div>
 </div>
 
-{% if conflicts %}
+{% if historical %}
+<div class="panel"><strong>Read-only historical schedule</strong>
+<p>{% if snapshot_reconstructed %}Reconstructed from records available on {{ snapshot_captured_at|date:"Y-m-d H:i" }}. Original publication values cannot be independently verified.{% else %}Preserved when this schedule was finalized.{% endif %}</p>
+</div>
+{% elif conflicts %}
 <div class="toast error">
   <span class="toast-dot"></span>
   <div>
     <strong>{{ conflicts|length }} conflict{{ conflicts|length|pluralize }} detected</strong>
-    {% for conflict in conflicts %}<p>{{ conflict }}</p>{% endfor %}
+    {% for conflict in conflicts %}
+    <p>{{ conflict.message }}
+      {% if conflict.entry %}<br><small>Meeting {{ conflict.entry.assignment.meeting_index }} | {{ conflict.entry.effective_faculty }} | {{ conflict.entry.room }} | {{ conflict.entry.get_day_display }} {{ conflict.entry.start_time|time:"g:i A" }} to {{ conflict.entry.end_time|time:"g:i A" }}</small>
+      {% if can_manage and schedule.status == 'DRAFT' %}<a class="button button-small" href="{% url 'entry_update' schedule.pk conflict.entry.pk %}">Fix Conflict</a>{% endif %}
+      {% endif %}
+    </p>{% endfor %}
   </div>
 </div>
 {% else %}
@@ -29,46 +52,28 @@
 </div>
 {% endif %}
 
-<h2>Timetable View</h2>
-<section class="schedule-board">
-  <div class="day-column">
-    <header>Monday</header>
-    {% for e in entries %}{% if e.day == 0 %}
-    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
-    {% endif %}{% endfor %}
-  </div>
-  <div class="day-column">
-    <header>Tuesday</header>
-    {% for e in entries %}{% if e.day == 1 %}
-    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
-    {% endif %}{% endfor %}
-  </div>
-  <div class="day-column">
-    <header>Wednesday</header>
-    {% for e in entries %}{% if e.day == 2 %}
-    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
-    {% endif %}{% endfor %}
-  </div>
-  <div class="day-column">
-    <header>Thursday</header>
-    {% for e in entries %}{% if e.day == 3 %}
-    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
-    {% endif %}{% endfor %}
-  </div>
-  <div class="day-column">
-    <header>Friday</header>
-    {% for e in entries %}{% if e.day == 4 %}
-    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
-    {% endif %}{% endfor %}
-  </div>
-  <div class="day-column">
-    <header>Saturday</header>
-    {% for e in entries %}{% if e.day == 5 %}
-    <article class="schedule-block"><strong>{{ e.assignment.subject.code }}</strong><span>{{ e.start_time|time:"g:i A" }} - {{ e.end_time|time:"g:i A" }}</span><span>{{ e.assignment.section }} | {{ e.room.name }}</span></article>
-    {% endif %}{% endfor %}
-  </div>
-</section>
+<form method="get" class="panel schedule-entry-filters" data-auto-tooltips="false">
+  <label><span class="field-label">Search</span>{{ filter_form.q }}</label>
+  <label><span class="field-label">Department</span>{{ filter_form.department }}</label>
+  <label><span class="field-label">Program</span>{{ filter_form.program }}</label>
+  <label><span class="field-label">Year Level</span>{{ filter_form.year_level }}</label>
+  <label><span class="field-label">Section</span>{{ filter_form.section }}</label>
+  <label><span class="field-label">Faculty</span>{{ filter_form.faculty }}</label>
+  <label><span class="field-label">Room</span>{{ filter_form.room }}</label>
+  <label><span class="field-label">Day</span>{{ filter_form.day }}</label>
+  <label><span class="field-label">Class Type</span>{{ filter_form.component }}</label>
+  <div class="toolbar"><button class="primary" type="submit">Apply Filters</button><a class="button" href="{% url 'schedule_detail' schedule.pk %}">Clear</a></div>
+</form>
 
-<h2>Table View</h2>
-{% include "schedules/entry_table.html" with entries=entries schedule=schedule %}
+<div class="view-switcher" role="tablist" aria-label="Schedule view">
+  <button class="view-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="schedule-table-view" data-schedule-view-button="table">Table View</button>
+  <button class="view-tab" type="button" role="tab" aria-selected="false" aria-controls="schedule-timetable-view" data-schedule-view-button="timetable">Timetable View</button>
+</div>
+
+<section id="schedule-table-view" role="tabpanel" data-schedule-view-panel="table">
+  {% include "schedules/schedule_table_view.html" %}
+</section>
+<section id="schedule-timetable-view" role="tabpanel" data-schedule-view-panel="timetable" hidden>
+  {% include "schedules/schedule_timetable_view.html" %}
+</section>
 {% endblock %}

@@ -1,19 +1,45 @@
 from django.urls import path
-from . import views
+from . import views, concern_views
+from . import import_views
+from . import workload_views
+from . import repair_views
 
 urlpatterns = [
+    path('<int:pk>/repair/', repair_views.repair_start, name='repair_start'),
+    path('<int:pk>/repair/review/', repair_views.repair_review, name='repair_review'),
+    path("workload-proposals/", workload_views.workload_proposals, name="workload_proposals"),
+    path("concerns/", concern_views.concern_list, name="concern_list"),
+    path("concerns/new/", concern_views.concern_create, name="concern_create"),
+    path("concerns/<int:pk>/", concern_views.concern_detail, name="concern_detail"),
+    path("import/", import_views.academic_import, name="academic_import"),
+    path("import/template/<str:kind>/", import_views.academic_import_template, name="academic_import_template"),
+    path("import/<uuid:pk>/", import_views.academic_import_review, name="academic_import_review"),
+    path("import/<uuid:pk>/errors/", import_views.academic_import_errors, name="academic_import_errors"),
     path("browse/", views.browse_schedules, name="browse_schedules"),
     path("my-availability/", views.my_availability, name="my_availability"),
     path("my-availability/new/", views.my_availability_create, name="my_availability_create"),
     path("my-availability/<int:pk>/edit/", views.my_availability_update, name="my_availability_update"),
+    path("drafts/save/", views.save_form_draft, name="save_form_draft"),
+    path("drafts/<int:pk>/discard/", views.discard_form_draft, name="discard_form_draft"),
     path("manage/<slug:resource>/", views.resource_list, name="resource_list"),
+    path("room-utilization/", views.room_utilization_dashboard, name="room_utilization"),
+    path("room-utilization/export/csv/", views.export_room_utilization_csv, name="room_utilization_csv"),
+    path("room-utilization/export/pdf/", views.export_room_utilization_pdf, name="room_utilization_pdf"),
+    path("room-schedule/", views.room_schedule_dashboard, name="room_schedule"),
+    path("room-capacity-planning/", views.room_capacity_planning, name="room_capacity_planning"),
     path("manage/<slug:resource>/new/", views.resource_create, name="resource_create"),
     path("manage/<slug:resource>/<int:pk>/edit/", views.resource_update, name="resource_update"),
     path("manage/<slug:resource>/<int:pk>/delete/", views.resource_delete, name="resource_delete"),
     path("generate/", views.generate_schedule, name="generate_schedule"),
+    path("generation-runs/<uuid:pk>/", views.generation_run_detail, name="generation_run_detail"),
+    path("error-log/", views.generation_error_log, name="generation_error_log"),
+    path("error-log/<int:pk>/", views.generation_error_detail, name="generation_error_detail"),
     path("<int:pk>/", views.schedule_detail, name="schedule_detail"),
     path("<int:pk>/entry/new/", views.entry_create, name="entry_create"),
     path("<int:pk>/entry/<int:entry_pk>/edit/", views.entry_update, name="entry_update"),
+    path("<int:pk>/entry/<int:entry_pk>/apply-suggestion/", views.entry_apply_suggestion, name="entry_apply_suggestion"),
+    path("<int:pk>/copy-to-draft/", views.copy_schedule_to_draft, name="copy_schedule_to_draft"),
+    path("<int:pk>/entry/<int:entry_pk>/remove/", views.entry_remove, name="entry_remove"),
     path("<int:pk>/publish/", views.publish_schedule, name="publish_schedule"),
     path("<int:pk>/export/csv/", views.export_csv, name="export_csv"),
     path("<int:pk>/export/pdf/", views.export_pdf, name="export_pdf"),

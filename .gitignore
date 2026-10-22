@@ -5,14 +5,24 @@ __pycache__/
 *.pyd
 .Python
 .venv/
+.venv-python314-backup/
 venv/
 env/
 
 # Django/local runtime
 db.sqlite3
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+.schedease-*.partial*
+/backups/
+/recovery-drills/
 staticfiles/
 media/
 .env
+.env.*
+!.env.example
 
 # Tooling
 .pytest_cache/
@@ -25,3 +35,6 @@ htmlcov/
 *.swp
 .DS_Store
 Thumbs.db
+
+# Local synthetic benchmark exports (regenerate; do not commit results).
+/benchmark-results/

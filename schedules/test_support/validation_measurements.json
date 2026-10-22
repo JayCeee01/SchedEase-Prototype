@@ -1,0 +1,385 @@
+{
+  "method": "Isolated Django TestCase, SQLite, CaptureQueriesContext and perf_counter. One sample per workload; fixture creation excluded.",
+  "initial_before_optimization": [
+    {
+      "meetings": 8,
+      "scenario": "valid",
+      "before": {
+        "queries": 116,
+        "seconds": 0.125914,
+        "validation_calls": 8,
+        "diagnostics": 0,
+        "categories": {},
+        "subject_selects": 24
+      }
+    },
+    {
+      "meetings": 8,
+      "scenario": "conflicts",
+      "before": {
+        "queries": 156,
+        "seconds": 0.15897,
+        "validation_calls": 8,
+        "diagnostics": 72,
+        "categories": {
+          "FACULTY_CONFLICT": 24,
+          "ROOM_CONFLICT": 24,
+          "SECTION_CONFLICT": 24
+        },
+        "subject_selects": 48
+      }
+    },
+    {
+      "meetings": 8,
+      "scenario": "invalid",
+      "before": {
+        "queries": 172,
+        "seconds": 0.183817,
+        "validation_calls": 8,
+        "diagnostics": 24,
+        "categories": {
+          "FACULTY_CREDENTIAL": 8,
+          "FACULTY_UNAVAILABLE": 8,
+          "ROOM_UNAVAILABLE": 8
+        },
+        "subject_selects": 24
+      }
+    },
+    {
+      "meetings": 32,
+      "scenario": "valid",
+      "before": {
+        "queries": 452,
+        "seconds": 0.642892,
+        "validation_calls": 32,
+        "diagnostics": 0,
+        "categories": {},
+        "subject_selects": 96
+      }
+    },
+    {
+      "meetings": 32,
+      "scenario": "conflicts",
+      "before": {
+        "queries": 612,
+        "seconds": 0.902086,
+        "validation_calls": 32,
+        "diagnostics": 288,
+        "categories": {
+          "FACULTY_CONFLICT": 96,
+          "ROOM_CONFLICT": 96,
+          "SECTION_CONFLICT": 96
+        },
+        "subject_selects": 192
+      }
+    },
+    {
+      "meetings": 32,
+      "scenario": "invalid",
+      "before": {
+        "queries": 676,
+        "seconds": 0.836497,
+        "validation_calls": 32,
+        "diagnostics": 96,
+        "categories": {
+          "FACULTY_CREDENTIAL": 32,
+          "FACULTY_UNAVAILABLE": 32,
+          "ROOM_UNAVAILABLE": 32
+        },
+        "subject_selects": 96
+      }
+    },
+    {
+      "meetings": 96,
+      "scenario": "valid",
+      "before": {
+        "queries": 1348,
+        "seconds": 2.667591,
+        "validation_calls": 96,
+        "diagnostics": 0,
+        "categories": {},
+        "subject_selects": 288
+      }
+    },
+    {
+      "meetings": 96,
+      "scenario": "conflicts",
+      "before": {
+        "queries": 1828,
+        "seconds": 3.022953,
+        "validation_calls": 96,
+        "diagnostics": 864,
+        "categories": {
+          "FACULTY_CONFLICT": 288,
+          "ROOM_CONFLICT": 288,
+          "SECTION_CONFLICT": 288
+        },
+        "subject_selects": 576
+      }
+    },
+    {
+      "meetings": 96,
+      "scenario": "invalid",
+      "before": {
+        "queries": 2020,
+        "seconds": 3.253399,
+        "validation_calls": 96,
+        "diagnostics": 288,
+        "categories": {
+          "FACULTY_CREDENTIAL": 96,
+          "FACULTY_UNAVAILABLE": 96,
+          "ROOM_UNAVAILABLE": 96
+        },
+        "subject_selects": 288
+      }
+    }
+  ],
+  "paired_final_comparison": [
+    {
+      "meetings": 8,
+      "scenario": "valid",
+      "before": {
+        "queries": 116,
+        "seconds": 0.122587,
+        "validation_calls": 8,
+        "overlap_comparisons": 56,
+        "diagnostics": 0,
+        "categories": {},
+        "subject_selects": 24
+      },
+      "after": {
+        "queries": 92,
+        "seconds": 0.135002,
+        "validation_calls": 8,
+        "overlap_comparisons": 0,
+        "diagnostics": 0,
+        "categories": {},
+        "subject_selects": 0
+      }
+    },
+    {
+      "meetings": 8,
+      "scenario": "conflicts",
+      "before": {
+        "queries": 156,
+        "seconds": 0.157903,
+        "validation_calls": 8,
+        "overlap_comparisons": 56,
+        "diagnostics": 72,
+        "categories": {
+          "FACULTY_CONFLICT": 24,
+          "ROOM_CONFLICT": 24,
+          "SECTION_CONFLICT": 24
+        },
+        "subject_selects": 48
+      },
+      "after": {
+        "queries": 92,
+        "seconds": 0.137466,
+        "validation_calls": 8,
+        "overlap_comparisons": 24,
+        "diagnostics": 72,
+        "categories": {
+          "FACULTY_CONFLICT": 24,
+          "ROOM_CONFLICT": 24,
+          "SECTION_CONFLICT": 24
+        },
+        "subject_selects": 0
+      }
+    },
+    {
+      "meetings": 8,
+      "scenario": "invalid",
+      "before": {
+        "queries": 172,
+        "seconds": 0.174765,
+        "validation_calls": 8,
+        "overlap_comparisons": 56,
+        "diagnostics": 24,
+        "categories": {
+          "FACULTY_CREDENTIAL": 8,
+          "FACULTY_UNAVAILABLE": 8,
+          "ROOM_UNAVAILABLE": 8
+        },
+        "subject_selects": 24
+      },
+      "after": {
+        "queries": 132,
+        "seconds": 0.180827,
+        "validation_calls": 8,
+        "overlap_comparisons": 0,
+        "diagnostics": 24,
+        "categories": {
+          "FACULTY_CREDENTIAL": 8,
+          "FACULTY_UNAVAILABLE": 8,
+          "ROOM_UNAVAILABLE": 8
+        },
+        "subject_selects": 0
+      }
+    },
+    {
+      "meetings": 32,
+      "scenario": "valid",
+      "before": {
+        "queries": 452,
+        "seconds": 0.607609,
+        "validation_calls": 32,
+        "overlap_comparisons": 992,
+        "diagnostics": 0,
+        "categories": {},
+        "subject_selects": 96
+      },
+      "after": {
+        "queries": 356,
+        "seconds": 0.523333,
+        "validation_calls": 32,
+        "overlap_comparisons": 0,
+        "diagnostics": 0,
+        "categories": {},
+        "subject_selects": 0
+      }
+    },
+    {
+      "meetings": 32,
+      "scenario": "conflicts",
+      "before": {
+        "queries": 612,
+        "seconds": 0.788054,
+        "validation_calls": 32,
+        "overlap_comparisons": 992,
+        "diagnostics": 288,
+        "categories": {
+          "FACULTY_CONFLICT": 96,
+          "ROOM_CONFLICT": 96,
+          "SECTION_CONFLICT": 96
+        },
+        "subject_selects": 192
+      },
+      "after": {
+        "queries": 356,
+        "seconds": 0.541254,
+        "validation_calls": 32,
+        "overlap_comparisons": 96,
+        "diagnostics": 288,
+        "categories": {
+          "FACULTY_CONFLICT": 96,
+          "ROOM_CONFLICT": 96,
+          "SECTION_CONFLICT": 96
+        },
+        "subject_selects": 0
+      }
+    },
+    {
+      "meetings": 32,
+      "scenario": "invalid",
+      "before": {
+        "queries": 676,
+        "seconds": 0.857974,
+        "validation_calls": 32,
+        "overlap_comparisons": 992,
+        "diagnostics": 96,
+        "categories": {
+          "FACULTY_CREDENTIAL": 32,
+          "FACULTY_UNAVAILABLE": 32,
+          "ROOM_UNAVAILABLE": 32
+        },
+        "subject_selects": 96
+      },
+      "after": {
+        "queries": 516,
+        "seconds": 0.698599,
+        "validation_calls": 32,
+        "overlap_comparisons": 0,
+        "diagnostics": 96,
+        "categories": {
+          "FACULTY_CREDENTIAL": 32,
+          "FACULTY_UNAVAILABLE": 32,
+          "ROOM_UNAVAILABLE": 32
+        },
+        "subject_selects": 0
+      }
+    },
+    {
+      "meetings": 96,
+      "scenario": "valid",
+      "before": {
+        "queries": 1348,
+        "seconds": 3.260213,
+        "validation_calls": 96,
+        "overlap_comparisons": 9120,
+        "diagnostics": 0,
+        "categories": {},
+        "subject_selects": 288
+      },
+      "after": {
+        "queries": 1060,
+        "seconds": 1.585955,
+        "validation_calls": 96,
+        "overlap_comparisons": 0,
+        "diagnostics": 0,
+        "categories": {},
+        "subject_selects": 0
+      }
+    },
+    {
+      "meetings": 96,
+      "scenario": "conflicts",
+      "before": {
+        "queries": 1828,
+        "seconds": 3.401318,
+        "validation_calls": 96,
+        "overlap_comparisons": 9120,
+        "diagnostics": 864,
+        "categories": {
+          "FACULTY_CONFLICT": 288,
+          "ROOM_CONFLICT": 288,
+          "SECTION_CONFLICT": 288
+        },
+        "subject_selects": 576
+      },
+      "after": {
+        "queries": 1060,
+        "seconds": 1.661221,
+        "validation_calls": 96,
+        "overlap_comparisons": 288,
+        "diagnostics": 864,
+        "categories": {
+          "FACULTY_CONFLICT": 288,
+          "ROOM_CONFLICT": 288,
+          "SECTION_CONFLICT": 288
+        },
+        "subject_selects": 0
+      }
+    },
+    {
+      "meetings": 96,
+      "scenario": "invalid",
+      "before": {
+        "queries": 2020,
+        "seconds": 3.733565,
+        "validation_calls": 96,
+        "overlap_comparisons": 9120,
+        "diagnostics": 288,
+        "categories": {
+          "FACULTY_CREDENTIAL": 96,
+          "FACULTY_UNAVAILABLE": 96,
+          "ROOM_UNAVAILABLE": 96
+        },
+        "subject_selects": 288
+      },
+      "after": {
+        "queries": 1540,
+        "seconds": 2.149908,
+        "validation_calls": 96,
+        "overlap_comparisons": 0,
+        "diagnostics": 288,
+        "categories": {
+          "FACULTY_CREDENTIAL": 96,
+          "FACULTY_UNAVAILABLE": 96,
+          "ROOM_UNAVAILABLE": 96
+        },
+        "subject_selects": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+<nav class="record-pagination" aria-label="{{ pagination_label|default:'Record pages' }}">
+  <span>Page {{ pagination.page.number }} of {{ pagination.page.paginator.num_pages }}</span>
+  <div class="toolbar">
+    {% if pagination.previous %}<a class="button" href="{{ pagination.previous }}">Previous</a>{% endif %}
+    {% for item in pagination.numbers %}
+      {% if not item.url %}<span>{{ item.number }}</span>{% elif item.number == pagination.page.number %}<span class="button primary" aria-current="page">{{ item.number }}</span>{% else %}<a class="button" aria-label="Page {{ item.number }}" href="{{ item.url }}">{{ item.number }}</a>{% endif %}
+    {% endfor %}
+    {% if pagination.next %}<a class="button" href="{{ pagination.next }}">Next</a>{% endif %}
+  </div>
+</nav>

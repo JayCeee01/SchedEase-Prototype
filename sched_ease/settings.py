@@ -1,14 +1,15 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-
-load_dotenv()
+from .security import environment_mode, security_settings
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+# Production must be selected in the process environment. Never load a local
+# development .env into a production worker selected by its service manager.
+if environment_mode(os.environ) == 'development':
+    load_dotenv(BASE_DIR / '.env')
 
-SECRET_KEY = os.getenv("SCHED_EASE_SECRET_KEY", os.getenv("SECRET_KEY", "dev-only-sched-ease-secret-key"))
-DEBUG = os.getenv("SCHED_EASE_DEBUG", "True").lower() == "true"
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("SCHED_EASE_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if h.strip()]
+globals().update(security_settings(os.environ))
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -75,4 +76,4 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
-LOGOUT_REDIRECT_URL = "login"
+LOGOUT_REDIRECT_URL = "landing"

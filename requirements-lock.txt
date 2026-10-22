@@ -1,0 +1,10 @@
+# Verified Windows / Python 3.12.10 dependency constraints.
+# Install: python -m pip install -r requirements.txt -c requirements-lock.txt
+asgiref==3.12.1
+chardet==7.6.0
+Django==5.0.6
+pillow==13.0.0
+python-dotenv==1.0.1
+reportlab==4.2.0
+sqlparse==0.6.0
+tzdata==2026.5

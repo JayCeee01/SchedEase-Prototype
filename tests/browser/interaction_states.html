@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Interaction regression fixture</title>
+<script>localStorage.setItem('schedease-theme', new URLSearchParams(location.search).get('theme') || 'light');</script>
+<link rel="stylesheet" href="../../static/css/app.css"></head>
+<body style="padding:24px">
+<h1>Interaction regression fixture</h1>
+<button data-theme-toggle>Theme</button><a href="#login" class="button primary" data-login-open>Login</a>
+<a href="#blocked" class="button" aria-disabled="true" id="disabled-link">Unavailable</a>
+<form class="panel form"><label for="name">Name</label><input id="name" required><button type="submit" class="primary">Save</button><button type="button" class="button button-danger">Delete</button></form>
+<div class="panel table-wrap"><table><thead><tr><th data-sort>Name</th><th data-sort>Code</th></tr></thead><tbody><tr><td>Zebra</td><td>2</td></tr><tr><td>Alpha</td><td>1</td></tr></tbody></table></div>
+<div class="toast warning">Warning: review the entered information.</div>
+<div class="login-modal-shell" data-login-modal aria-hidden="true"><section class="login-modal-card" role="dialog" aria-modal="true" aria-label="Login"><button data-login-close type="button">Close</button><form><label for="username">Username</label><input id="username" name="username"><button type="submit">Sign in</button></form></section></div>
+<form class="panel form" data-form-draft data-draft-save-url="/synthetic-draft/" data-draft-resource="rooms">
+<label for="draft-name">Draft name</label><input id="draft-name" name="name"><p data-draft-status></p>
+</form>
+<pre id="results" style="white-space:pre-wrap;overflow-wrap:anywhere">RUNNING</pre>
+<script>window.addEventListener('error', e => document.querySelector('#results').textContent = 'FAIL: '+e.message);</script>
+<script src="../../static/js/app.js"></script>
+<script>
+(async () => {
+ const results=[]; const check=(condition,name)=>{if(!condition) throw Error(name); results.push(name);};
+ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+ try {
+ check(window.innerWidth >= 300, 'viewport width '+window.innerWidth);
+ const icon=document.querySelector('label .info-icon');
+ check(icon.tagName==='BUTTON' && icon.type==='button','help is a native non-submit button');
+ icon.focus(); check(document.querySelector('.app-tooltip').classList.contains('is-visible'),'focus opens help');
+ check(icon.getAttribute('aria-describedby')==='schedease-tooltip','help description associated');
+ icon.click(); check(document.querySelector('.app-tooltip').classList.contains('is-visible'),'click/touch opens help');
+ document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ check(!document.querySelector('.app-tooltip').classList.contains('is-visible'),'Escape dismisses help');
+ check(!icon.hasAttribute('aria-describedby'),'dismissal clears transient description');
+ const headers=document.querySelectorAll('th');
+ const sorter=headers[0].querySelector('button'); check(sorter.type==='button','sort has native keyboard control');
+ sorter.click(); check(document.querySelector('tbody td').textContent==='Alpha','ascending sort preserved');
+ check(headers[0].getAttribute('aria-sort')==='ascending','ascending state exposed');
+ sorter.click(); check(document.querySelector('tbody td').textContent==='Zebra','descending sort preserved');
+ headers[1].querySelector('button').click(); check(!headers[0].hasAttribute('aria-sort'),'previous sort state cleared');
+ const unavailable=document.querySelector('#disabled-link');
+ check(!unavailable.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true})),'disabled link activation prevented');
+ const opener=document.querySelector('[data-login-open]'); opener.focus(); opener.click(); await wait(100);
+ const modal=document.querySelector('[data-login-modal]');
+ check(document.activeElement.name==='username','dialog focuses username');
+ modal.querySelector('button[type=submit]').disabled=true;
+ const controls=[...modal.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')].filter(x=>!x.disabled && x.tabIndex>=0 && x.getClientRects().length);
+ controls.at(-1).focus(); document.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true}));
+ check(document.activeElement===controls[0],'Tab wraps to first dialog control, excluding disabled actions');
+ document.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',shiftKey:true,bubbles:true,cancelable:true}));
+ check(document.activeElement===controls.at(-1),'Shift Tab wraps to last dialog control');
+ document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ check(modal.getAttribute('aria-hidden')==='true','Escape closes dialog');
+ check(document.activeElement===opener,'dialog restores opener focus');
+ opener.click(); document.querySelector('[data-login-close]').click(); await wait(100);
+ check(document.activeElement===opener,'early close cancels delayed focus');
+ const expected=new URLSearchParams(location.search).get('theme')||'light';
+ check(document.documentElement.dataset.theme===expected,'saved theme loaded');
+ document.querySelector('[data-theme-toggle]').click();
+ check(localStorage.getItem('schedease-theme')!==expected,'theme preference saved');
+ document.querySelector('[data-theme-toggle]').click();
+ icon.focus(); await wait(200);
+ check(getComputedStyle(icon).outlineStyle!=='none','help focus outline present');
+ const requests=[];const originalFetch=window.fetch;
+ window.fetch=(url,options)=>new Promise((resolve,reject)=>requests.push({resolve,reject,payload:JSON.parse(options.body)}));
+ const draft=document.querySelector('#draft-name'),status=document.querySelector('[data-draft-status]');
+ draft.value='First';draft.dispatchEvent(new Event('input',{bubbles:true}));await wait(1000);
+ check(requests.length===1,'first autosave started');
+ draft.value='Newer';draft.dispatchEvent(new Event('input',{bubbles:true}));await wait(1000);
+ check(requests.length===1,'autosaves serialized while response pending');
+ requests[0].resolve({ok:true});await wait(30);
+ check(status.dataset.state==='pending','old response does not mark newer edits saved');
+ await wait(1000);check(requests.length===2&&requests[1].payload.payload.name==='Newer','newer edits queued for saving');
+ requests[1].reject(new Error('Simulated connection failure'));await wait(30);
+ check(status.dataset.state==='error','failed save shown accurately');
+ draft.dispatchEvent(new Event('input',{bubbles:true}));await wait(1000);
+ requests[2].resolve({ok:true});await wait(30);
+ check(status.dataset.state==='saved','successful retry marks current edits saved');
+ window.fetch=originalFetch;
+ document.querySelector('#results').textContent='PASS '+results.length+' checks\n'+results.join('\n');
+ } catch(error) {document.querySelector('#results').textContent='FAIL '+error.message;}
+})();
+</script></body></html>

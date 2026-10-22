@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260906-assignments">
 </head>
 <body>
   <div class="app-shell">
@@ -32,30 +32,69 @@
       </div>
       {% if user.is_authenticated %}
       <nav class="nav-group" aria-label="Primary navigation">
-        <a href="{% url 'dashboard' %}" data-icon="grid">Dashboard</a>
-        <a href="{% url 'browse_schedules' %}" data-icon="calendar">Browse Schedules</a>
+        <a href="{% url 'dashboard' %}" data-icon="grid"{% if request.resolver_match.url_name == 'dashboard' %} class="is-active" aria-current="page"{% endif %}>Dashboard</a>
         {% if user.profile.role == "FACULTY" %}
-        <a href="{% url 'my_availability' %}" data-icon="clock">My Availability</a>
+        <a href="{% url 'browse_schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'browse_schedules' %} class="is-active" aria-current="page"{% endif %}>Browse Schedules</a>
+        <a href="{% url 'my_availability' %}" data-icon="clock"{% if 'my_availability' in request.resolver_match.url_name %} class="is-active" aria-current="page"{% endif %}>My Availability</a>
+        {% elif not user.is_superuser and user.profile.role != "ADMIN" %}
+        <a href="{% url 'browse_schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'browse_schedules' %} class="is-active" aria-current="page"{% endif %}>Browse Schedules</a>
         {% endif %}
         {% if user.is_superuser or user.profile.role == "ADMIN" %}
-        <span class="nav-section">Administration</span>
-        <a href="{% url 'generate_schedule' %}" data-icon="spark">Generate</a>
-        <a href="{% url 'resource_list' 'schedules' %}" data-icon="calendar">Manage Schedules</a>
-        <a href="{% url 'resource_list' 'departments' %}" data-icon="building">Departments</a>
-        <a href="{% url 'resource_list' 'programs' %}" data-icon="book">Programs</a>
-        <a href="{% url 'resource_list' 'sections' %}" data-icon="layers">Sections</a>
-        <a href="{% url 'resource_list' 'subjects' %}" data-icon="file">Subjects</a>
-        <a href="{% url 'resource_list' 'credentials' %}" data-icon="check">Credentials</a>
-        <a href="{% url 'resource_list' 'faculty-credentials' %}" data-icon="user">Faculty Credentials</a>
-        <a href="{% url 'resource_list' 'subject-credential-requirements' %}" data-icon="file">Subject Requirements</a>
-        <a href="{% url 'resource_list' 'credential-overrides' %}" data-icon="flag">Credential Overrides</a>
-        <a href="{% url 'resource_list' 'faculty' %}" data-icon="user">Faculty</a>
-        <a href="{% url 'resource_list' 'students' %}" data-icon="users">Students</a>
-        <a href="{% url 'resource_list' 'rooms' %}" data-icon="door">Rooms</a>
-        <a href="{% url 'resource_list' 'terms' %}" data-icon="flag">Terms</a>
-        <a href="{% url 'resource_list' 'assignments' %}" data-icon="check">Assignments</a>
-        <a href="{% url 'resource_list' 'availability' %}" data-icon="clock">Availability</a>
-        <a href="{% url 'resource_list' 'ga-settings' %}" data-icon="sliders">GA Settings</a>
+        <details class="nav-disclosure" data-nav-group="scheduling"{% if request.resolver_match.url_name == 'generate_schedule' or request.resolver_match.url_name == 'generation_error_log' or request.resolver_match.url_name == 'generation_error_detail' or request.resolver_match.url_name == 'browse_schedules' or request.resolver_match.url_name == 'schedule_detail' or request.resolver_match.kwargs.resource == 'schedules' or request.resolver_match.kwargs.resource == 'assignments' or request.resolver_match.kwargs.resource == 'ga-settings' %} open{% endif %}>
+          <summary data-tooltip="Scheduling"><span class="nav-category-icon" data-group-icon="scheduling"></span><span class="nav-category-label">Scheduling</span><span class="nav-chevron" aria-hidden="true"></span></summary>
+          <div class="nav-children">
+            <a href="{% url 'generate_schedule' %}" data-icon="spark">Generate Schedule</a>
+            <a href="{% url 'resource_list' 'schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'schedule_detail' or request.resolver_match.url_name == 'entry_create' or request.resolver_match.url_name == 'entry_update' %} class="is-active" aria-current="page"{% endif %}>Manage Schedules</a>
+            <a href="{% url 'resource_list' 'assignments' %}" data-icon="check">Assignments</a>
+            <a href="{% url 'generation_error_log' %}" data-icon="flag">Error Log</a>
+            <a href="{% url 'browse_schedules' %}" data-icon="calendar">Browse Published</a>
+            <a href="{% url 'resource_list' 'ga-settings' %}" data-icon="sliders">GA Settings</a>
+          </div>
+        </details>
+
+        <details class="nav-disclosure" data-nav-group="academic"{% if request.resolver_match.kwargs.resource == 'departments' or request.resolver_match.kwargs.resource == 'programs' or request.resolver_match.kwargs.resource == 'year-levels' or request.resolver_match.kwargs.resource == 'sections' or request.resolver_match.kwargs.resource == 'subjects' or request.resolver_match.kwargs.resource == 'students' %} open{% endif %}>
+          <summary data-tooltip="Academic Management"><span class="nav-category-icon" data-group-icon="academic"></span><span class="nav-category-label">Academic Management</span><span class="nav-chevron" aria-hidden="true"></span></summary>
+          <div class="nav-children">
+            <a href="{% url 'resource_list' 'departments' %}" data-icon="building">Departments</a>
+            <a href="{% url 'resource_list' 'programs' %}" data-icon="book">Programs</a>
+            <a href="{% url 'resource_list' 'year-levels' %}" data-icon="layers">Year Levels</a>
+            <a href="{% url 'resource_list' 'sections' %}" data-icon="layers">Sections</a>
+            <a href="{% url 'resource_list' 'subjects' %}" data-icon="file">Courses</a>
+            <a href="{% url 'resource_list' 'students' %}" data-icon="users">Students</a>
+          </div>
+        </details>
+
+        <details class="nav-disclosure" data-nav-group="people"{% if request.resolver_match.kwargs.resource == 'faculty' or request.resolver_match.kwargs.resource == 'credentials' or request.resolver_match.kwargs.resource == 'faculty-credentials' or request.resolver_match.kwargs.resource == 'subject-credential-requirements' or request.resolver_match.kwargs.resource == 'credential-overrides' or request.resolver_match.kwargs.resource == 'availability' %} open{% endif %}>
+          <summary data-tooltip="People and Credentials"><span class="nav-category-icon" data-group-icon="people"></span><span class="nav-category-label">People &amp; Credentials</span><span class="nav-chevron" aria-hidden="true"></span></summary>
+          <div class="nav-children">
+            <a href="{% url 'resource_list' 'faculty' %}" data-icon="user">Faculty</a>
+            <a href="{% url 'resource_list' 'credentials' %}" data-icon="check">Credentials</a>
+            <a href="{% url 'resource_list' 'faculty-credentials' %}" data-icon="user">Faculty Credentials</a>
+            <a href="{% url 'resource_list' 'subject-credential-requirements' %}" data-icon="file">Course Requirements</a>
+            <a href="{% url 'resource_list' 'credential-overrides' %}" data-icon="flag">Credential Overrides</a>
+            <a href="{% url 'resource_list' 'availability' %}" data-icon="clock">Availability</a>
+          </div>
+        </details>
+
+        <details class="nav-disclosure" data-nav-group="rooms"{% if request.resolver_match.kwargs.resource == 'rooms' or request.resolver_match.url_name == 'room_utilization' or request.resolver_match.url_name == 'room_schedule' or request.resolver_match.url_name == 'room_capacity_planning' %} open{% endif %}>
+          <summary data-tooltip="Room Management"><span class="nav-category-icon" data-group-icon="rooms"></span><span class="nav-category-label">Room Management</span><span class="nav-chevron" aria-hidden="true"></span></summary>
+          <div class="nav-children">
+            <a href="{% url 'resource_list' 'rooms' %}" data-icon="door">Rooms</a>
+            <a href="{% url 'room_utilization' %}" data-icon="sliders">Room Utilization</a>
+            <a href="{% url 'room_schedule' %}" data-icon="calendar">Room Schedule</a>
+            <a href="{% url 'room_capacity_planning' %}" data-icon="layers">Capacity Planning</a>
+          </div>
+        </details>
+
+        <details class="nav-disclosure" data-nav-group="administration"{% if request.resolver_match.kwargs.resource == 'terms' %} open{% endif %}>
+          <summary data-tooltip="Administration"><span class="nav-category-icon" data-group-icon="administration"></span><span class="nav-category-label">Administration</span><span class="nav-chevron" aria-hidden="true"></span></summary>
+          <div class="nav-children">
+            <a href="{% url 'resource_list' 'terms' %}" data-icon="flag">Academic Terms</a>
+          </div>
+        </details>
+        {% endif %}
+        {% if user.is_superuser or user.profile.role == "ADMIN" or user.profile.role == "FACULTY" or user.profile.role == "STUDENT" %}
+        <a href="{% url 'concern_list' %}" data-icon="flag"{% if 'concern_' in request.resolver_match.url_name %} class="is-active" aria-current="page"{% endif %}>Schedule Concerns</a>
         {% endif %}
       </nav>
       {% endif %}
@@ -74,18 +113,18 @@
         </div>
         <div class="topbar-search">
           <span class="icon search-icon"></span>
-          <input type="search" data-global-filter placeholder="Search visible tables">
+          <input type="search" data-global-filter aria-label="Filter table rows on this page" placeholder="Filter rows on this page">
         </div>
         <div class="topbar-actions">
           <button class="icon-button" type="button" data-theme-toggle aria-label="Toggle theme">
             <span class="icon theme-icon"></span>
           </button>
           {% if user.is_authenticated %}
-          <div class="user-menu">
+          <div class="user-menu" role="group" aria-label="Signed in as {{ user.get_full_name|default:user.username }}">
             <span class="avatar">{{ user.username|slice:":1"|upper }}</span>
             <span>
               <strong>{{ user.get_full_name|default:user.username }}</strong>
-              <small>{{ user.profile.get_role_display|default:"Administrator" }}</small>
+              <small>{% if user.is_superuser or user.profile.role == "ADMIN" %}Administrator{% elif user.profile.role == "FACULTY" %}Faculty{% elif user.profile.role == "STUDENT" %}Student{% else %}User{% endif %}</small>
             </span>
           </div>
           <form method="post" action="{% url 'logout' %}">
@@ -110,5 +149,6 @@
   </div>
   <div class="backdrop" data-sidebar-toggle></div>
   <script src="{% static 'js/app.js' %}"></script>
+  <script src="{% static 'js/table-scroll.js' %}"></script>
 </body>
 </html>

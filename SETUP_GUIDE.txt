@@ -68,6 +68,24 @@ source .venv/bin/activate
 
 After activation, you should see (.venv) near the start of your terminal line.
 
+if not work: 
+
+# remove the broken venv:
+Remove-Item -Recurse -Force .venv
+
+# Create venv using the py launcher (recommended):
+py -3 -m venv .venv
+
+# activate:
+.\.venv\Scipts\Activate.ps1
+
+# install requirements:
+pip intall -r requirements.txt
+
+# remove restrictions:
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+.\.venv\Scripts\Activate.ps1
+
 
 6. Install Required Dependencies
 --------------------------------

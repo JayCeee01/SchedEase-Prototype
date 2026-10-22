@@ -8,6 +8,20 @@
   </div>
   <a class="button primary" href="{% url 'my_availability' %}">Update Availability</a>
 </div>
-<h2>Assigned Teaching Schedule</h2>
-{% include "schedules/entry_table.html" with entries=entries %}
+<section class="panel" aria-labelledby="faculty-workload-heading">
+  <h2 id="faculty-workload-heading">Published teaching workload</h2>
+  <p class="subtle">Weekly teaching hours from your published meetings, shown separately for each schedule. These are contact hours, not academic units.</p>
+  {% if faculty %}<p>Current weekly teaching limit: <strong>{{ faculty.max_weekly_hours }} hours</strong></p>{% endif %}
+  {% for workload in workloads %}
+  <div class="panel">
+    <h3>{{ workload.schedule.name }}</h3>
+    <p class="subtle">{{ workload.schedule.term }}</p>
+    <p><strong>{{ workload.hours|floatformat:2 }} hours</strong> ({{ workload.minutes }} minutes) per week</p>
+    <p>{{ workload.meetings }} meeting{{ workload.meetings|pluralize }} &middot; {{ workload.sections }} section{{ workload.sections|pluralize }}</p>
+  </div>
+  {% empty %}<p>No published teaching workload yet.</p>{% endfor %}
+</section>
+<h2>Weekly Teaching Timetable</h2>
+{% include "schedules/personal_timetable.html" %}
+{% if entries %}<details class="panel schedule-list-disclosure"><summary>View schedule as a list</summary>{% include "schedules/entry_table.html" with entries=entries %}</details>{% endif %}
 {% endblock %}

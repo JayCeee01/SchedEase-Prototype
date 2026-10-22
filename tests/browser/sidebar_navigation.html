@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sidebar regression fixture</title>
+<link rel="stylesheet" href="../../static/css/app.css"><script>
+localStorage.setItem('schedease-theme',new URLSearchParams(location.search).get('theme')||'light');
+if(sessionStorage.getItem('schedease-sidebar-collapsed')===null)sessionStorage.setItem('schedease-sidebar-collapsed','true');
+if(sessionStorage.getItem('schedease-sidebar-scroll')===null)sessionStorage.setItem('schedease-sidebar-scroll','180');
+window.savedNavigationScroll=Number(sessionStorage.getItem('schedease-sidebar-scroll'));
+</script></head><body><div class="app-shell"><aside class="sidebar" id="sidebar"><div class="brand-lockup"><button class="icon-button sidebar-menu-button" data-sidebar-collapse type="button"><span class="icon menu-icon"></span></button><a class="brand" href="#home"><span class="brand-mark">SE</span><span class="brand-text"><strong>SchedEase</strong><small>Academic Scheduler</small></span></a></div><nav class="nav-group" aria-label="Primary navigation"></nav></aside>
+<div class="workspace"><header class="topbar"><button class="icon-button mobile-only" type="button" data-sidebar-toggle>Menu</button><button type="button" data-theme-toggle>Theme</button></header><section class="content"><h1>Sidebar navigation</h1><p>Fixture for the shared sidebar and saved navigation state.</p><pre id="results" style="white-space:pre-wrap">RUNNING</pre></section></div></div><div class="backdrop" data-sidebar-toggle></div>
+<script>
+const nav=document.querySelector('.nav-group');for(let group=0;group<4;group++){const details=document.createElement('details');details.className='nav-disclosure';details.dataset.navGroup='fixture-'+group;details.open=true;details.innerHTML='<summary data-tooltip="Academic Management"><span class="nav-category-icon" data-group-icon="academic"></span><span class="nav-category-label">Academic Management '+group+'</span><span class="nav-chevron" aria-hidden="true"></span></summary><div class="nav-children"></div>';for(let i=0;i<8;i++){const a=document.createElement('a');a.href='#module-'+group+'-'+i;a.dataset.icon='book';a.textContent=i===0?'Long academic navigation label for departments':'Module '+group+'-'+i;if(group===0&&i===0){a.className='is-active';a.setAttribute('aria-current','page');}a.addEventListener('click',e=>e.preventDefault());details.lastChild.append(a);}nav.append(details);}
+</script><script src="../../static/js/app.js"></script><script>
+(async()=>{const results=[];const check=(ok,name)=>{if(!ok)throw Error(name);results.push(name);};const wait=()=>new Promise(r=>setTimeout(r,300));try{
+await wait();const sidebar=document.querySelector('.sidebar'),workspace=document.querySelector('.workspace'),nav=document.querySelector('.nav-group'),toggle=document.querySelector('[data-sidebar-collapse]'),opener=document.querySelector('button[data-sidebar-toggle]');
+check(innerWidth>0,'viewport width '+innerWidth);
+check(document.body.classList.contains('sidebar-collapsed'),'saved collapsed preference restored');
+check(Math.abs(nav.scrollTop-window.savedNavigationScroll)<3,'saved sidebar scroll restored');
+check(toggle.getBoundingClientRect().top<document.querySelector('.brand').getBoundingClientRect().top,'toggle remains above logo');
+check(document.querySelector('.brand-mark').getBoundingClientRect().width>0,'logo visible');
+check(document.querySelector('.is-active').getAttribute('aria-current')==='page','active destination retained');
+if(innerWidth>900){
+check(!sidebar.inert,'desktop rail available');check(toggle.getAttribute('aria-expanded')==='false','collapsed toggle state exposed');
+const link=nav.querySelector('a');link.click();check(document.body.classList.contains('sidebar-collapsed'),'destination click preserves collapsed rail');
+nav.scrollTop=0;link.focus();await wait();check(document.querySelector('.app-tooltip').classList.contains('is-visible'),'collapsed destination tooltip on focus');check(link.getAttribute('aria-label').includes('academic'),'collapsed destination retains accessible name');
+check(document.querySelector('.app-tooltip').getBoundingClientRect().right<=innerWidth,'tooltip stays in viewport');
+toggle.click();await wait();check(toggle.getAttribute('aria-expanded')==='true','desktop expands');check(document.querySelector('.workspace').getBoundingClientRect().left>=sidebar.getBoundingClientRect().right-1,'content beside expanded sidebar');toggle.click();await wait();
+}else{
+check(sidebar.inert,'closed mobile navigation not focusable');opener.focus();opener.click();await wait();check(!sidebar.inert && workspace.inert,'overlay navigation isolates background');check(document.activeElement===toggle,'overlay focuses close toggle');check(toggle.getAttribute('aria-expanded')==='true','mobile expanded state exposed');
+check(sidebar.getBoundingClientRect().right<=innerWidth,'drawer fits viewport');
+document.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',shiftKey:true,bubbles:true,cancelable:true}));check(sidebar.contains(document.activeElement) && document.activeElement!==toggle,'Shift Tab wraps inside drawer');document.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true}));check(document.activeElement===toggle,'Tab returns to first drawer control');
+document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await wait();check(sidebar.inert && !workspace.inert,'Escape closes overlay');check(document.activeElement===opener,'focus returns to trigger');
+opener.click();await wait();toggle.click();await wait();check(!document.body.classList.contains('sidebar-open'),'inside toggle closes drawer');check(sessionStorage.getItem('schedease-sidebar-collapsed')==='true','mobile close preserves desktop preference');
+opener.click();await wait();document.querySelector('.backdrop').click();await wait();check(!document.body.classList.contains('sidebar-open'),'backdrop closes drawer');
+}
+const group=nav.querySelector('details');group.open=false;await wait();check(sessionStorage.getItem('schedease-nav-group-fixture-0')==='false','accordion state saved');group.open=true;await wait();check(group.querySelector('summary').getAttribute('aria-label').includes('Academic'),'collapsed accordion keeps accessible name');
+nav.scrollTop=120;await wait();check(sessionStorage.getItem('schedease-sidebar-scroll')==='120','sidebar scroll stored independently');
+check(document.documentElement.scrollWidth<=innerWidth+1,'sidebar creates no page horizontal overflow');
+document.querySelector('#results').textContent='PASS '+results.length+' checks\n'+results.join('\n');
+}catch(e){document.querySelector('#results').textContent='FAIL '+e.message;}})();
+</script></body></html>

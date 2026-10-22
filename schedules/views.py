@@ -1,18 +1,25 @@
 import csv
+import json
+import logging
+import re
 from django.contrib import messages
+from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
-from django.db import transaction
-from django.db.models import Count
-from django.http import HttpResponse
+from django.db import DatabaseError, IntegrityError, transaction
+from django.db.models.deletion import ProtectedError
+from django.db.models import Count, Q, Prefetch
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST, require_http_methods
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
-from .forms import MODEL_FORMS, ScheduleEntryForm, ScheduleGenerationForm, ScheduleSearchForm
+from .forms import AssignmentMeetingFormSetFactory, DiagnosticFilterForm, EmailOrUsernameAuthenticationForm, MODEL_FORMS, ScheduleEntryFilterForm, ScheduleEntryForm, ScheduleGenerationForm, ScheduleSearchForm
 from .models import (
     AcademicTerm,
+    Assignment,
     Availability,
     Credential,
     CredentialOverride,
@@ -20,22 +27,40 @@ from .models import (
     Faculty,
     FacultyCredential,
     GASettings,
+    FormDraft,
+    GenerationIssue,
+    GenerationRun,
     Program,
     Role,
     Room,
+    RoomKind,
     Schedule,
     ScheduleEntry,
+    ScheduleEntryAudit,
     ScheduleStatus,
     Section,
     Student,
     Subject,
     SubjectCredentialRequirement,
     TeachingAssignment,
+    Weekday,
     YearLevel,
 )
-from .services.conflicts import conflict_messages
-from .services.credentials import faculty_qualification, missing_credential_message
+from .services.history import historical_entries, historical_term
+from .services.conflicts import conflict_messages, schedule_validation_messages, schedule_validation_issues
+from .services.credentials import faculty_qualification, missing_credential_message, valid_credential_override
 from .services.ga import GeneticScheduler
+from .services.reproducibility import choose_seed, initial_metadata
+from .services.generation_lock import acquire, GenerationBusy, GenerationLeaseLost
+from .services.generation_issues import fail_run, unexpected_diagnostic, recover_stale_runs
+from .services.diagnostics import Diagnostic, GenerationFailure
+from .services.form_drafts import object_signature, safe_draft_payload, safe_assignment_draft_payload
+from .services.room_utilization import capacity_planning, filtered_rows, latest_schedule, personal_schedule_grid, room_schedule_grid, utilization_rows, utilization_summary
+
+from .services.listing import (RELATED, RECORD_ORDER, EXTRA_SORTS, paginate, query_url,
+                               search_records, list_request, filter_records, record_counts)
+
+logger = logging.getLogger(__name__)
 
 RESOURCE_MODELS = {
     "departments": Department,
@@ -50,7 +75,7 @@ RESOURCE_MODELS = {
     "students": Student,
     "rooms": Room,
     "terms": AcademicTerm,
-    "assignments": TeachingAssignment,
+    "assignments": Assignment,
     "availability": Availability,
     "ga-settings": GASettings,
     "schedules": Schedule,
@@ -58,20 +83,20 @@ RESOURCE_MODELS = {
 }
 
 RESOURCE_DESCRIPTIONS = {
-    "departments": "Maintain college departments that own programs, subjects, faculty, and sections.",
+    "departments": "Maintain college departments that own programs, courses, faculty, and sections.",
     "programs": "Manage academic programs and connect them to their departments.",
     "year-levels": "Define year levels used when organizing sections and student schedules.",
     "sections": "Track section size, program, year level, and advising assignments.",
-    "subjects": "Configure subject hours, units, and room requirements used by the generator.",
+    "subjects": "Configure course hours, units, and room requirements used by the generator.",
     "credentials": "Create the exact credential names used for faculty qualification matching.",
     "faculty-credentials": "Assign credentials to faculty members for teaching eligibility checks.",
-    "subject-credential-requirements": "Define the required credential for each subject and explicitly allowed equivalents.",
+    "subject-credential-requirements": "Define the required credential for each course and explicitly allowed equivalents.",
     "faculty": "Manage faculty records and workload details.",
     "students": "Manage student records and section membership.",
     "rooms": "Maintain room capacity, availability, and specialized room types.",
     "terms": "Configure academic terms for schedule generation and publishing.",
-    "assignments": "Assign faculty to subjects and sections before schedule generation.",
-    "availability": "Define preferred, available, and unavailable time windows for faculty or rooms.",
+    "assignments": "Assign faculty to courses and sections, with one or more schedulable meetings.",
+    "availability": "Define preferred, available, and unavailable time windows for faculty or rooms; available/unavailable windows for sections.",
     "ga-settings": "Adjust how schedules are created and improved.",
     "schedules": "Review, edit, publish, and delete generated schedule records.",
     "credential-overrides": "Audit admin-approved exceptions for unqualified faculty assignments.",
@@ -83,11 +108,98 @@ def role(user):
 
 
 def admin_required(user):
-    return user.is_authenticated and (user.is_superuser or role(user) == Role.ADMIN)
+    return user.is_authenticated and user.is_active and (user.is_superuser or role(user) == Role.ADMIN)
 
 
 def faculty_required(user):
     return user.is_authenticated and role(user) == Role.FACULTY
+
+
+def entries_visible_to_user(entries, user):
+    """Restrict published timetable rows to the faculty member or student's section."""
+    if admin_required(user):
+        return entries
+    if role(user) == Role.FACULTY:
+        faculty = Faculty.objects.filter(user=user).first()
+        if not faculty:
+            return entries.none()
+        return entries.filter(
+            Q(faculty_override=faculty)
+            | Q(faculty_override__isnull=True, assignment__faculty=faculty)
+        )
+    student = Student.objects.filter(user=user).select_related("section").first()
+    if not student or not student.section_id:
+        return entries.none()
+    return entries.filter(
+        Q(section_override=student.section)
+        | Q(section_override__isnull=True, assignment__section=student.section)
+    )
+
+
+def restrict_schedule_filter_choices(form, entries, user):
+    """Do not reveal unrelated academic identities in historical filter menus."""
+    if admin_required(user):
+        return
+    allowed = {name: set() for name in ('term', 'department', 'program', 'year_level', 'section', 'faculty', 'room', 'subject')}
+    for entry in entries:
+        section = entry.effective_section
+        values = {'term': entry.schedule.term_id, 'department': section.program.department_id,
+            'program': section.program_id, 'year_level': section.year_level_id, 'section': section.pk,
+            'faculty': entry.effective_faculty.pk, 'room': entry.room_id, 'subject': entry.effective_subject.pk}
+        for name, pk in values.items():
+            allowed[name].add(pk)
+    for name, ids in allowed.items():
+        if name in form.fields:
+            form.fields[name].queryset = form.fields[name].queryset.filter(pk__in=ids)
+
+
+def resource_model(resource):
+    try:
+        return RESOURCE_MODELS[resource]
+    except KeyError as exc:
+        raise Http404("Unknown administrative resource.") from exc
+
+
+def section_search_q(prefix, search):
+    base = (
+        Q(**{f"{prefix}name__icontains": search})
+        | Q(**{f"{prefix}program__code__icontains": search})
+    )
+    full = re.fullmatch(r"\s*(\S+)\s+(\d+)-([A-Z0-9][A-Z0-9_-]*)\s*", search, flags=re.IGNORECASE)
+    if full and len(full.group(2)) < 10:
+        base |= Q(**{
+            f"{prefix}program__code__iexact": full.group(1),
+            f"{prefix}year_level__level": int(full.group(2)),
+            f"{prefix}name__iexact": full.group(3),
+        })
+    elif search.isdigit() and len(search) < 10:
+        base |= Q(**{f"{prefix}year_level__level": int(search)})
+    return base
+
+
+def visible_schedule(request, pk):
+    schedules = Schedule.objects.all()
+    if not admin_required(request.user):
+        schedules = schedules.filter(status=ScheduleStatus.PUBLISHED)
+    schedule = get_object_or_404(schedules, pk=pk)
+    if not admin_required(request.user) and not entries_visible_to_user(schedule.entries.all(), request.user).exists():
+        raise Http404("Schedule is not assigned to this user.")
+    return schedule
+
+
+def landing_page(request):
+    login_form = EmailOrUsernameAuthenticationForm(request, data=request.POST or None)
+    login_modal_open = False
+    if request.method == "POST":
+        login_modal_open = True
+        if login_form.is_valid():
+            auth_login(request, login_form.get_user())
+            if not request.POST.get("remember_me"):
+                request.session.set_expiry(0)
+            return redirect("dashboard")
+    else:
+        login_form = EmailOrUsernameAuthenticationForm(request)
+    return render(request, "landing.html", {"login_form": login_form, "login_modal_open": login_modal_open})
 
 
 @login_required
@@ -96,25 +208,50 @@ def dashboard(request):
     user_role = role(request.user)
     context = {"schedules": schedules, "user_role": user_role}
     if admin_required(request.user):
+        latest = Schedule.objects.first()
+        latest_entries = latest.entries.count() if latest else 0
+        latest_requirements = latest.term.teachingassignment_set.count() if latest else 0
+        utilization = utilization_summary(utilization_rows(latest)) if latest else {"average_utilization": 0}
         context.update(
             {
                 "counts": {
                     "departments": Department.objects.count(),
                     "faculty": Faculty.objects.count(),
                     "sections": Section.objects.count(),
-                    "assignments": TeachingAssignment.objects.count(),
+                    "subjects": Subject.objects.count(),
+                    "rooms": Room.objects.filter(is_active=True).count(),
+                    "scheduled classes": latest_entries,
+                    "unscheduled classes": max(0, latest_requirements - latest_entries),
+                    "schedule issues": len(schedule_validation_messages(latest)) if latest else 0,
+                    "average room utilization": f"{utilization['average_utilization']}%",
                 }
             }
         )
         return render(request, "schedules/admin_dashboard.html", context)
     if user_role == Role.FACULTY:
         faculty = Faculty.objects.filter(user=request.user).first()
-        context["entries"] = ScheduleEntry.objects.filter(assignment__faculty=faculty, schedule__status=ScheduleStatus.PUBLISHED)
-        context["availability"] = Availability.objects.filter(faculty=faculty)
+        context["entries"] = (ScheduleEntry.objects.filter(schedule__status=ScheduleStatus.PUBLISHED).filter(
+            Q(faculty_override=faculty) | Q(faculty_override__isnull=True, assignment__faculty=faculty)
+        ) if faculty else ScheduleEntry.objects.none()).select_related(
+            "schedule__term", "assignment__subject", "assignment__section", "assignment__faculty", "room",
+            "subject_override", "section_override", "faculty_override").order_by("day", "start_time")
+        context["entries"] = historical_entries(context["entries"])
+        context["timetable_grid"] = personal_schedule_grid(context["entries"])
+        from .services.faculty_workload import published_workload
+        context["faculty"] = faculty
+        context["workloads"] = published_workload(context["entries"])
+        context["availability"] = Availability.objects.filter(faculty=faculty) if faculty else Availability.objects.none()
         return render(request, "schedules/faculty_dashboard.html", context)
     student = Student.objects.filter(user=request.user).select_related("section").first()
     context["student"] = student
-    context["entries"] = ScheduleEntry.objects.filter(assignment__section=getattr(student, "section", None), schedule__status=ScheduleStatus.PUBLISHED)
+    student_section = getattr(student, "section", None)
+    context["entries"] = (ScheduleEntry.objects.filter(schedule__status=ScheduleStatus.PUBLISHED).filter(
+        Q(section_override=student_section) | Q(section_override__isnull=True, assignment__section=student_section)
+    ) if student_section else ScheduleEntry.objects.none()).select_related(
+        "schedule__term", "assignment__subject", "assignment__section", "assignment__faculty", "room",
+        "subject_override", "section_override", "faculty_override").order_by("day", "start_time")
+    context["entries"] = historical_entries(context["entries"])
+    context["timetable_grid"] = personal_schedule_grid(context["entries"])
     return render(request, "schedules/student_dashboard.html", context)
 
 
@@ -129,6 +266,8 @@ def browse_schedules(request):
         "assignment__faculty",
         "room",
     )
+    entries = entries_visible_to_user(entries, request.user)
+    restrict_schedule_filter_choices(form, entries, request.user)
     if form.is_valid():
         term = form.cleaned_data.get("term")
         department = form.cleaned_data.get("department")
@@ -148,7 +287,9 @@ def browse_schedules(request):
             entries = entries.filter(assignment__section=section)
         if subject:
             entries = entries.filter(assignment__subject=subject)
-    return render(request, "schedules/browse.html", {"form": form, "entries": entries})
+    elif form.is_bound:
+        entries = entries.none()
+    return render(request, "schedules/browse.html", {"form": form, "entries": historical_entries(entries)})
 
 
 @login_required
@@ -167,14 +308,16 @@ def my_availability_create(request):
     form.fields["faculty"].initial = faculty
     form.fields["faculty"].disabled = True
     form.fields["room"].disabled = True
+    form.fields["section"].disabled = True
     if request.method == "POST" and form.is_valid():
         item = form.save(commit=False)
         item.faculty = faculty
         item.room = None
+        item.section = None
         item.save()
         messages.success(request, "Availability saved.")
         return redirect("my_availability")
-    return render(request, "schedules/form.html", {"form": form, "title": "Add Availability"})
+    return render(request, "schedules/form.html", {"form": form, "title": "Add Availability", "tooltip_context": "availability"})
 
 
 @login_required
@@ -186,58 +329,364 @@ def my_availability_update(request, pk):
     form = form_class(request.POST or None, instance=item)
     form.fields["faculty"].disabled = True
     form.fields["room"].disabled = True
+    form.fields["section"].disabled = True
     if request.method == "POST" and form.is_valid():
         item = form.save(commit=False)
         item.faculty = faculty
         item.room = None
+        item.section = None
         item.save()
         messages.success(request, "Availability updated.")
         return redirect("my_availability")
-    return render(request, "schedules/form.html", {"form": form, "title": "Edit Availability"})
+    return render(request, "schedules/form.html", {"form": form, "title": "Edit Availability", "tooltip_context": "availability"})
 
 
 @login_required
 @user_passes_test(admin_required)
 def resource_list(request, resource):
-    model = RESOURCE_MODELS[resource]
-    return render(request, "schedules/resource_list.html", {"resource": resource, "objects": model.objects.all()[:200], "description": RESOURCE_DESCRIPTIONS.get(resource, "Manage records for this section.")})
+    model = resource_model(resource)
+    navigation = list_request(request, resource)
+    objects = model.objects.all()
+    schedule_tab = request.GET.get("tab", "active")
+    if schedule_tab not in ("active", "drafts", "archived"):
+        schedule_tab = "active"
+    if resource in RELATED:
+        objects = objects.select_related(*RELATED[resource])
+    if resource == "schedules":
+        if schedule_tab == "archived":
+            objects = objects.filter(status=ScheduleStatus.ARCHIVED)
+        elif schedule_tab == "drafts":
+            objects = objects.exclude(status__in=[ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED])
+        else:
+            objects = objects.filter(status=ScheduleStatus.PUBLISHED)
+    elif resource == "assignments":
+        objects = objects.prefetch_related(Prefetch("meetings", queryset=TeachingAssignment.objects.select_related("subject")))
+    field_names = {field.name for field in model._meta.fields}
+    created_field = "created_at" if "created_at" in field_names else ("generated_at" if "generated_at" in field_names else "pk")
+    modified_field = "updated_at" if "updated_at" in field_names else created_field
+    sort = request.GET.get("sort", "modified_desc")
+    orderings = {"added_desc": f"-{created_field}", "added_asc": created_field,
+                 "modified_desc": f"-{modified_field}", "modified_asc": modified_field}
+    columns = ([('code', 'Course Code', ('code',)), ('title', 'Course Description', ('title',))]
+               if resource == 'subjects' else
+               [('course', 'Course', ('subject__code', 'subject__title')),
+                ('section', 'Section', ('section__program__code', 'section__year_level__level', 'section__name')),
+                ('faculty', 'Faculty', ('faculty__full_name',)), ('term', 'Term', ('term__name', 'term__school_year'))]
+               if resource == 'assignments' else [('record', 'Record', RECORD_ORDER[resource])])
+    orderings = {key: (value,) for key, value in orderings.items()}
+    sort_options = [('modified_desc', 'Recently Modified'), ('modified_asc', 'Least Recently Modified'),
+                    ('added_desc', 'Recently Added'), ('added_asc', 'Oldest Added')]
+    for key, label, fields in columns + EXTRA_SORTS.get(resource, []):
+        orderings[key + '_asc'] = fields
+        orderings[key + '_desc'] = tuple('-' + field for field in fields)
+        sort_options.extend([(key + '_asc', label + ' (ascending)'), (key + '_desc', label + ' (descending)')])
+    if sort not in orderings:
+        sort = 'modified_desc'
+    ordering = orderings[sort]
+    query = request.GET.get('q', '').strip()
+    if 'sort' in navigation.GET:
+        navigation.GET['sort'] = sort
+    if 'tab' in navigation.GET:
+        navigation.GET['tab'] = schedule_tab
+    scope = objects
+    objects, filters, filter_errors = filter_records(objects, resource, navigation.GET)
+    objects = search_records(objects, resource, query, section_search_q)
+    filters_active = any(control['value'] for control in filters)
+    total_count, filtered_count = record_counts(scope, objects, bool(query or filters_active))
+    objects = objects.order_by(*ordering, '-pk' if sort.endswith('_desc') else 'pk')
+    page, pagination = paginate(navigation, objects, count=filtered_count)
+    headers = [dict(label=label, url=query_url(navigation, page=None,
+        sort=key + ('_desc' if sort == key + '_asc' else '_asc')),
+        direction='ascending' if sort == key + '_asc' else 'descending' if sort == key + '_desc' else 'none')
+        for key, label, fields in columns]
+    return render(request, "schedules/resource_list.html", {"resource": resource, "objects": page.object_list, "page_obj": page, "pagination": pagination,
+        "total_count": total_count, "filtered_count": filtered_count, "filters": filters,
+        "filter_errors": filter_errors, "filters_active": filters_active, "sort_options": sort_options,
+        "clear_url": query_url(navigation, page=None, q=None, **{control['name']: None for control in filters}),
+        "q": query, "column_headers": headers, "column_sort": sort not in ("added_asc", "added_desc", "modified_asc", "modified_desc"),
+        "tab_links": {tab: query_url(navigation, tab=tab, page=None, status=None) for tab in ("active", "drafts", "archived")},
+        "drafts": FormDraft.objects.filter(user=request.user, resource=resource),
+        "sort": sort, "schedule_tab": schedule_tab, "resource_label": "Courses" if resource == "subjects" else resource.replace("-", " ").title(),
+        "has_created_at": created_field != "pk", "has_updated_at": "updated_at" in field_names,
+        "description": RESOURCE_DESCRIPTIONS.get(resource, "Manage records for this section.")})
+
+
+@login_required
+@user_passes_test(admin_required)
+def room_utilization_dashboard(request):
+    term = AcademicTerm.objects.filter(pk=request.GET.get("term")).first() if request.GET.get("term") else None
+    schedule = Schedule.objects.filter(pk=request.GET.get("schedule")).first() if request.GET.get("schedule") else latest_schedule(term)
+    department = Department.objects.filter(pk=request.GET.get("department")).first() if request.GET.get("department") else None
+    rows = utilization_rows(schedule, department=department)
+    rows = filtered_rows(
+        rows,
+        query=request.GET.get("q", ""),
+        room_type=request.GET.get("room_type", ""),
+        utilization_range=request.GET.get("utilization", ""),
+        room_group=request.GET.get("room_group", ""),
+        day=request.GET.get("day", ""),
+    )
+    context = {
+        "rows": rows,
+        "summary": utilization_summary(rows),
+        "schedule": schedule,
+        "terms": AcademicTerm.objects.all(),
+        "schedules": Schedule.objects.filter(term=term).order_by("-generated_at") if term else Schedule.objects.all().order_by("-generated_at"),
+        "departments": Department.objects.all(),
+        "weekdays": Weekday.choices,
+        "room_types": RoomKind.choices,
+        "selected_room_type": request.GET.get("room_type", ""),
+        "selected_utilization": request.GET.get("utilization", ""),
+        "selected_room_group": request.GET.get("room_group", ""),
+        "selected_day": request.GET.get("day", ""),
+        "selected_term": str(term.pk) if term else "",
+        "selected_schedule": str(schedule.pk) if schedule else "",
+        "selected_department": str(department.pk) if department else "",
+        "query": request.GET.get("q", ""),
+    }
+    return render(request, "schedules/room_utilization.html", context)
+
+
+@login_required
+@user_passes_test(admin_required)
+def room_schedule_dashboard(request):
+    term = AcademicTerm.objects.filter(pk=request.GET.get("term")).first() if request.GET.get("term") else None
+    schedule = Schedule.objects.filter(pk=request.GET.get("schedule")).first() if request.GET.get("schedule") else latest_schedule(term)
+    room = Room.objects.filter(pk=request.GET.get("room")).first() if request.GET.get("room") else Room.objects.order_by("name").first()
+    return render(request, "schedules/room_schedule.html", {
+        "term": term, "schedule": schedule, "room": room,
+        "terms": AcademicTerm.objects.all(),
+        "schedules": Schedule.objects.filter(term=term).order_by("-generated_at") if term else Schedule.objects.all().order_by("-generated_at"),
+        "rooms": Room.objects.filter(is_active=True), "weekdays": Weekday.choices,
+        "grid": room_schedule_grid(room, schedule) if room else [],
+    })
+
+
+@login_required
+@user_passes_test(admin_required)
+def room_capacity_planning(request):
+    term = AcademicTerm.objects.filter(pk=request.GET.get("term")).first() if request.GET.get("term") else AcademicTerm.objects.filter(is_active=True).first()
+    planning, lecture = capacity_planning(term, request.GET)
+    return render(request, "schedules/room_capacity_planning.html", {
+        "term": term, "terms": AcademicTerm.objects.all(), "planning": planning,
+        "lecture": lecture, "room_types": RoomKind.choices,
+    })
+
+
+@login_required
+@user_passes_test(admin_required)
+def export_room_utilization_csv(request):
+    schedule = Schedule.objects.filter(pk=request.GET.get("schedule")).first() if request.GET.get("schedule") else latest_schedule()
+    rows = filtered_rows(
+        utilization_rows(schedule),
+        query=request.GET.get("q", ""),
+        room_type=request.GET.get("room_type", ""),
+        utilization_range=request.GET.get("utilization", ""),
+        room_group=request.GET.get("room_group", ""), day=request.GET.get("day", ""),
+    )
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="room-utilization.csv"'
+    writer = csv.writer(response)
+    writer.writerow(["Room", "Room Type", "Capacity", "Monday %", "Tuesday %", "Wednesday %", "Thursday %", "Friday %", "Saturday %", "Weekly Utilization %", "Seat Utilization %", "Available Hours", "Scheduled Hours", "Assigned Classes", "Status"])
+    for row in rows:
+        writer.writerow([
+            row.room.name,
+            row.room.get_room_type_display(),
+            row.room.capacity, *[item["percentage"] for item in row.daily], row.utilization_percentage,
+            row.capacity_utilization, row.available_hours, row.scheduled_hours, row.assigned_classes, row.status,
+        ])
+    return response
+
+
+@login_required
+@user_passes_test(admin_required)
+def export_room_utilization_pdf(request):
+    schedule = Schedule.objects.filter(pk=request.GET.get("schedule")).first() if request.GET.get("schedule") else latest_schedule()
+    rows = filtered_rows(
+        utilization_rows(schedule),
+        query=request.GET.get("q", ""),
+        room_type=request.GET.get("room_type", ""),
+        utilization_range=request.GET.get("utilization", ""),
+        room_group=request.GET.get("room_group", ""), day=request.GET.get("day", ""),
+    )
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="room-utilization.pdf"'
+    pdf = canvas.Canvas(response, pagesize=letter)
+    pdf.drawString(40, 750, "SchedEase Room Utilization Report")
+    y = 720
+    for row in rows:
+        pdf.drawString(
+            40,
+            y,
+            f"{row.room.name} | {row.room.get_room_type_display()} | {row.utilization_percentage}% | {row.status} | {row.scheduled_hours}/{row.available_hours} hrs",
+        )
+        y -= 18
+        if y < 50:
+            pdf.showPage()
+            y = 750
+    pdf.save()
+    return response
 
 
 @login_required
 @user_passes_test(admin_required)
 def resource_create(request, resource):
+    resource_model(resource)
+    if resource == "assignments":
+        return assignment_editor(request)
     form_class = MODEL_FORMS[resource]
-    form = form_class(request.POST or None)
+    draft = FormDraft.objects.filter(user=request.user, resource=resource, object_pk="").first()
+    form = form_class(request.POST or None, initial=draft.payload if draft and request.method == "GET" else None)
     if request.method == "POST" and form.is_valid():
-        if resource == "assignments":
-            return save_assignment_with_credential_check(request, form, resource)
-        form.save()
+        obj = form.save(commit=False)
+        if resource == 'credential-overrides':
+            obj.admin_user = request.user
+        obj.save()
+        form.save_m2m()
+        FormDraft.objects.filter(user=request.user, resource=resource, object_pk="").delete()
         messages.success(request, "Record created.")
         return redirect("resource_list", resource=resource)
-    return render(request, "schedules/form.html", {"form": form, "title": f"New {resource.replace('-', ' ')}", "description": RESOURCE_DESCRIPTIONS.get(resource, "Create a new record.")})
+    return render(request, "schedules/form.html", {"form": form, "title": f"New {resource.replace('-', ' ')}",
+        "description": RESOURCE_DESCRIPTIONS.get(resource, "Create a new record."), "tooltip_context": resource,
+        "draft": draft, "draft_resource": resource, "draft_object_pk": ""})
 
 
 @login_required
 @user_passes_test(admin_required)
 def resource_update(request, resource, pk):
-    model = RESOURCE_MODELS[resource]
+    model = resource_model(resource)
     obj = get_object_or_404(model, pk=pk)
-    form = MODEL_FORMS[resource](request.POST or None, instance=obj)
+    if resource == "assignments":
+        return assignment_editor(request, obj)
+    draft = FormDraft.objects.filter(user=request.user, resource=resource, object_pk=str(pk)).first()
+    draft_conflict = bool(draft and draft.base_signature and draft.base_signature != object_signature(obj))
+    form = MODEL_FORMS[resource](request.POST or None, instance=obj,
+        initial=draft.payload if draft and request.method == "GET" else None)
     if request.method == "POST" and form.is_valid():
-        if resource == "assignments":
-            return save_assignment_with_credential_check(request, form, resource)
+        if draft_conflict and request.POST.get("draft_conflict_confirm") != "yes":
+            form.add_error(None, "This record changed after your draft was created. Review the latest record and confirm before updating.")
+            return render(request, "schedules/form.html", {"form": form, "title": f"Edit {obj}",
+                "description": RESOURCE_DESCRIPTIONS.get(resource, "Update this record."), "tooltip_context": resource,
+                "draft": draft, "draft_conflict": True, "draft_resource": resource, "draft_object_pk": str(pk)})
         form.save()
+        FormDraft.objects.filter(user=request.user, resource=resource, object_pk=str(pk)).delete()
         messages.success(request, "Record updated.")
         return redirect("resource_list", resource=resource)
-    return render(request, "schedules/form.html", {"form": form, "title": f"Edit {obj}", "description": RESOURCE_DESCRIPTIONS.get(resource, "Update this record.")})
+    return render(request, "schedules/form.html", {"form": form, "title": f"Edit {obj}",
+        "description": RESOURCE_DESCRIPTIONS.get(resource, "Update this record."), "tooltip_context": resource,
+        "draft": draft, "draft_conflict": draft_conflict, "draft_resource": resource, "draft_object_pk": str(pk)})
+
+
+def assignment_editor(request, assignment=None):
+    assignment = assignment or Assignment()
+    draft = FormDraft.objects.filter(user=request.user, resource="assignments", object_pk=str(assignment.pk) if assignment.pk else "").first()
+    draft_conflict = bool(draft and draft.base_signature and draft.base_signature != object_signature(assignment if assignment.pk else None))
+    posted = request.POST.copy() if request.method == "POST" else None
+    if request.method == "GET" and draft:
+        posted = draft.payload.copy()
+    if posted is not None and "meetings-TOTAL_FORMS" not in posted:
+        legacy_subject = Subject.objects.filter(pk=posted.get("subject")).first()
+        legacy_component = TeachingAssignment.Component.GENERAL
+        legacy_duration = 0
+        if legacy_subject:
+            if legacy_subject.lecture_hours:
+                legacy_component = TeachingAssignment.Component.LECTURE
+                legacy_duration = legacy_subject.lecture_hours * 60
+            elif legacy_subject.lab_hours:
+                legacy_component = TeachingAssignment.Component.LABORATORY
+                legacy_duration = legacy_subject.lab_hours * 60
+        posted.update({"meetings-TOTAL_FORMS": "1", "meetings-INITIAL_FORMS": "0",
+                       "meetings-MIN_NUM_FORMS": "1", "meetings-MAX_NUM_FORMS": "1000",
+                       "meetings-0-meeting_index": posted.get("meeting_index", "1"),
+                       "meetings-0-component": posted.get("component", legacy_component),
+                       "meetings-0-duration_minutes": posted.get("duration_minutes", legacy_duration),
+                       "meetings-0-required_room_type_override": posted.get("required_room_type_override", "")})
+    form = MODEL_FORMS["assignments"](posted, instance=assignment)
+    meetings = AssignmentMeetingFormSetFactory(posted, instance=assignment, prefix="meetings")
+    meetings.extra = 0
+    credential_result = None
+    if request.method == "POST" and form.is_valid() and meetings.is_valid():
+        if draft_conflict and request.POST.get("draft_conflict_confirm") != "yes":
+            form.add_error(None, "This assignment or its meetings changed after your draft was saved. Review the changes and confirm before saving.")
+            return render(request, "schedules/assignment_form.html", {
+                "form": form, "meetings": meetings, "assignment": assignment,
+                "draft": draft, "draft_conflict": True, "title": "Edit Assignment" if assignment.pk else "New Assignment",
+            })
+        credential_result = faculty_qualification(form.cleaned_data["faculty"], form.cleaned_data["subject"], form.cleaned_data["term"])
+        confirmed = request.POST.get("credential_override_confirm") == "yes"
+        reason = request.POST.get("credential_override_reason", "").strip()
+        covered = bool(assignment.pk and assignment.meetings.exists()) and all(
+            valid_credential_override(item.instance, form.cleaned_data["faculty"], form.cleaned_data["subject"])
+            for item in meetings.forms if item.cleaned_data and not item.cleaned_data.get("DELETE")
+        )
+        if credential_result["qualified"] or covered or (confirmed and reason):
+            try:
+                with transaction.atomic():
+                    parent = form.save()
+                    meetings.save(commit=False)
+                    for removed in meetings.deleted_objects:
+                        removed.delete()
+                    for meeting_form in meetings.forms:
+                        if not meeting_form.cleaned_data or meeting_form.cleaned_data.get("DELETE"):
+                            continue
+                        meeting = meeting_form.instance
+                        # Legacy inconsistent meetings must not silently change a schedule
+                        # even when the parent fields themselves were left unchanged.
+                        if meeting.pk:
+                            parent._check_schedule_references([
+                                field for field in Assignment.SHARED_FIELDS
+                                if getattr(meeting, field + "_id") != getattr(parent, field + "_id")
+                            ])
+                        meeting.assignment = parent
+                        for field in Assignment.SHARED_FIELDS:
+                            setattr(meeting, field, getattr(parent, field))
+                        meeting.full_clean()
+                        meeting.save()
+                    if not credential_result["qualified"] and not covered:
+                        for meeting in parent.meetings.all():
+                            if not valid_credential_override(meeting, parent.faculty, parent.subject):
+                                CredentialOverride.objects.create(
+                                    assignment=meeting, subject=parent.subject, faculty=parent.faculty,
+                                    admin_user=request.user, reason=reason,
+                                    missing_credentials=missing_credential_message(parent.faculty, parent.subject, parent.term),
+                                )
+            except (ProtectedError, ValidationError, IntegrityError) as exc:
+                if isinstance(exc, ProtectedError):
+                    error = "A meeting you removed is already used by a schedule. Remove it from that schedule before deleting it here."
+                elif isinstance(exc, ValidationError):
+                    error = "Assignment was not saved. " + " ".join(exc.messages)
+                else:
+                    error = "Assignment was not saved because its meetings conflict with existing records. Review the course, section, term, and meeting numbers."
+                form.add_error(None, error)
+                return render(request, "schedules/assignment_form.html", {
+                    "form": form, "meetings": meetings, "assignment": assignment,
+                    "draft": draft, "draft_conflict": draft_conflict,
+                    "title": "Edit Assignment" if assignment.pk else "New Assignment",
+                })
+            FormDraft.objects.filter(user=request.user, resource="assignments", object_pk__in=["", str(parent.pk)]).delete()
+            messages.success(request, "Assignment and its meetings were saved.")
+            return redirect("resource_list", resource="assignments")
+        if confirmed and not reason:
+            form.add_error(None, "An override reason is required.")
+        else:
+            form.add_error(None, "The selected faculty member does not meet this course's credential requirements.")
+    return render(request, "schedules/assignment_form.html", {
+        "form": form, "meetings": meetings, "assignment": assignment,
+        "credential_result": credential_result,
+        "draft": draft, "draft_conflict": draft_conflict,
+        "title": "Edit Assignment" if assignment.pk else "New Assignment",
+    })
 
 
 def save_assignment_with_credential_check(request, form, resource):
     assignment = form.save(commit=False)
-    result = faculty_qualification(assignment.faculty, assignment.subject)
+    result = faculty_qualification(assignment.faculty, assignment.subject, assignment.term)
     if result["qualified"]:
         assignment.save()
         form.save_m2m()
+        FormDraft.objects.filter(
+            user=request.user, resource=resource, object_pk__in=["", str(assignment.pk)]
+        ).delete()
         messages.success(request, "Teaching assignment saved.")
         return redirect("resource_list", resource=resource)
 
@@ -255,17 +704,71 @@ def save_assignment_with_credential_check(request, form, resource):
                 faculty=assignment.faculty,
                 admin_user=request.user,
                 reason=reason,
-                missing_credentials=missing_credential_message(assignment.faculty, assignment.subject),
+                missing_credentials=missing_credential_message(assignment.faculty, assignment.subject, assignment.term),
             )
+            FormDraft.objects.filter(
+                user=request.user, resource=resource, object_pk__in=["", str(assignment.pk)]
+            ).delete()
         messages.warning(request, "Teaching assignment saved with a credential override.")
         return redirect("resource_list", resource=resource)
 
     return render_credential_override_confirmation(request, form, result)
 
 
+@login_required
+@user_passes_test(admin_required)
+@require_POST
+def save_form_draft(request):
+    try:
+        body = json.loads(request.body or "{}")
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "The draft data was not valid JSON."}, status=400)
+
+    resource = str(body.get("resource", ""))
+    try:
+        model = resource_model(resource)
+        form_class = MODEL_FORMS[resource]
+    except (Http404, KeyError):
+        return JsonResponse({"error": "This form cannot be saved as a draft."}, status=400)
+
+    object_pk = str(body.get("object_pk") or "")
+    instance = get_object_or_404(model, pk=object_pk) if object_pk else None
+    payload = (safe_assignment_draft_payload(body.get("payload") or {}) if resource == "assignments"
+               else safe_draft_payload(form_class, body.get("payload") or {}))
+    if not body.get("changed") or not payload:
+        return JsonResponse({"saved": False, "reason": "unchanged"})
+
+    draft, created = FormDraft.objects.get_or_create(
+        user=request.user,
+        resource=resource,
+        object_pk=object_pk,
+        defaults={"base_signature": object_signature(instance)},
+    )
+    draft.payload = payload
+    if created and instance and not draft.base_signature:
+        draft.base_signature = object_signature(instance)
+    draft.save()
+    return JsonResponse({"saved": True, "draft_id": draft.pk, "updated_at": draft.updated_at.isoformat()})
+
+
+@login_required
+@user_passes_test(admin_required)
+@require_POST
+def discard_form_draft(request, pk):
+    draft = get_object_or_404(FormDraft, pk=pk, user=request.user)
+    resource, object_pk = draft.resource, draft.object_pk
+    draft.delete()
+    messages.success(request, "Draft discarded. The saved record was not changed.")
+    if object_pk and resource in RESOURCE_MODELS and RESOURCE_MODELS[resource].objects.filter(pk=object_pk).exists():
+        return redirect("resource_update", resource=resource, pk=object_pk)
+    return redirect("resource_create", resource=resource)
+
+
 def render_credential_override_confirmation(request, form, result):
     obj = form.save(commit=False)
-    assignment = obj if hasattr(obj, "subject") else obj.assignment
+    assignment = obj if hasattr(obj, "subject") else {
+        "faculty": obj.effective_faculty, "subject": obj.effective_subject,
+    }
     return render(
         request,
         "schedules/credential_override_confirm.html",
@@ -281,13 +784,27 @@ def render_credential_override_confirmation(request, form, result):
 @login_required
 @user_passes_test(admin_required)
 def resource_delete(request, resource, pk):
-    model = RESOURCE_MODELS[resource]
+    model = resource_model(resource)
     obj = get_object_or_404(model, pk=pk)
     if request.method == "POST":
-        obj.delete()
-        messages.success(request, "Record deleted.")
+        try:
+            obj.delete()
+            messages.success(request, "Record deleted.")
+        except ProtectedError:
+            messages.error(request, "This record is still used by other scheduling data and cannot be deleted. Remove or reassign those references first.")
         return redirect("resource_list", resource=resource)
     return render(request, "schedules/confirm_delete.html", {"resource": resource, "object": obj})
+
+
+def finish_generation_failure(run, diagnostics):
+    if run is None:
+        return
+    try:
+        fail_run(run, diagnostics)
+    except DatabaseError:
+        # Atomic failure recording leaves the prior state intact for lease-based
+        # recovery rather than showing partial records or private DB errors.
+        logger.exception("Could not record generation failure for run %s", run.pk)
 
 
 @login_required
@@ -295,109 +812,422 @@ def resource_delete(request, resource, pk):
 def generate_schedule(request):
     form = ScheduleGenerationForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        scheduler = GeneticScheduler(form.cleaned_data["term"], form.cleaned_data["settings"])
-        schedule = scheduler.generate(form.cleaned_data["name"])
-        messages.success(request, f"Schedule generated with fitness score {schedule.fitness_score:.2f}.")
+        term = form.cleaned_data["term"]
+        try:
+            lease = acquire(term.pk)
+        except GenerationBusy as exc:
+            form.add_error(None, str(exc))
+            messages.warning(request, "Generation is already in progress or temporarily busy. Please try again shortly.")
+            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
+        run = None
+        seed = choose_seed(form.cleaned_data.get("seed"))
+        try:
+            run = GenerationRun.objects.create(
+                term=term, ga_settings=form.cleaned_data["settings"],
+                requested_by=request.user, requested_name=form.cleaned_data["name"], lease_owner=lease.owner,
+                reproducibility=initial_metadata(seed, form.cleaned_data["settings"]),
+            )
+            lease.run_id = run.pk
+            scheduler = GeneticScheduler(term, form.cleaned_data["settings"], seed=seed)
+            schedule = scheduler.generate(form.cleaned_data["name"], lease=lease)
+        except GenerationLeaseLost as exc:
+            if run is not None:
+                GenerationRun.objects.filter(pk=run.pk).update(status=GenerationRun.Status.FAILED, completed_at=timezone.now())
+            form.add_error(None, str(exc))
+            messages.warning(request, "Generation stopped because its reservation could not be maintained. Please try again.")
+            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
+        except ValueError as exc:
+            diagnostics = exc.issues if isinstance(exc, GenerationFailure) else [Diagnostic('GENERATION_FAILURE',
+                'Schedule generation could not be completed. Review the scheduling inputs and try again.')]
+            finish_generation_failure(run, diagnostics)
+            form.add_error(None, "Schedule generation could not be completed. Review the Error Log for complete details and suggested actions.")
+            messages.error(request, "Schedule generation could not be completed. Please check the Error Log for more information.")
+            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule", "error_run": run})
+        except Exception:
+            logger.exception("Unexpected schedule generation failure for term %s", term.pk)
+            if run is None:
+                form.add_error(None, "Generation could not start. Please try again shortly.")
+                return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
+            finish_generation_failure(run, [unexpected_diagnostic()])
+            form.add_error(None, "Schedule generation could not be completed. Review the Error Log for complete details and suggested actions.")
+            messages.error(request, "Schedule generation could not be completed. Please check the Error Log for more information.")
+            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule", "error_run": run})
+        finally:
+            lease.release()
+        messages.success(request, f"Schedule generated and validated: 0 hard violations; soft preference score {schedule.fitness_score:.2f}.")
         return redirect("schedule_detail", pk=schedule.pk)
-    return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule"})
+    return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
+
+
+@login_required
+@user_passes_test(admin_required)
+@require_http_methods(['GET', 'POST'])
+def generation_error_log(request):
+    if request.method == 'POST':
+        if request.POST.get('action') != 'recover':
+            return HttpResponse('Choose a supported action.', status=400)
+        count = recover_stale_runs()
+        messages.success(request, f'{count} interrupted generation run(s) reviewed.')
+        return redirect('generation_error_log')
+    issues = GenerationIssue.objects.select_related(
+        "run__term", "assignment__subject", "assignment__section__program", "assignment__section__year_level", "assignment__faculty", "room"
+    )
+    filters = {
+        "run": "run_id", "term": "run__term_id", "category": "category", "severity": "severity",
+        "subject": "assignment__subject_id", "section": "assignment__section_id",
+        "faculty": "assignment__faculty_id", "room": "room_id", "status": "status",
+    }
+    diagnostic_filters = DiagnosticFilterForm(request.GET)
+    if diagnostic_filters.is_valid():
+        for parameter, lookup in filters.items():
+            value = diagnostic_filters.cleaned_data.get(parameter)
+            if value:
+                issues = issues.filter(**{lookup: value})
+        if diagnostic_filters.cleaned_data.get('date'):
+            issues = issues.filter(created_at__date=diagnostic_filters.cleaned_data['date'])
+    else:
+        issues = issues.none()
+    search = request.GET.get("q", "").strip()
+    if search:
+        issues = issues.filter(
+            Q(short_description__icontains=search) | Q(reason__icontains=search)
+            | Q(assignment__subject__code__icontains=search) | Q(assignment__subject__title__icontains=search)
+            | section_search_q("assignment__section__", search) | Q(assignment__faculty__full_name__icontains=search)
+            | Q(room__name__icontains=search)
+        )
+    summary_source = issues
+    summary = {
+        "total": summary_source.count(),
+        "critical": summary_source.filter(severity=GenerationIssue.Severity.CRITICAL).count(),
+        "errors": summary_source.filter(severity=GenerationIssue.Severity.ERROR).count(),
+        "warnings": summary_source.filter(severity=GenerationIssue.Severity.WARNING).count(),
+        "unscheduled": summary_source.filter(category=GenerationIssue.Category.UNSCHEDULED).count(),
+    }
+    issues_page, issue_pagination = paginate(request, issues.order_by('-created_at', 'pk'), count=summary['total'])
+    runs = GenerationRun.objects.select_related('term').order_by('-started_at', '-pk')
+    run_search = request.GET.get('run_q', '').strip()
+    if run_search:
+        runs = runs.filter(Q(requested_name__icontains=run_search) | Q(term__name__icontains=run_search)
+                           | Q(term__school_year__icontains=run_search) | Q(status__icontains=run_search))
+    runs_page, run_pagination = paginate(request, runs, 'run_page')
+    return render(request, "schedules/error_log.html", {
+        "issues": issues_page.object_list, "summary": summary, "issue_pagination": issue_pagination,
+        "diagnostic_filter_errors": [diagnostic_filters.fields[name].label or name.title() for name in diagnostic_filters.errors],
+        "runs": runs_page.object_list, "run_pagination": run_pagination, "run_q": run_search,
+        "run_choices": GenerationRun.objects.only('pk', 'started_at').order_by('-started_at', '-pk'), "terms": AcademicTerm.objects.all(),
+        "categories": GenerationIssue.Category.choices, "severities": GenerationIssue.Severity.choices,
+        "statuses": GenerationIssue.Status.choices, "subjects": Subject.objects.all(), "sections": Section.objects.select_related("program", "year_level"),
+        "faculty_list": Faculty.objects.all(), "rooms": Room.objects.all(),
+    })
+
+
+@login_required
+@user_passes_test(admin_required)
+def generation_run_detail(request, pk):
+    run = get_object_or_404(GenerationRun.objects.select_related('term', 'schedule'), pk=pk)
+    return render(request, 'schedules/generation_run_detail.html', {'run': run})
+
+
+@login_required
+@user_passes_test(admin_required)
+def generation_error_detail(request, pk):
+    issue = get_object_or_404(GenerationIssue.objects.select_related(
+        "run__term", "run__ga_settings", "run__schedule", "assignment__subject",
+        "assignment__section", "assignment__faculty", "room"
+    ), pk=pk)
+    if request.method == "POST":
+        status = request.POST.get("status")
+        if status in GenerationIssue.Status.values:
+            issue.status = status
+            issue.save(update_fields=["status", "updated_at"])
+            messages.success(request, "Issue status updated.")
+            return redirect("generation_error_detail", pk=issue.pk)
+    ids = issue.details.get('meeting_ids', [])
+    meetings = {m.pk: m for m in TeachingAssignment.objects.filter(pk__in=ids, term=issue.run.term).select_related('subject', 'section', 'faculty')}
+    affected = [{'id': pk, 'meeting': meetings.get(pk)} for pk in ids]
+    return render(request, "schedules/error_detail.html", {"issue": issue, "statuses": GenerationIssue.Status.choices, "affected_meetings": affected})
 
 
 @login_required
 def schedule_detail(request, pk):
-    schedule = get_object_or_404(Schedule, pk=pk)
-    entries = list(schedule.entries.select_related("assignment__subject", "assignment__faculty", "assignment__section", "room"))
-    return render(request, "schedules/schedule_detail.html", {"schedule": schedule, "entries": entries, "conflicts": conflict_messages(entries)})
+    schedule = visible_schedule(request, pk)
+    entries = schedule.entries.select_related(
+        "assignment__subject__department", "assignment__faculty",
+        "assignment__section__program__department", "assignment__section__year_level", "room",
+        "subject_override", "section_override__program", "section_override__year_level", "faculty_override",
+    )
+    entries = entries_visible_to_user(entries, request.user)
+    filter_form = ScheduleEntryFilterForm(request.GET or None)
+    restrict_schedule_filter_choices(filter_form, entries, request.user)
+    if filter_form.is_valid():
+        values = filter_form.cleaned_data
+        if values.get("department"):
+            entries = entries.filter(
+                Q(section_override__program__department=values["department"])
+                | Q(section_override__isnull=True, assignment__section__program__department=values["department"])
+            )
+        if values.get("program"):
+            entries = entries.filter(
+                Q(section_override__program=values["program"])
+                | Q(section_override__isnull=True, assignment__section__program=values["program"])
+            )
+        if values.get("year_level"):
+            entries = entries.filter(
+                Q(section_override__year_level=values["year_level"])
+                | Q(section_override__isnull=True, assignment__section__year_level=values["year_level"])
+            )
+        if values.get("section"):
+            entries = entries.filter(
+                Q(section_override=values["section"])
+                | Q(section_override__isnull=True, assignment__section=values["section"])
+            )
+        if values.get("faculty"):
+            entries = entries.filter(
+                Q(faculty_override=values["faculty"])
+                | Q(faculty_override__isnull=True, assignment__faculty=values["faculty"])
+            )
+        if values.get("room"):
+            entries = entries.filter(room=values["room"])
+        if values.get("day") != "" and values.get("day") is not None:
+            entries = entries.filter(day=values["day"])
+        if values.get("component"):
+            entries = entries.filter(
+                Q(component_override=values["component"])
+                | Q(component_override="", assignment__component=values["component"])
+            )
+        search = values.get("q", "").strip()
+        if search:
+            entries = entries.filter(
+                section_search_q("assignment__section__", search)
+                | section_search_q("section_override__", search)
+                | Q(assignment__subject__code__icontains=search)
+                | Q(assignment__subject__title__icontains=search)
+                | Q(subject_override__code__icontains=search)
+                | Q(subject_override__title__icontains=search)
+                | Q(assignment__faculty__full_name__icontains=search)
+                | Q(faculty_override__full_name__icontains=search)
+                | Q(room__name__icontains=search)
+            )
+    elif filter_form.is_bound:
+        entries = entries.none()
+    entries = list(entries.order_by(
+        "assignment__section__program__code", "assignment__section__year_level__level",
+        "assignment__section__name", "assignment__subject__code", "assignment__component", "day", "start_time",
+    ))
+    if schedule.status in (ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED):
+        snapshot = schedule.snapshot
+        return render(request, "schedules/schedule_detail.html", {
+            "schedule": schedule, "entries": historical_entries(entries), "filter_form": filter_form,
+            "conflicts": [], "can_manage": admin_required(request.user), "historical": True,
+            "historical_term": historical_term(snapshot), "snapshot_reconstructed": snapshot.reconstructed,
+            "snapshot_captured_at": snapshot.captured_at,
+        })
+    for entry in entries:
+        try:
+            entry.full_clean()
+            entry.manual_conflicts = []
+        except ValidationError as exc:
+            entry.manual_conflicts = exc.messages
+    if admin_required(request.user) and request.GET.get("check") == "1":
+        count = len(schedule_validation_messages(schedule))
+        if count:
+            messages.error(request, f"{count} conflicts require attention.")
+        else:
+            messages.success(request, "No conflicts detected.")
+    return render(request, "schedules/schedule_detail.html", {
+        "schedule": schedule, "entries": entries, "filter_form": filter_form,
+        "conflicts": schedule_validation_issues(schedule) if admin_required(request.user) else [], "can_manage": admin_required(request.user),
+    })
 
 
 @login_required
 @user_passes_test(admin_required)
 def entry_create(request, pk):
     schedule = get_object_or_404(Schedule, pk=pk)
-    form = ScheduleEntryForm(request.POST or None)
+    if schedule.status in {ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED}:
+        messages.error(request, "Published and archived schedules are locked. Create or regenerate a draft version before making changes.")
+        return redirect("schedule_detail", pk=pk)
+    form = ScheduleEntryForm(request.POST or None, instance=ScheduleEntry(schedule=schedule), defer_credential_review=True, revision_user=request.user)
+    form.fields["assignment"].queryset = TeachingAssignment.objects.filter(term=schedule.term)
     if request.method == "POST" and form.is_valid():
         return save_entry_with_credential_check(request, form, schedule)
-    return render(request, "schedules/form.html", {"form": form, "title": "Add Schedule Entry"})
+    return render(request, "schedules/form.html", {"form": form, "title": "Add Schedule Entry", "tooltip_context": "schedule-entry"})
 
 
 @login_required
 @user_passes_test(admin_required)
 def entry_update(request, pk, entry_pk):
     entry = get_object_or_404(ScheduleEntry, pk=entry_pk, schedule_id=pk)
-    form = ScheduleEntryForm(request.POST or None, instance=entry)
+    if entry.schedule.status in {ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED}:
+        messages.error(request, "Published and archived schedules are locked. Create or regenerate a draft version before making changes.")
+        return redirect("schedule_detail", pk=pk)
+    form = ScheduleEntryForm(request.POST or None, instance=entry, defer_credential_review=True, revision_user=request.user)
+    form.fields["assignment"].queryset = TeachingAssignment.objects.filter(term=entry.schedule.term)
     if request.method == "POST" and form.is_valid():
         return save_entry_with_credential_check(request, form, entry.schedule)
-    return render(request, "schedules/form.html", {"form": form, "title": "Edit Schedule Entry"})
+    from .services.corrections import placement_suggestions
+    suggestions = placement_suggestions(entry, request.user) if request.method == "GET" else []
+    return render(request, "schedules/form.html", {"form": form, "title": "Edit Schedule Entry", "tooltip_context": "schedule-entry",
+        "correction_entry": entry if request.method == "GET" and entry.schedule.status == ScheduleStatus.DRAFT else None,
+        "suggestions": suggestions})
 
 
 def save_entry_with_credential_check(request, form, schedule):
     entry = form.save(commit=False)
     entry.schedule = schedule
-    result = faculty_qualification(entry.assignment.faculty, entry.assignment.subject)
-    if not result["qualified"] and not entry.assignment.credential_overrides.exists():
+    result = faculty_qualification(entry.effective_faculty, entry.effective_subject, schedule.term)
+    valid_override = valid_credential_override(entry.assignment, entry.effective_faculty, entry.effective_subject)
+    if not result["qualified"] and not valid_override:
         if request.POST.get("credential_override_confirm") != "yes":
             return render_credential_override_confirmation(request, form, result)
         reason = request.POST.get("credential_override_reason", "").strip()
         if not reason:
             messages.error(request, "Override reason is required.")
             return render_credential_override_confirmation(request, form, result)
-        CredentialOverride.objects.create(
-            assignment=entry.assignment,
-            subject=entry.assignment.subject,
-            faculty=entry.assignment.faculty,
-            admin_user=request.user,
-            reason=reason,
-            missing_credentials=missing_credential_message(entry.assignment.faculty, entry.assignment.subject),
-        )
+    from .services.manual_edits import FIELDS, save_manual_entry
     try:
-        entry.full_clean()
+        save_manual_entry(schedule_id=schedule.pk, entry_id=entry.pk, actor=request.user,
+            revision=form.cleaned_data["revision"], proposed={field: getattr(entry, field) for field in FIELDS},
+            confirmed=request.POST.get("credential_override_confirm") == "yes",
+            reason=request.POST.get("credential_override_reason", ""))
     except ValidationError as exc:
         form.add_error(None, exc)
-        return render(request, "schedules/form.html", {"form": form, "title": "Edit Schedule Entry", "description": "Resolve the validation issues before saving this schedule entry."})
-    entry.save()
-    messages.success(request, "Schedule entry saved.")
-    return redirect("schedule_detail", pk=schedule.pk)
+    except DatabaseError:
+        logger.exception("Manual schedule save rejected for schedule %s", schedule.pk)
+        form.add_error(None, "The schedule changed or is busy. Nothing was saved. Reload the form and try again.")
+    except Exception:
+        logger.exception("Unexpected manual schedule save failure for schedule %s", schedule.pk)
+        form.add_error(None, "The schedule could not be saved. Nothing was changed. Reload the form and try again.")
+    else:
+        messages.success(request, "Schedule entry saved.")
+        return redirect("schedule_detail", pk=schedule.pk)
+    return render(request, "schedules/form.html", {"form": form, "title": "Edit Schedule Entry", "description": "Resolve the validation issues before saving this schedule entry.", "tooltip_context": "schedule-entry"})
 
 
 @login_required
 @user_passes_test(admin_required)
+@require_POST
 def publish_schedule(request, pk):
     schedule = get_object_or_404(Schedule, pk=pk)
-    conflicts = conflict_messages(list(schedule.entries.all()))
+    if schedule.status in {ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED}:
+        messages.error(request, "Published and archived schedules are locked.")
+        return redirect("schedule_detail", pk=pk)
+    conflicts = schedule_validation_messages(schedule)
     if conflicts:
         messages.error(request, "Resolve conflicts before publishing.")
-    else:
-        schedule.status = ScheduleStatus.PUBLISHED
-        schedule.published_at = timezone.now()
-        schedule.save()
-        messages.success(request, "Schedule published.")
+        return redirect("schedule_detail", pk=pk)
+    current = Schedule.objects.filter(term=schedule.term, status=ScheduleStatus.PUBLISHED).exclude(pk=schedule.pk).first()
+    if current and request.POST.get("replace_confirm") != "yes":
+        return render(request, "schedules/publish_replace_confirm.html", {
+            "schedule": schedule, "current": current,
+        })
+    from .services.publication import publish
+    try:
+        schedule, current = publish(schedule, request.user, request.POST.get("replace_confirm") == "yes")
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+        return redirect("schedule_detail", pk=pk)
+    except Exception:
+        logger.exception("Schedule publication failed for schedule %s", pk)
+        messages.error(request, "The schedule could not be published. Nothing was changed. Reload and try again.")
+        return redirect("schedule_detail", pk=pk)
+    messages.success(request, "Schedule published. The previous official schedule was archived." if current else "Schedule published.")
     return redirect("schedule_detail", pk=pk)
 
 
 @login_required
 def export_csv(request, pk):
-    schedule = get_object_or_404(Schedule, pk=pk)
+    schedule = visible_schedule(request, pk)
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="{schedule.name}.csv"'
     writer = csv.writer(response)
-    writer.writerow(["Day", "Start", "End", "Subject", "Section", "Faculty", "Room"])
-    for e in schedule.entries.select_related("assignment__subject", "assignment__section", "assignment__faculty", "room"):
-        writer.writerow([e.get_day_display(), e.start_time, e.end_time, e.assignment.subject.code, e.assignment.section, e.assignment.faculty, e.room.name])
+    writer.writerow(["Day", "Start", "End", "Course", "Section", "Faculty", "Room"])
+    entries = entries_visible_to_user(schedule.entries.select_related(
+        "assignment__subject", "assignment__section", "assignment__faculty", "room",
+        "subject_override", "section_override", "faculty_override"), request.user)
+    for e in historical_entries(entries):
+        writer.writerow([e.get_day_display(), e.start_time, e.end_time, e.effective_subject.code, e.effective_section, e.effective_faculty, e.room.name])
     return response
 
 
 @login_required
 def export_pdf(request, pk):
-    schedule = get_object_or_404(Schedule, pk=pk)
+    schedule = visible_schedule(request, pk)
     response = HttpResponse(content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="{schedule.name}.pdf"'
     pdf = canvas.Canvas(response, pagesize=letter)
     pdf.drawString(40, 750, schedule.name)
     y = 720
-    for e in schedule.entries.select_related("assignment__subject", "assignment__section", "assignment__faculty", "room"):
-        pdf.drawString(40, y, f"{e.get_day_display()} {e.start_time}-{e.end_time} {e.assignment.subject.code} {e.assignment.section} {e.assignment.faculty} {e.room.name}")
+    entries = entries_visible_to_user(schedule.entries.select_related(
+        "assignment__subject", "assignment__section", "assignment__faculty", "room",
+        "subject_override", "section_override", "faculty_override"), request.user)
+    for e in historical_entries(entries):
+        pdf.drawString(40, y, f"{e.get_day_display()} {e.start_time}-{e.end_time} {e.effective_subject.code} {e.effective_section} {e.effective_faculty} {e.room.name}")
         y -= 18
         if y < 50:
             pdf.showPage()
             y = 750
     pdf.save()
     return response
+
+
+@login_required
+@user_passes_test(admin_required)
+@require_POST
+def copy_schedule_to_draft(request, pk):
+    from .services.manual_edits import copy_to_draft
+    get_object_or_404(Schedule, pk=pk)
+    try:
+        draft = copy_to_draft(source_id=pk, actor=request.user)
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+    except Exception:
+        logger.exception("Schedule copy failed for schedule %s", pk)
+        messages.error(request, "The draft could not be created. Nothing was changed. Please try again.")
+    else:
+        messages.success(request, "Draft created. Review and edit its meetings before publishing.")
+        return redirect("schedule_detail", pk=draft.pk)
+    return redirect("schedule_detail", pk=pk)
+
+
+@login_required
+@user_passes_test(admin_required)
+def entry_remove(request, pk, entry_pk):
+    from .services.manual_edits import remove_manual_entry, revision_token
+    entry = get_object_or_404(ScheduleEntry, pk=entry_pk, schedule_id=pk)
+    if entry.schedule.status != ScheduleStatus.DRAFT:
+        messages.error(request, "Meetings can only be removed from draft schedules.")
+        return redirect("schedule_detail", pk=pk)
+    revision = request.POST.get("revision", "") if request.method == "POST" else revision_token(entry.schedule, request.user, entry)
+    if request.method == "POST":
+        try:
+            remove_manual_entry(schedule_id=pk, entry_id=entry_pk, actor=request.user, revision=revision,
+                                confirmed=request.POST.get("confirm_remove") == "yes")
+        except ValidationError as exc:
+            messages.error(request, " ".join(exc.messages))
+        except Exception:
+            logger.exception("Meeting removal failed for entry %s", entry_pk)
+            messages.error(request, "The meeting could not be removed. Nothing was changed. Reload and try again.")
+        else:
+            messages.success(request, "Meeting removed from this draft. Review missing meetings before publishing.")
+            return redirect("schedule_detail", pk=pk)
+    return render(request, "schedules/entry_remove_confirm.html", {"entry": entry, "schedule": entry.schedule, "revision": revision})
+
+
+@login_required
+@user_passes_test(admin_required)
+@require_POST
+def entry_apply_suggestion(request, pk, entry_pk):
+    from .services.corrections import apply_suggestion
+    get_object_or_404(ScheduleEntry, pk=entry_pk, schedule_id=pk)
+    try:
+        apply_suggestion(schedule_id=pk, entry_id=entry_pk, actor=request.user, token=request.POST.get("suggestion", ""))
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+    except Exception:
+        logger.exception("Suggested correction failed for entry %s", entry_pk)
+        messages.error(request, "The correction could not be saved. Nothing was changed. Reload and try again.")
+    else:
+        messages.success(request, "Suggested placement saved. Review any remaining schedule issues.")
+        return redirect("schedule_detail", pk=pk)
+    return redirect("entry_update", pk=pk, entry_pk=entry_pk)

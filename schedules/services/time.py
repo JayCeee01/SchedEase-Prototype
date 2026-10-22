@@ -1,13 +1,18 @@
 from datetime import time, timedelta, datetime
 
 SCHOOL_START = time(7, 0)
-SCHOOL_END = time(21, 0)
+SCHOOL_END = time(19, 0)
 SLOT_MINUTES = 60
 ALLOWED_DAYS = range(6)
 
 
 def add_hours(start, hours):
     dt = datetime.combine(datetime.today(), start) + timedelta(hours=hours)
+    return dt.time()
+
+
+def add_minutes(start, minutes):
+    dt = datetime.combine(datetime.today(), start) + timedelta(minutes=minutes)
     return dt.time()
 
 
@@ -25,3 +30,11 @@ def hourly_starts(duration_hours):
     while current + timedelta(hours=duration_hours) <= latest_end:
         yield current.time()
         current += timedelta(minutes=SLOT_MINUTES)
+
+
+def slot_starts(duration_minutes, slot_minutes=30):
+    current = datetime.combine(datetime.today(), SCHOOL_START)
+    latest_end = datetime.combine(datetime.today(), SCHOOL_END)
+    while current + timedelta(minutes=duration_minutes) <= latest_end:
+        yield current.time()
+        current += timedelta(minutes=slot_minutes)
