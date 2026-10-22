@@ -1,11 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
 <div class="page-hero"><div><p class="eyebrow">Schedule repair</p><h1>Review repair proposals</h1><p class="subtle">{{ schedule.name }} · {{ schedule.term }}</p></div><a class="button" href="{% url 'schedule_detail' schedule.pk %}">View draft</a></div>
 {% for error in errors %}<p class="toast error" role="alert">{{ error }}</p>{% endfor %}
 {% if setup %}<section class="panel"><h2>2. Find a feasible repair</h2>
 <p>Scenario: {{ setup.scenario.kind|title }}. Instructor and room restrictions repeat weekly for this draft and its future copies. One-time absences are not supported.</p>
-{% if setup.scenario.kind != 'sections' %}<p>Weekday {{ setup.scenario.day|add:1 }} (Monday = 1), {{ setup.scenario.start }}–{{ setup.scenario.end }}.</p>{% endif %}
-<form method="post">{% csrf_token %}<button class="primary" name="action" value="preview" data-loading-text="Finding proposals">Preview repair</button></form>
+{% if setup.scenario.kind != 'sections' %}<p>{{ unavailable_days }}, {{ setup.scenario.start }}–{{ setup.scenario.end }}.</p>{% endif %}
+<form data-repair-form method="post">{% csrf_token %}<button class="primary" name="action" value="preview" data-loading-text="Finding proposals">Preview repair</button></form>
 <p><a href="{% url 'repair_start' setup.source %}">Revise inputs in a new repair draft</a></p>
 </section>{% endif %}
 {% if result %}<section class="panel"><h2>3. Review changes</h2>
@@ -17,9 +18,10 @@
 {% for row in result.rows %}<article class="panel"><h3>{{ row.after.subject }} — {{ row.after.section }} · {{ row.state }}</h3>
 {% if row.before %}<p><strong>Before:</strong> {{ row.before.faculty }} · {{ row.before.room }} · Weekday {{ row.before.day|add:1 }}, {{ row.before.start }}–{{ row.before.end }}</p>{% endif %}
 <p><strong>Proposed:</strong> {{ row.after.faculty }} · {{ row.after.room }} · Weekday {{ row.after.day|add:1 }}, {{ row.after.start }}–{{ row.after.end }}</p><p class="subtle">{{ row.reason }}</p></article>{% endfor %}
-<form method="post">{% csrf_token %}<input type="hidden" name="token" value="{{ result.token }}">
+<form data-repair-form method="post">{% csrf_token %}<input type="hidden" name="token" value="{{ result.token }}">
 <p><label><input type="checkbox" name="confirm" value="yes" required> I approve all displayed changes, including any instructor overrides, for this draft.</label></p>
 <div class="toolbar form-actions"><button class="primary" name="action" value="apply" data-loading-text="Applying repair">Apply to draft</button></div></form>
 {% else %}<h3>Administrator review required</h3><ul>{% for item in result.affected_classes %}<li>{{ item }}</li>{% endfor %}</ul><ul>{% for reason in result.reasons %}<li>{{ reason }}</li>{% endfor %}</ul><p>No schedule changes were saved.</p>{% endif %}
 </section>{% endif %}
+<script src="{% static 'js/smart-repair.js' %}"></script>
 {% endblock %}

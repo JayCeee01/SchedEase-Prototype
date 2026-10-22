@@ -9,6 +9,13 @@ from .services import smart_repair as service
 from .services.conflicts import schedule_validation_messages
 
 
+def measurement(scenario, result):
+    import json
+    print('T10 measurement '+json.dumps(dict(scenario=scenario,success=result['success'],
+        counts=result.get('counts'),unresolved=result['unresolved'],hard_violations=result.get('hard_violations'),
+        seconds=round(result['seconds'],4)),sort_keys=True))
+
+
 class SmartRepairTests(SchedulingDefectFixture):
     def setUp(self):
         self.admin = User.objects.create_superuser(username='repair-admin', password='test')
@@ -39,6 +46,7 @@ class SmartRepairTests(SchedulingDefectFixture):
         alternate = m.Room.objects.create(name='Alternative', room_type='LECTURE', capacity=30)
         draft = self.draft()
         result = service.propose(draft.pk, self.admin)
+        measurement('same-time alternate room',result)
         self.assertTrue(result['success'], result)
         self.assertEqual(result['counts']['time_changes'], 0)
         self.assertEqual(result['counts']['room_changes'], 1)
@@ -59,7 +67,7 @@ class SmartRepairTests(SchedulingDefectFixture):
             self.assertEqual(result['counts']['instructor_changes'], 0)
             service.apply(draft.pk, self.admin, result['token'], confirmed=True)
             self.assert_safe(draft)
-            print('T10 scenario', kind, result['counts'], 'seconds', round(result['seconds'], 4))
+            measurement(kind+' time change',result)
 
     def replacement(self, **kwargs):
         self.hours.end_time=time(10); self.hours.save()
@@ -70,18 +78,33 @@ class SmartRepairTests(SchedulingDefectFixture):
     def test_explicit_replacement_only_changes_draft_entry(self):
         draft, other=self.replacement()
         result=service.propose(draft.pk,self.admin)
+        measurement('approved replacement',result)
         self.assertTrue(result['success'], result)
         self.assertEqual(result['counts']['instructor_changes'],1)
         self.assertEqual(result['counts']['time_changes'],0)
         service.apply(draft.pk,self.admin,result['token'],confirmed=True)
         self.assertEqual(draft.entries.get(assignment=self.meetings[0]).effective_faculty.pk,other.pk)
         self.assert_safe(draft)
+        audit=draft.edit_audits.get(new_values__action='smart_repair_apply')
+        override=audit.new_values['instructor_overrides'][0]
+        self.assertEqual(override['original_faculty_id'],self.faculty.pk)
+        self.assertEqual(override['replacement_faculty_id'],other.pk)
+        self.assertEqual(override['meeting_id'],self.meetings[0].pk)
+        self.assertTrue(override['reason'])
+        self.assertEqual(audit.user_id,self.admin.pk)
+        self.assertIsNotNone(audit.created_at)
+        from .services.publication import publish
+        draft.refresh_from_db()
+        publish(draft,self.admin,replace_confirmed=True)
+        self.assertEqual(draft.entries.get(assignment=self.meetings[0]).effective_faculty.pk,other.pk)
+        self.assertEqual(list(self.source.entries.values()),self.original)
 
     def test_unresolved_does_not_modify_entries(self):
         self.hours.end_time=time(10);self.hours.save()
         draft=self.draft()
         before=list(draft.entries.values())
         result=service.propose(draft.pk,self.admin)
+        measurement('no feasible room/time',result)
         self.assertFalse(result['success'])
         self.assertEqual(result['unresolved'],1)
         self.assertIsNone(result['token'])
@@ -127,6 +150,39 @@ class SmartRepairTests(SchedulingDefectFixture):
         with self.assertRaises(ValidationError):service.propose(draft.pk,user)
         with self.assertRaises(ValidationError):service.create_draft(self.source.pk,user,{})
 
+    def test_multiple_days_enforced_without_blocking_other_days_or_adjacent_times(self):
+        from .services.repair_rules import entry_errors
+        for kind in ('room','faculty'):
+            draft=self.draft(kind,days=[2,0,2])
+            self.assertEqual(service.setup(draft)['scenario']['days'],[0,2])
+            entry=draft.entries.first()
+            for day,blocked in [(0,True),(2,True),(1,False)]:
+                entry.day=day
+                self.assertEqual(bool(entry_errors(entry)),blocked)
+            entry.day=2;entry.start_time=time(9);entry.end_time=time(10)
+            self.assertEqual(entry_errors(entry),[])
+            result=service.propose(draft.pk,self.admin)
+            self.assertTrue(result['success'],result)
+            service.apply(draft.pk,self.admin,result['token'],confirmed=True)
+            self.assert_safe(draft)
+
+    def test_missing_or_invalid_days_rejected_and_legacy_rules_remain_readable(self):
+        from .services.repair_rules import entry_errors
+        for days in ([],[6],['Monday'],[True]):
+            with self.assertRaises(ValidationError):self.draft(days=days)
+        draft=self.draft()
+        audit=draft.edit_audits.get(new_values__action='smart_repair_setup')
+        scenario=audit.new_values['scenario'];scenario.pop('days');scenario['day']=0
+        audit.save(update_fields=['new_values'])
+        self.assertTrue(entry_errors(draft.entries.first()))
+        self.assertTrue(service.propose(draft.pk,self.admin)['success'])
+
+    def test_form_requires_a_day_for_outages(self):
+        from .repair_views import RepairForm
+        form=RepairForm(self.source,dict(kind='room',room=self.room.pk,start='08:00',end='09:00',recurring='on'))
+        self.assertFalse(form.is_valid())
+        self.assertIn('at least one day',str(form.errors))
+
     def test_replacement_workload_capacity_blocks_entire_batch(self):
         draft, other=self.replacement(max_weekly_hours=1)
         # An existing authorized override already consumes the replacement's limit.
@@ -135,6 +191,7 @@ class SmartRepairTests(SchedulingDefectFixture):
         result=service.propose(draft.pk,self.admin)
         self.assertFalse(result['success'],result)
         self.assertTrue(any('weekly workload' in reason for reason in result['reasons']))
+        measurement('replacement lacks capacity',result)
         self.assertEqual(draft.entries.get(assignment=self.meetings[0]).effective_faculty.pk,self.faculty.pk)
 
     def test_unqualified_replacement_is_not_used(self):
@@ -163,7 +220,7 @@ class SmartRepairTests(SchedulingDefectFixture):
         self.assertEqual(result['counts']['time_changes'],0)
         service.apply(draft.pk,self.admin,result['token'],confirmed=True)
         self.assert_safe(draft)
-        print('T10 new section',result['counts'],'seconds',round(result['seconds'],4))
+        measurement('additional section',result)
 
     def test_limited_rearrangement_requires_authorization(self):
         self.hours.end_time=time(11);self.hours.save()
@@ -194,7 +251,7 @@ class SmartRepairTests(SchedulingDefectFixture):
         url=f'/schedules/{self.source.pk}/repair/'
         response=self.client.get(url)
         self.assertContains(response,'Create a repair draft')
-        payload=dict(kind='room',room=self.room.pk,day=0,start='08:00',end='09:00',recurring='on')
+        payload=dict(kind='room',room=self.room.pk,days=[0,2],start='08:00',end='09:00',recurring='on')
         self.assertEqual(self.client.post(url,payload).status_code,302)
         draft=m.Schedule.objects.get(status='DRAFT')
         review=f'/schedules/{draft.pk}/repair/review/'

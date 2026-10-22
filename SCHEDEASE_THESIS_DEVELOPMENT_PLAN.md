@@ -28,7 +28,7 @@ All service paths in this table are under `schedules/services/` unless otherwise
 | **O4: significantly shorten preparation time - Not Yet Verified** | `reproducibility.py`, generation-run models, `schedules/benchmarks/`, `schedules/benchmark_reports/`, benchmark commands and `GA_BENCHMARKS.md`/`GA_EVALUATION_REPORTS.md` provide seeds, parameters, elapsed measurements and reports. Tests: `test_benchmarks.py`, `test_benchmark_reports.py`. | GA runtime can be measured. No documented matched manual preparation study establishing significant end-to-end improvement was located in the inspected evidence. Solver runtime excludes data preparation, corrections and final approval. | T11: matched workloads/quality, consented time recording, defined start/stop points, repetitions, hardware/version/seed/configuration, manual baseline and justified effect/significance analysis. Include failed/infeasible runs; never invent human timing data. |
 | **O5: fair instructor load distribution - Partially Verified** | `models.py:Faculty.max_weekly_hours`; `ga.py` preflight totals assigned meeting minutes and rejects overload. `_distribution_penalty` scores faculty/section daily concentration, faculty idle gaps and section gaps. Tests: `test_ga_soft_scoring.py` and generation/preflight tests. | Faculty is fixed on the input meeting; `Gene` selects assignment/time/room, not a new teacher. Temporal spreading and maximum-hour enforcement are **not balancing total load between instructors**. The original timetable GA has no inter-instructor fairness objective. T8 now provides a separate administrator-approved allocation step using workload-percentage variance. | T8: approved utilization-based fairness and explicitly selected reassignment scope; implemented and tested feasible batch allocation without treating unequal teaching hours as unfair. Broader institutional effectiveness still requires representative evaluation. T6 workload presentation and the scoped T8 proposal workflow are complete. Representative institutional fairness effectiveness and broader scheduled-term allocation remain unverified; see T8 evidence below. |
 | **O6: room utilization and requirements - Partially Verified** | `placements.py:feasible_placements`, `conflicts.py:individual_entry_errors` enforce active rooms, capacity, type and availability. `room_utilization.py` reports available/scheduled hours, seat metrics and planning assumptions. Tests: `test_room_availability_reporting.py`, `test_availability.py`, `test_ga_soft_scoring.py` and existing room checks. | `ga.py:fitness` penalizes excess capacity; `_room_utilization_penalty` discourages unused suitable rooms and uneven used-room hours. This heuristic is not proof of optimal use. Room model has name/type/capacity/active fields, **no department ownership/eligibility restriction**; department report filtering is not room-allocation enforcement. | T9 completed: retained existing shared-room policy, verified constraints and deterministic capacity-fit/distribution behavior, and corrected effective-section seat/department reporting. Controlled fixture improves seat occupancy 20% to 66.7% with room-time utilization unchanged at 50%. Representative institutional impact and consolidation-versus-spreading preferences remain unverified; no department-exclusive policy was introduced. |
-| **O7: sudden changes with limited disruption - Partially Verified** | `manual_edits.py:copy_to_draft`, `save_manual_entry`, `remove_manual_entry`; `corrections.py:placement_suggestions`, `apply_suggestion`; finalized protection and snapshots preserve originals. Tests: `test_copy_remove.py`, `test_corrections.py`, `test_snapshots.py`, `test_manual_transactions.py`. | `repair.py:repair_candidate` repairs GA candidates with a bounded search; it is not a published-schedule change-event service. No explicit incumbent-schedule disruption objective or absence/additional-section rescheduling workflow was found. Fixed-placement feasibility was evaluated in `FIXED_MEETING_PLACEMENTS_EVALUATION.md`, not proof of a complete operational workflow. | T10: approved absence/room outage/additional-section scenarios, protected originals, affected-set selection, feasible draft alternatives, audit/revision safeguards and measured unchanged assignments plus response time. Full regeneration alone does not prove limited disruption. |
+| **O7: sudden changes with limited disruption - Partially Verified** | T10 `smart_repair.py`, `repair_rules.py`, administrator repair views; existing copy/manual transaction/publication safeguards. Twenty-two focused tests include multi-day rules, legacy compatibility, approved draft-entry overrides, recurring outages, new sections, atomic rejection and concurrent application. | Seven reproducible synthetic scenarios measured; weekly recurrence only, bounded search, SQLite application. No matched full-regeneration comparison or representative institutional effectiveness study. | T10 completed for the scoped workflow; see measurements and limitations below. T11 is Manual Evaluation Pending; no benchmarking implementation was authorized. |
 
 ## Faculty, Student and Administrator capability audit
 
@@ -55,7 +55,7 @@ Plan a private reporter-owned list/detail view and an administrator-only review 
 
 ## B. New thesis development progress
 
-**9/16 Completed (T1-T9); 1 In Progress (T10); 3 Not Started (T11-T13); 3 Deferred (T14-T16).** T14 is optional. Existing functionality is credited in the audit, not by prematurely marking its future verification task complete. Priorities order work within the specified phases; they do not authorize parallel implementation or bypass dependencies.
+**14/16 Completed (T1-T10, T12-T13, T15-T16); T11 Manual Evaluation Pending; T14 Deferred.** T14 is optional. Existing functionality is credited in the audit, not by prematurely marking its future verification task complete. Priorities order work within the specified phases; they do not authorize parallel implementation or bypass dependencies.
 
 | Task / phase | Status / priority | Objectives | Dependencies | Acceptance criteria and evidence/reuse |
 | --- | --- | --- | --- | --- |
@@ -68,19 +68,19 @@ Plan a private reporter-owned list/detail view and an administrator-only review 
 | T7 / 2: shared concerns | Completed / High | O1, O3, O7 | T5, T6 | Implement the approved concern contract above: all five categories, reporter-private tracking, admin review/status/response/audit, authorized resolution references and zero automatic schedule mutation. Test ownership/permissions, invalid references and CSRF. |
 | T8 / 3: load balancing | Completed / High | O5 | T6; T7 phase gate; approved fairness/reassignment policy | Measure normalized loads and evaluate an actual load-balancing objective/strategy within qualifications, availability and limits; report feasible comparisons. If faculty allocation stays fixed, document the objective gap rather than relabeling day spread as fairness. |
 | T9 / 3: room optimization | Completed / High | O6 | T4, T8 | Validate capacity/type/availability/department rules; measure baseline and optimized utilization including unused capacity; document denominator and spreading/consolidation tradeoff. Reuse existing room analytics and GA terms. |
-| T10 / 3: targeted rescheduling | In Progress / High | O7 | T7, T8, T9 | Handle absence, outage and new-section scenarios on drafts, retain originals/audit and minimize defined movement costs; report changed/unchanged entries, feasibility and response time. Reuse corrections, copy and bounded repair; do not modify snapshots. |
-| T11 / 3: performance/manual study | Not Started / High | O4, supporting O5-O7 | T2-T10; agreed manual-study protocol | Measure full preparation workflow against documented matched manual cases and repeated seeded solver runs; report failures, quality, distributions/effect sizes and limitations. Reuse benchmark/report tooling; no invented timing or unsupported significance claims. |
-| T12 / 4: role/integration tests | Not Started / Critical | O1-O3, O7; all roles | T5-T11 | Admin/Faculty/Student happy paths and unauthorized direct reads/writes, concern ownership, CSRF, stale edits and finalized protections pass; record actual account/browser evidence and regression results. Reuse existing role/security suites. |
-| T13 / 4: thesis acceptance/evidence | Not Started / Critical | O1-O7 | T11, T12 | Each objective has explicit pass/fail criteria, reproducible artifacts, data provenance, measured outcomes and approved limitations; no objective marked fulfilled solely from UI/model existence. Collect cases, seeds/configs, conflict counts, load/utilization metrics, timings and disruption comparisons. |
+| T10 / 3: targeted rescheduling | Completed / High | O7 | T7, T8, T9 | Handle absence, outage and new-section scenarios on drafts, retain originals/audit and minimize defined movement costs; report changed/unchanged entries, feasibility and response time. Reuse corrections, copy and bounded repair; do not modify snapshots. |
+| T11 / 3: performance/manual study | Manual Evaluation Pending / High | O4, supporting O5-O7 | T2-T10; agreed manual-study protocol | Measure full preparation workflow against documented matched manual cases and repeated seeded solver runs; report failures, quality, distributions/effect sizes and limitations. Reuse benchmark/report tooling; no invented timing or unsupported significance claims. |
+| T12 / 4: role/integration tests | Completed / Critical | O1-O3, O7; all roles | T5-T11 | Admin/Faculty/Student happy paths and unauthorized direct reads/writes, concern ownership, CSRF, stale edits and finalized protections pass; record actual account/browser evidence and regression results. Reuse existing role/security suites. |
+| T13 / 4: thesis acceptance/evidence | Completed (evidence review) / Critical | O1-O7 | T11, T12 | Each objective has explicit pass/fail criteria, reproducible artifacts, data provenance, measured outcomes and approved limitations; no objective marked fulfilled solely from UI/model existence. Collect cases, seeds/configs, conflict counts, load/utilization metrics, timings and disruption comparisons. |
 | T14 / 5: availability requests/notifications | Deferred (optional) / Low | O3, O7 | T13; explicit approval and confirmed need | If authorized, define request approval/notifications/privacy/failure handling; requests do not silently rewrite finalized schedules. Not required to count core thesis progress complete unless scope is formally amended. |
-| T15 / 5: essential administrator UI | Deferred / Medium | Supports O1-O7 | T13; T14 only if adopted and relevant | Reassess historical UI tasks 3.2 onward against actual workflow blockers; preserve 9/24 baseline and implement only approved essentials, with no automatic credit for old tasks. |
-| T16 / 5: final usability/accessibility | Deferred / Medium | Supports O1-O7 | T13, T15; adopted T14 | Role-based populated workflows across both themes, target widths, keyboard/focus, assistive technology and device/browser matrix verified; document unresolved limitations. Keep this distinct from functional thesis acceptance in T13. |
+| T15 / 5: essential administrator UI | Completed / Medium | Supports O1-O7 | T13; T14 only if adopted and relevant | Reassess historical UI tasks 3.2 onward against actual workflow blockers; preserve 9/24 baseline and implement only approved essentials, with no automatic credit for old tasks. |
+| T16 / 5: final usability/accessibility | Completed (focused QA) / Medium | Supports O1-O7 | T13, T15; adopted T14 | Role-based populated workflows across both themes, target widths, keyboard/focus, assistive technology and device/browser matrix verified; document unresolved limitations. Keep this distinct from functional thesis acceptance in T13. |
 
 ## Policy decisions and next action
 
 Resolve decisions in their owning task before coding dependent changes: O1 meaning of subject conflicts/curriculum coverage (T2); cross-term collision scope (T3); individual vs section availability and approved default policy (T4); workload units/contracts and permission to reassign teachers (T8); department/shared-room policy and utilization goal (T9); allowable displacement and absence/change semantics (T10); manual-study population, protocol and significance claim (T11). These are open questions, not assumed requirements or permission to change academic rules.
 
-**T9 is Completed. T10 is In Progress; the repair-specific instructor-override policy is awaiting clarification.** T2 verified the existing conflict/publication stack without application changes; see the verification record below. Follow the specified phase order. Do not resume UI Task 3.2 automatically or begin T11 without approval.
+**T10 is Completed for the bounded recurring-repair scope; O7 remains Partially Verified pending representative operational evidence.** T2 verified the existing conflict/publication stack without application changes; see the verification record below. Follow the specified phase order. Do not resume UI Task 3.2 automatically or begin T11 without approval.
 
 ## T1 verification and limitations
 
@@ -391,33 +391,220 @@ Limitations: these are controlled synthetic fixtures rather than representative 
 **T9 Completed; O6 Partially Verified; roadmap 9/16.** No pending implementation in the stated scoped verification; institutional effectiveness and any future room ownership/tradeoff policy remain explicit limitations. T10 has not started.
 
 
-## T10 preparation and policy checkpoint (2026-10-22)
+## T10 completion record (2026-10-22)
 
-**T10 In Progress; O7 Partially Verified; roadmap remains 9/16 completed.** Existing uncommitted T9 reporting changes and tests were preserved. This session inspected only the relevant repair, copying, manual-edit, availability, workload and publication boundaries. No Smart Repair implementation, database migration or new scenario benchmark is claimed at this checkpoint.
+**T10 Completed for bounded recurring repair; O7 Partially Verified; roadmap 10/16.** T11 and later tasks were not started. No working database changes, migrations, commits, push or deployment were performed by this task.
 
-### Verified reusable foundations
+### Recovered work and approved decision
 
-- `manual_edits.copy_to_draft` creates independent draft entries while sharing existing parent assignments/meetings; it preserves source entries, revisions, publication history and snapshots.
-- `manual_edit_transaction`, `save_manual_entry` and signed revision tokens provide administrator checks, SQLite writer serialization, transactional validation and audit recording.
-- `corrections.placement_suggestions` searches valid room/time alternatives without writes, and applies signed proposals through the normal manual-save service. It is a per-entry correction helper, not coordinated disruption minimization.
-- `repair.repair_candidate` reuses feasible domains and joint resource conflicts for bounded GA candidate repair. It freezes initially unaffected genes and rejects new overlap pairs. It does not yet implement recurring outage scenarios, additional-section insertion, a source-schedule preservation metric or an operational Smart Repair preview.
-- Shared validation and publication already enforce credentials, weekly workload, availability, curriculum meeting totals, resource conflicts and overlapping published terms. Publication is a separate authorized action and must remain so.
-- Availability records contain resource, weekday, start/end time and kind, without a date-specific exception field. One-time absences cannot safely be interpreted as term-wide recurring changes. Additional-section requirements must come from actual authorized TeachingAssignment records, and publication requires the term's required meetings rather than invented curriculum.
+The earlier checkpoint inspected Copy to Draft, manual transactions, GA repair, qualifications, availability, publication and T8 locks. The initial 66 foundation tests passed. The interrupted implementation subsequently added the repair service, recurring rules, administrator screens, and 19 focused tests. The recovered regression log records **124 passing tests in 69.453s** (T10, copying/removal, corrections, GA repair, manual transactions, cross-term double booking, section availability and T8 workload balancing). These files were already present in the user's latest local commit when work resumed; no reset or reimplementation was performed.
 
-### Instructor replacement policy decision
+The user explicitly approved **draft-entry instructor overrides**, and reaffirmed this in the resume request. T8's general locked-parent policy is unchanged. Only selected affected meetings and an administrator-selected group of at most three comparable instructors from the original instructor's department can be considered. A separate checked approval is required to apply the displayed batch. Qualifications (including existing matching credential overrides), availability, weekly workload and resource conflicts remain mandatory.
 
-T10 explicitly requires respecting T8's locked-assignment policy. T8 disallows parent reassignment whenever meetings are referenced by any schedule. Copy to Draft retains those references, so simply invoking T8 allocation on a repair draft cannot satisfy the replacement-instructor scenario.
+Work finished after resumption: explicit original/replacement instructor identity and reason in the approval audit; publication persistence assertions; comparison across equally sized authorized rearrangement scopes; a candidate-domain safety bound; narrowly scoped UI selectors and duplicate-submit handling; browser verification; seven-scenario measurement output; and this roadmap update.
 
-The existing manual correction workflow separately permits an explicitly approved **draft-entry faculty override**, leaving its parent faculty and the published original unchanged. This is verified by `test_copy_remove.py:test_edit_copy_does_not_edit_source_or_definitions`. The outstanding policy question is whether the Smart Repair recommender may propose this existing draft-only override for a locked parent, or must classify it as non-reassignable and escalate. This is a policy distinction, not a request to weaken database protections or automatically change instructors.
+### Workflow and reuse
 
-An asynchronous clarification was sent with these choices: allow explicitly approved draft-entry overrides; or keep locked assignments non-reassignable. Do not infer the answer from elapsed time. Until resolved, no new instructor-replacement behavior is introduced. With override permission, the implementation must still require an explicitly selected comparable/qualified replacement group, check effective weekly loads, retain independent approval and revalidate the full repaired draft before publication. Without it, same-instructor time/room repair and permitted limited rearrangement remain possible; locked replacement cases must be reported accurately as unresolved.
+1. Open a published schedule and select **Smart Repair**.
+2. Describe a weekly recurring instructor/room outage, or select additional sections with recorded teaching assignments. Optional replacement authorization and limited rearrangement remain explicit.
+3. Create an independently editable repair draft using `copy_to_draft`.
+4. Preview affected classes, original/proposed placements, reasons, preserved/modified/added/unresolved counts, time/room/instructor changes, preservation percentage, hard violations and search time.
+5. Explicitly approve the complete proposal. Atomic application uses the existing manual-edit revision transaction. It does not publish.
+6. Review the draft and use the existing publication/replacement confirmation workflow.
 
-### Verification and remaining work
+The service reuses `AvailabilityPolicy`, credential eligibility, shared entry validation (including overlapping published terms), `PlacementOccupancy`, `Gene`, meeting requirement checks, existing GA soft scoring as the final tie breaker, protected audit records, and normal copy/manual/publication services. It adds bounded incumbent search because the existing GA candidate repair helper cannot represent draft-entry instructor overrides or approved change-event rules. GA weights, generation, parent assignments, T8 allocation and publication policies are unchanged.
 
-Executed existing focused foundations: `test_copy_remove`, `test_corrections`, `test_ga_repair`, `test_manual_transactions`: **66 passed in 34.404s**, zero failures/skips/expected failures/unexpected successes. Logged mocked audit/database errors belong to passing rollback tests. The existing warm-domain GA microbenchmark reported 20/20 candidate repairs; this is not evidence of operational T10 scenario effectiveness or a full-regeneration comparison.
+Recurring restrictions are stored as `smart_repair_setup` records in the existing schedule audit trail, not global faculty/room availability. Shared entry validation enforces them during later manual edits and publication. Copy lineage carries them into subsequent copies. No new model or migration is needed. The original published schedule's availability and placements are unchanged.
 
-`manage.py check` passed; `makemigrations --check --dry-run` found no changes. No full-suite result is claimed. Only this plan was changed for T10, preserving the already-uncommitted T9 files.
+### Search and approval safeguards
 
-Outstanding implementation: approved recurring scenario representation and enforcement through later edits/publication; affected-set detection; staged direct and bounded rearrangement proposals; instructor-replacement policy integration; new-section insertion; reproducible disruption metrics and timings; signed/stale-safe atomic application; administrator UI and before/after comparisons; no-solution explanations; new scenario, permission, rollback and browser tests. A suitable disruption comparison should first require zero hard violations, preserve unrelated meetings, then compare time changes, room changes and approved instructor changes with scenario-specific priority handling; no arbitrary policy weights are approved at this checkpoint.
+- Direct repair freezes unaffected entries and retains instructors. Room outages favor a suitable alternate room at the same time before moving a class.
+- Only after direct repair fails does the service consider explicitly selected replacement instructors. No replacement can exceed its effective weekly teaching limit.
+- If authorized, limited rearrangement considers moving one, then two, of the first six related meetings in stable meeting-ID order. It compares all explored scopes of the same size before widening.
+- Within each authorized priority stage, feasible proposals compare `(unaffected changes, time changes, room changes, instructor changes, negative existing GA soft score)` lexicographically. Feasibility is mandatory; weights cannot buy permission to violate constraints.
+- Search is deterministic under unchanged inputs. Limits: 40 meetings per draft, 100,000 candidate checks and 6,000 joint-search attempts. Candidate starts include the existing half-hour grid, original times and availability/outage boundaries. A limit does not prove infeasibility or global optimality.
+- Additional sections use existing term teaching assignments only; missing required classes prevent a complete repair. No curriculum or instructor allocation is invented.
+- Signed previews bind the administrator, draft, revision and scheduling-input fingerprint, and expire after 30 minutes. Changed inputs/source state, replay and other-user tokens cannot silently apply.
+- Application reserves the SQLite writer, rechecks the revision/inputs and validates the whole resulting draft inside the transaction. Failed validation rolls back placements, revision and audit records. Separate-connection concurrent apply testing verifies that only one competing application commits; the other is stale or receives a lock rejection.
+- The batch audit records original/replacement instructor IDs and names, entry and meeting IDs, recurring scenario and reason; its existing user/timestamp fields record approval. Publication retains the effective override rather than reverting to the shared parent instructor. Original finalized entries and their history remain protected.
+- Admin-only GET/POST endpoints, CSRF, explicit confirmation and backend permissions are tested. Reporters cannot access repair drafts. There is no automatic publication.
 
-Do not mark T10 complete or advance to T11. No runtime code, records, commits, push or deployment were changed for T10.
+### Reproducible measurements
+
+`test_smart_repair.py` uses a synthetic two-meeting published timetable (Monday 08:00-09:00 and 09:00-10:00), recorded room/availability constraints and explicit scenario variations. No stochastic full regeneration is used. Measurements below are from the final focused run; seconds are machine-dependent, not service-level guarantees.
+
+| Scenario | Preserved original meetings | Modified / added | Time / room / instructor changes | Hard violations in proposal | Unresolved | Search seconds |
+| --- | --- | --- | --- | --- | --- | --- |
+| Instructor outage, same instructor moved | 1/2 (50%) | 1 / 0 | 1 / 0 / 0 | 0 | 0 | 0.0555 |
+| Approved eligible instructor replacement | 1/2 (50%) | 1 / 0 | 0 / 0 / 1 | 0 | 0 | 0.0784 |
+| Qualified replacement lacks remaining capacity | No feasible proposal | No changes applied | Not applicable | Not applicable | 1 | 0.0578 |
+| Room outage, suitable same-time alternative | 1/2 (50%) | 1 / 0 | 0 / 1 / 0 | 0 | 0 | 0.1365 |
+| Room outage requiring a time change | 1/2 (50%) | 1 / 0 | 1 / 0 / 0 | 0 | 0 | 0.0481 |
+| Additional authorized section | 2/2 (100%) | 0 / 1 | 0 / 0 / 0 | 0 | 0 | 0.0565 |
+| No feasible room/time within authorized scope | No feasible proposal | No changes applied | Not applicable | Not applicable | 1 | 0.0474 |
+
+Time/room/instructor change counts refer to pre-existing meetings; additions are counted separately. The preservation denominator is the draft's incumbent meeting set at preview time. Failed searches do not receive a fabricated zero-hard-violation score. Workload/qualification/room-type/capacity reasons come from actual checks; a bounded-search failure is explicitly scoped and does not claim mathematical infeasibility. Retry can create a new repair draft with revised inputs. No superiority to full regeneration, production-scale timing or institutional effectiveness is claimed.
+
+### Verification
+
+- Recovered broad regression: **124 passed**, 69.453s; no failures/skips/expected failures. Intentional mocked error logging belongs to passing rollback/diagnostic tests.
+- Shared validation regression and earlier T10 checks: **25 passed**, 37.680s, including 10 existing validation-performance/parity tests; query budgets and diagnostics remained intact.
+- Final changed T10 functionality: **19 passed**, 15.194s, including separate-thread/connection concurrency, explicit override audit/publication persistence, unresolved workload, source changes, stale/replayed previews, permissions/CSRF, inherited rules, alternatives, new sections, bounded search and limited rearrangement. No failures, skips, expected failures or unexpected successes. The final direct command exited successfully (0).
+- `manage.py check`: no issues. `makemigrations --check --dry-run`: no changes. `git diff --check`: passed (line-ending conversion notices are not whitespace failures).
+- Browser fixture: `tests/browser/render_repair.py` renders authenticated Django setup, successful preview and unresolved responses using an isolated in-memory database. `run_interactions.py --repair` passed **25 checks x 8 combinations = 200 checks**, at 1360/768/500/390px in both themes. Checked headings, contained controls/no page overflow, scenario visibility, checkbox focus/selection retention, unassumed authorization, disabled irrelevant replacements, before/after content, unavailable apply on failure and action-preserving duplicate-submit handling. Initial browser failures exposed and led to fixing an overbroad sidebar-details selector; the final run passed.
+- Light Mode: all four widths passed; desktop screenshot inspected for layout/readability. Dark Mode: all four widths passed; mobile screenshot inspected for layout/readability. Existing semantic styles/theme persistence are reused. This is local Chrome evidence, not an assistive-technology or cross-browser certification.
+
+Reproduce with `.\.venv\Scripts\python.exe manage.py test schedules.test_smart_repair --noinput`. Browser verification uses `.\.venv\Scripts\python.exe tests/browser/render_repair.py`, then `.\.venv\Scripts\python.exe tests/browser/run_interactions.py --repair`. Browser HTML/images are disposable generated artifacts. The renderer migrates only its isolated in-memory fixture; it never migrates the working database. No new full-suite result is claimed.
+
+### Files and remaining limitations
+
+T10 files: `schedules/services/smart_repair.py`, `repair_rules.py`, the small `conflicts.py` validation integration; `schedules/repair_views.py`, routes in `schedules/urls.py`; `templates/schedules/repair_start.html`, `repair_review.html`, the Smart Repair link in `schedule_detail.html`; `static/js/smart-repair.js`; `schedules/test_smart_repair.py`; `tests/browser/render_repair.py` and the `--repair` runner option; this plan. Existing T9 changes were preserved.
+
+Weekly recurrence only: one-day absence, holidays and date-specific exceptions remain unsupported. Inherited recurring restrictions persist for the repaired schedule lineage; global availability is not changed. Scope revision starts a new draft from the source rather than silently deleting prior audit rules. Application is deliberately restricted to the tested SQLite backend. Fingerprints conservatively invalidate on unrelated scheduling-data changes. Search is bounded and may miss feasible placements outside its time grid, related-meeting subset or attempt limits. Representative school datasets, matched full-regeneration comparisons, other database engines and broader accessibility/browser testing remain unverified. These are explicit O7 evidence limitations, not permission to start T11.
+
+### T10 follow-up: multiple unavailable days
+
+Replaced the single weekday selector with Monday-Saturday checkboxes for room and instructor outages. One start/end time applies to all selected days. Backend validation requires at least one valid weekday; preview, search and later entry/publication validation enforce every selected day. Existing single-day audit records remain readable without migration. The preview lists weekday names. Different times for individual days are not part of this change.
+
+Verification: 22 focused repair tests passed (15.599s), including multi-day rules, unaffected days, adjacent periods, invalid/empty selections and legacy records. Browser checks passed 26 assertions at each of four widths in both themes (208 total). Django system checks, migration dry-run and whitespace checks passed. No working database changes.
+
+## T12 cross-role verification (2026-10-22)
+
+**Completed for the requested focused verification scope; roadmap 11/16.** The user explicitly authorized T12 while deferring T11 measurements. **T11: Manual Evaluation Pending. O4: Not Yet Verified** until actual matched manual/automated comparison measurements exist. No T11 implementation or T13 work was performed.
+
+### Evidence and results
+
+Executed existing tests only; no duplicate tests or new infrastructure:
+
+- `test_admin_publication_security` (17): role/model permissions, direct admin and application endpoints, escalation attempts, CSRF/POST, authorized publication/snapshots, invalid publication rejection and scoped exports.
+- `test_student_timetable` (4): real HTTP login, published timetable details, draft exclusion, empty/missing-profile states, rejected mutation routes and unchanged records/audits.
+- `test_faculty_timetable` (5): HTTP login, own published timetable/workload, effective instructor filtering, read-only scheduling, availability ownership and rejected cross-owner GET/POST.
+- `test_concerns` (10): Student/Faculty submissions, published/authorized references, reporter-only visibility, administrator review/status/history, stale/invalid requests, safe text, CSRF and schedule immutability.
+- `test_diagnostic_access` (15): role-scoped diagnostics, private metadata exclusion from timetables/exports, direct JSON and correction endpoints, import ownership and allowed administrator actions.
+- Three selected `GenerationLockTests`: `test_success_records_run_and_schedule_before_release`, `test_admin_and_csrf_enforced_before_acquisition`, `test_generation_preserves_published_and_archived_history`.
+- The above combined run: **54 passed in 26.755s**.
+- Four selected `SchedulingTestCase` privacy tests: `test_student_browse_only_shows_entries_for_own_section`, `test_student_empty_timetable_and_other_section_schedule_access`, `test_student_browse_respects_effective_section_overrides`, `test_faculty_cannot_open_schedule_with_no_assigned_entries`: **4 passed in 5.711s**.
+
+**New executions: 58 passed; zero failures, skips, expected failures or unexpected successes.** No full-suite execution or new full-suite count is claimed.
+
+Reused unchanged prior evidence rather than rerunning successful tests: T8's `test_workload_balancing` module in the 124-test T10 regression run covers role-administrator approval, denied faculty approval, explicit confirmation, signed/stale scope, CSRF and atomic audited batches. The latest **22 passing Smart Repair tests** cover administrator-only HTTP/service access, explicit approval, multi-day constraints, workload/qualification restrictions, unchanged parents/original schedules, publication retention, rollback and competing applications.
+
+### Representative UI evidence reused
+
+Existing authenticated Django-rendered browser fixtures and `run_interactions.py` already cover all requested roles in Light and Dark Mode at 1360/768/500/390px: Student timetable **104 assertions**, Faculty timetable/workload **104**, Administrator workload workflow **336**, and latest Administrator Smart Repair **208**. Recorded checks include theme behavior, content visibility, control containment, responsive overflow, and relevant interaction states. No affected UI or shared authorization code changed during T12; no additional browser executions were needed or claimed. HTTP login and permissions were freshly tested with Django clients, not a live-server browser login.
+
+### Final checks and limitations
+
+`manage.py check`: no issues. `makemigrations --check --dry-run`: no changes. `git diff --check`: passed. All test data used Django's disposable database; the already-modified working SQLite database and all existing uncommitted implementation files were preserved.
+
+No confirmed permission, privacy, publication or workflow defect was found in the executed/reused coverage. **Only this development plan changed for T12.** This is focused regression verification, not an exhaustive security audit, physical-device/screen-reader certification, live deployment test or full-suite rerun. Previously documented SQLite/search/weekly-recurrence limits remain. Manual preparation-time comparisons and O4 effectiveness remain unverified. No commits, push or deployment.
+
+## T13 objective evidence and defense checklist (2026-10-22)
+
+**T13 Completed: evidence review/documentation, not institutional acceptance of every objective. Roadmap 12/16.** Objective statuses below are unchanged from their supported summaries. T11 remains **Manual Evaluation Pending**; T14-T16 remain Deferred. This review reused the existing T2-T12 records and their cited tests/measurements; no new tests, browser runs, application changes or database operations were needed. Historical test totals are evidence from their recorded runs, not a newly executed full-suite result.
+
+### Consolidated O1-O7 matrix
+
+| Objective / current status | Implemented functionality | Existing supporting evidence | Limits of the evidence | Needed for full institutional verification |
+| --- | --- | --- | --- | --- |
+| **O1 conflict detection: Partially Verified** | Shared effective faculty/room/section overlap checks, partial-time intersections, meeting requirements and backend manual/publication rejection. | T2: six `test_thesis_conflicts` tests; 136-test focused combined run. T12 reconfirmed publication/security paths. Adjacent classes and legitimate parallel sections are accepted. | Validates recorded requirements; assignment coverage does not establish authoritative curriculum completeness. No certification of every institutional academic rule. | Academic approval of the conflict/subject-rule matrix; reconcile required curriculum against recorded assignments; demonstrate detection and absence of false positives on representative term data. |
+| **O2 double-booking: Verified within recurring-term model / SQLite** | Instructor/room conflicts within a schedule and across overlapping published terms; transactional manual edits, final GA save and publication. | T3: eight focused tests, real separate-connection races, recorded 575-test full-suite result; `test_thesis_double_booking`. T12 authorization/publication checks; T10 concurrent apply evidence. | Alternative drafts are independent. Weekly recurrence derives from term dates; holidays/cancellations and other database engines are not certified. | Replay representative overlapping terms, instructors and rooms using approved calendars; confirm the deployed database and concurrency behavior. Record institution-approved exception handling. |
+| **O3 availability: Verified within fixed-section model** | Faculty and administrator-managed section availability enforced in GA domains, manual editing and publication; faculty self-service ownership enforced. | T4: 12 new focused tests and recorded 587-test full-suite result; `test_section_availability`, `test_availability`. T12 Faculty ownership tests passed. | Section constraints represent fixed cohorts, not individual student preferences; no term-specific availability or holiday exceptions. | Obtain approved faculty/section windows and section membership; confirm fixed-section assumptions; reconcile actual classes against availability and record exceptions. |
+| **O4 preparation-time reduction: Not Yet Verified** | Reproducible GA runs, recorded seeds/configuration/timing and benchmark/report tools exist. | Existing reproducibility/benchmark/report tests establish tooling, not a manual comparison. | Solver runtime excludes preparation, correction and approval; no measured end-to-end reduction or statistical significance is established. | Complete the matched manual-versus-SchedEase protocol below. Keep T11 Manual Evaluation Pending until measurements exist. |
+| **O5 workload balancing: Partially Verified** | Separate administrator-approved allocation proposals compare workload percentages, enforce qualifications/availability/limits, and audit atomic approval. | T8 synthetic case: A/B 6h/0h with 12h/6h limits becomes 4h/2h; percentage variance 625 to 0, spread 50 to 0 points, zero hard violations. `test_workload_balancing`; approval/lock evidence reused by T12. | Unequal hours can be legitimate; timetable GA does not itself reassign faculty. Scheduled parents remain locked outside approved draft-entry repair overrides. | Approved comparable instructor groups and workload ceilings; representative terms; before/after percentage variance, spread, overloads, eligible/excluded assignments and administrator acceptance. Do not equate equal hours with fairness. |
+| **O6 room optimization: Partially Verified** | Feasible room capacity/type/availability allocation, capacity-fit and room-use soft scoring, and utilization reporting. | T9 seeded fixture (seed 19): seat occupancy 20% to 66.7%, unused seat-hours 160 to 20, zero hard violations; room-time utilization stays 50%. `test_room_optimization`, room availability/report tests. | Controlled existing-GA behavior, not a newly improved optimizer or proof of optimal room use. Rooms have no department-exclusive ownership policy. | Representative sizes, departments, levels, specialized rooms and availability; compare feasible baselines with identical demand. Separately report room-hours/available-hours, seat fit, unused seat-hours, compatibility/conflicts and departmental distribution. Approve consolidation/spreading preferences. |
+| **O7 adaptability: Partially Verified** | Recurring instructor/room outages (multiple weekdays), approved draft-entry replacements, new-section insertion, bounded low-disruption search and separate publication. | T10 seven synthetic scenarios; 22 focused tests. Successful outage repairs preserve 1/2 meetings; section insertion preserves 2/2 and adds one; valid proposals have zero hard violations. No-capacity/infeasible cases remain unresolved without changes. T12 reused safeguard evidence. | Weekly recurrence, SQLite application and bounded search; no one-date exceptions, global-optimality guarantee or representative full-regeneration comparison. | Representative outage/new-section cases at realistic scale; matched targeted repair/full regeneration/manual correction with the same inputs and constraints. Record preserved/modified/added/unresolved meetings, time/room/instructor changes, feasibility, response time and reviewer acceptance. |
+
+### Defense demonstration checklist (prepared; not newly executed)
+
+Use a disposable demonstration database and anonymized/synthetic records. Identify which evidence is controlled testing and which, if later collected, is institutionally observed. Preserve original published schedules throughout demonstrations.
+
+- [ ] Show the academic term, assignments, meeting requirements, availability, room capacities/types and input provenance; explain that completeness is checked against recorded requirements.
+- [ ] Generate and review a schedule; show validation before explicit publication and the resulting published version. Keep seed/configuration and run record available.
+- [ ] Demonstrate faculty, room and section overlaps, including partial overlap; show backend rejection and an adjacent valid time. Demonstrate overlapping published-term occupancy separately from independent drafts.
+- [ ] Show allowed/unavailable faculty and section windows and rejected unauthorized availability edits.
+- [ ] Log in as Faculty and Student; show own published timetable, Faculty workload, hidden drafts/other records and a concern submission. Switch to Administrator to review/respond without changing the timetable. T12 provides HTTP permission evidence.
+- [ ] Show workload proposal scope/comparability, before/after percentage metrics, explicit batch approval/audit and an overload/unqualified rejection. Label the 625-to-0 variance example synthetic.
+- [ ] Show room capacity/type compliance and report denominators. Explain why improved seat fit in T9 did **not** increase aggregate room-time utilization.
+- [ ] From a published schedule, create a repair draft; select unavailable days/times, preview preserved/changed classes, explicitly approve any instructor replacement and publish separately. Show an unresolved no-capacity case and unchanged parent/original entries.
+- [ ] Present the O1-O7 matrix and supporting test references. Separate successful controlled tests from institutional effectiveness; disclose O4's missing comparison and O5-O7's representative-data limitations.
+
+### Minimum fair manual-versus-SchedEase evaluation (T11 pending)
+
+1. **Matched problem:** use identical anonymized term data, sections, meetings/durations, faculty qualifications/limits/availability, rooms and constraints. Record dataset provenance/version and approved corrections. Both methods must meet the same completeness and zero-hard-conflict criteria.
+2. **Defined timing:** agree on start/end events covering data preparation/entry, initial scheduling, corrections, validation and approval. Record phase times and total elapsed/active time consistently; distinguish breaks, setup/training and external waiting. Solver runtime alone cannot answer O4.
+3. **Participants and environment:** identify qualified schedulers, experience/training and consent where applicable; record manual tools, SchedEase/code version, hardware/database, seed/configuration and run identifiers. Counterbalance method order where practical to reduce practice effects.
+4. **Repeated observations:** agree on representative cases and repetitions before collection. Preserve timestamps/raw logs, failed/incomplete attempts, unresolved constraints, correction counts and final schedule quality. Do not select only successful or fastest runs. Determine an adequate sample with the thesis adviser before making significance claims.
+5. **Comparison and reporting:** pair results by case; report manual and SchedEase times, differences and variability alongside feasibility/quality. Percentage reduction = `(manual time - SchedEase time) / manual time * 100` when manual time is positive; negative values indicate slower preparation. Report uncertainty and justify any statistical method. Do not claim significance or savings without actual observations.
+
+For O5-O7, retain the representative measurements listed in the matrix with raw inputs/outputs, seeds/configurations where relevant, equal comparison constraints, failed cases and institutional reviewer decisions. No measurements have been invented and no T11 benchmarking features were added.
+
+### Review outcome
+
+No concrete evidence inconsistency required a new test. The O7 summary was refreshed from the earlier 19-test checkpoint to the already-recorded 22-test multi-day follow-up without changing its Partially Verified status. `git diff --check` passed after documentation changes. Only this plan was modified for T13; all existing uncommitted application and working-database changes were preserved. T13 documentation completion does not close T11 or upgrade O1/O4/O5/O6/O7. No T14 work, commits, push or deployment.
+
+## T15 essential administrator UI correctness (2026-10-22)
+
+**Completed; roadmap 13/16 (81.25%).** Resumed the already-implemented fixes and completed documentation; successful verification was not repeated. T11 remains Manual Evaluation Pending, T14 Deferred and T16 Not Started. O1-O7 statuses are unchanged. Historical UI/UX progress remains 9/24; this scoped review does not complete historical tasks wholesale.
+
+### Essential workflows reviewed
+
+- Record editors already share headings/actions, preserve entered values and validation feedback, and retain specialized assignment/generation controls. Reused the existing four `test_record_editors` tests and prior responsive/editor evidence.
+- Draft creation/update, unchanged-form handling, restoration/final-save cleanup, owner-only discard, stale-record detection and unauthorized/invalid submissions already have backend coverage. Six existing draft tests were executed; only the confirmed browser state issue below needed correction.
+- Generation loading feedback already exists and its focused Django test passed. Existing T2/T10 conflict explanations and validation, T12 publication/confirmation/CSRF evidence, and Smart Repair approval/rollback tests were reused; no scheduling or permission changes were needed.
+- Reviewed relevant historical UI items 3.2/3.3 (guidance, validation and truthful saving states); no table, navigation or broad design work was resumed.
+
+### Confirmed fixes
+
+1. **Late autosave response could falsely mark newer edits saved.** The previous callback cleared the dirty flag unconditionally; overlapping requests could also be outstanding. `static/js/app.js` now permits one draft request at a time, compares current field values with the acknowledged payload, retains the pending state when they differ, and queues the newer draft. Failed requests show the existing error feedback and can retry. Payloads, debounce intervals, endpoints and backend persistence rules are unchanged.
+2. **Smart Repair actions could remain disabled after browser history restoration.** `static/js/smart-repair.js` now resets transient submission/busy/loading state on `pageshow`, restores original button states, and removes generated action inputs/status messages. This prevents stale duplicate action values when submitting again. Signed previews, confirmation requirements and backend stale-request checks remain unchanged.
+
+### Verification recovered from the interrupted session
+
+- **11 focused Django tests passed in 10.411s**, zero failures/skips/expected failures: four `test_record_editors` tests; `SchedulingTestCase.test_form_draft_is_created_updated_and_does_not_create_official_record`, `test_unchanged_form_does_not_create_a_draft`, `test_draft_restores_and_final_create_removes_it`, `test_user_can_only_discard_their_own_draft`, `test_edit_draft_detects_newer_official_record`, `test_non_admin_cannot_save_drafts_and_invalid_json_is_safe`, and `test_generate_page_has_accessible_loading_state`.
+- Existing `interaction_states.html` gained delayed-response/newer-edit, serialized-request, failure and successful-retry assertions. `run_interactions.py` passed **28 checks x 4 combinations = 112** (Light/Dark at 1360/390px).
+- Existing Django-rendered Smart Repair fixture gained history-restoration/button/transient-state assertions. `run_interactions.py --repair` passed **28 checks x 8 combinations = 224** (Light/Dark at 1360/768/500/390px), retaining selected-day, approval, preview, error-state and no-overflow checks. **336 browser assertions total**, all passed.
+- `manage.py check`: no issues. `makemigrations --check --dry-run`: no changes. `git diff --check`: passed, including the final documentation update. No full suite or unrelated browser pages were rerun.
+
+### Files and limits
+
+T15 changed only `static/js/app.js`, `static/js/smart-repair.js`, `tests/browser/interaction_states.html`, the existing-in-progress `tests/browser/render_repair.py`, and this plan. Other pending application changes and the already-modified working database were preserved; no working-database writes, migrations, dependencies, commits, push or deployment.
+
+Browser autosave tests deliberately control network response timing; history recovery is tested through a persisted `pageshow` event, not physical-device navigation or a live-server end-to-end session. Existing editor responsive evidence is reused, not newly rerun for every editor. Full screen-reader/cross-browser evaluation, broader wording/field guidance and unrelated historical UI improvements remain outside T15. No T14 or T16 implementation was performed.
+
+## T16 final focused usability/accessibility verification (2026-10-22)
+
+**Completed within the requested targeted QA scope; roadmap 14/16 (87.5%).** This is not a claim of full WCAG compliance or comprehensive device/assistive-technology certification. T11 remains Manual Evaluation Pending; T14 remains Deferred; O1-O7 statuses and historical UI/UX task progress are unchanged.
+
+### Coverage and reused evidence
+
+| Critical area | Evidence reviewed/reused; no unnecessary rerun |
+| --- | --- |
+| Administrator record editing, invalid forms and autosave | T15's 11 passing focused Django tests and 112 browser assertions: retained values, recoverable errors, serialized draft requests, accurate pending/error/saved feedback; existing shared-editor responsive evidence. |
+| Generation, conflicts and publication | T12's 58 focused passes cover authorized generation/publication, invalid publication rejection, CSRF and object privacy; T2/T10 cover conflict explanations and transactional safeguards. Existing generation loading test and T15 evidence retained. |
+| Workload proposal approval | T8's 336 browser assertions and approval tests reused: scope labels, selection/focus, stale-result invalidation, explicit authorization and responsive controls. |
+| Smart Repair | T10/T15 tests retain preview, explicit approval, unresolved/error behavior, duplicate-submit prevention and history-recovery states. Newly tested description/error associations below. |
+| Faculty timetable/availability and Student timetable/concerns | T12 HTTP access/ownership checks plus recorded Student/Faculty browser evidence (104 assertions each), concern browser coverage and response/status tests reused. No fresh live-account walkthrough is claimed. |
+| Navigation, dialogs, focus and contrast | Existing sidebar evidence (336 assertions) covers keyboard containment/restoration, Escape, drawer bounds and persistence; T15 interaction checks retain login-dialog/help focus and Escape handling. Design-token measurements document primary text contrast of 5.47/7.58/9.48:1 in Light and 8.05/10.13/11.89:1 in Dark for default/hover/active; focus/surface ratios 7.58:1 and 11.76:1. These are recorded token measurements, not newly measured universal component contrast. |
+
+Existing evidence covers desktop/tablet/mobile widths 1360/768/500/390, theme behavior, contained forms, table-only horizontal scrolling and action visibility. Physical touch ergonomics, every target-size/spacing combination and all zoom/device conditions remain unverified. No exhaustive page matrix or full suite was rerun.
+
+### Confirmed accessibility defect and smallest correction
+
+The custom Smart Repair form rendered help paragraphs without the IDs referenced by accessible descriptions, and did not explicitly link validation errors to controls. Multi-checkbox fields also needed a consistently named group.
+
+- `RepairForm` now supplies `aria-describedby` references for rendered errors and applicable help text.
+- `repair_start.html` renders matching IDs, announces field errors with `role="alert"`, and uses fieldsets/legends for grouped checkbox fields. Existing labels, Django invalid-state attributes, validation rules and preserved form values are unchanged.
+- The existing repair browser fixture now includes an actual invalid Django POST response and verifies resolved descriptions, named/labeled weekday controls, visible keyboard focus, error association and retained selections. No new testing infrastructure, CSS redesign or scheduling behavior was introduced.
+
+### New verification
+
+- Existing `SmartRepairTests.test_http_authorization_csrf_confirmation_and_method`: **1 passed in 0.819s**, no failure/skip/expected failure; validates the affected form route and its existing authorization/confirmation handling.
+- Existing `run_interactions.py --repair`: **42 assertions x 8 theme/width combinations = 336 passed**, including the new invalid-form/accessibility checks and existing preview, selection, loading/history recovery and overflow checks. Light and Dark Mode each passed at 1360/768/500/390px.
+- `manage.py check`: no issues. `makemigrations --check --dry-run`: no changes. `git diff --check`: passed. The fixture uses an isolated in-memory database; the working database was not modified.
+
+### Files and limitations
+
+T16 changes: `schedules/repair_views.py`, `templates/schedules/repair_start.html`, existing `tests/browser/render_repair.py`, and this plan. All earlier uncommitted changes were preserved.
+
+Automated DOM/focus checks establish the tested associations and interactions, not actual screen-reader speech. Real assistive-technology sessions, physical touch devices, Firefox/Safari, comprehensive zoom/reflow and universal contrast/target-size certification remain outstanding. Browser fixtures render Django responses offline; live-server end-to-end navigation is not claimed. Existing status announcements are retained; no claim is made that every success/error message across the application has been audited. These limits are explicitly recorded rather than implying full WCAG conformance. No T11/T14 implementation, new dependencies, commits, push or deployment.

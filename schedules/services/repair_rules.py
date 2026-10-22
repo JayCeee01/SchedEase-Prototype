@@ -4,6 +4,11 @@ from schedules.models import ScheduleEntryAudit
 from .time import overlaps
 
 
+def scenario_days(scenario):
+    """Read new multi-day rules and existing single-day audit records."""
+    return scenario.get('days', [scenario.get('day')])
+
+
 def windows(schedule):
     if hasattr(schedule, '_repair_windows'):
         return schedule._repair_windows
@@ -27,7 +32,7 @@ def entry_errors(entry):
     errors = []
     for window in windows(entry.schedule):
         resource = entry.effective_faculty.pk if window['kind'] == 'faculty' else entry.room_id
-        if resource == window['resource'] and entry.day == window['day'] and overlaps(
+        if resource == window['resource'] and entry.day in scenario_days(window) and overlaps(
                 entry.start_time, entry.end_time, time.fromisoformat(window['start']), time.fromisoformat(window['end'])):
             errors.append('Recurring repair restriction: the selected ' + window['kind'] + ' is unavailable during this time.')
     return errors

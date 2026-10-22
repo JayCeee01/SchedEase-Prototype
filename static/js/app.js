@@ -672,6 +672,7 @@
     let savedState;
     let dirty = false;
     let finalSubmitting = false;
+    let draftRequestPending = false;
     let timer;
 
     const payload = () => {
@@ -702,6 +703,8 @@
 
     const saveDraft = async (keepalive = false) => {
       if (!dirty || finalSubmitting) return true;
+      if (draftRequestPending) return false;
+      draftRequestPending = true;
       const currentPayload = payload();
       setStatus("Saving draft...", "saving");
       try {
@@ -719,12 +722,18 @@
         });
         if (!response.ok) throw new Error("Draft request failed");
         savedState = JSON.stringify(currentPayload);
-        dirty = false;
-        setStatus("Draft saved", "saved");
-        return true;
+        dirty = JSON.stringify(payload()) !== savedState;
+        setStatus(dirty ? "Unsaved draft changes" : "Draft saved", dirty ? "pending" : "saved");
+        if (dirty && !finalSubmitting) {
+          window.clearTimeout(timer);
+          timer = window.setTimeout(() => saveDraft(), 900);
+        }
+        return !dirty;
       } catch (error) {
         setStatus("Draft could not be saved. Check your connection and try again.", "error");
         return false;
+      } finally {
+        draftRequestPending = false;
       }
     };
 

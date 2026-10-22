@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction, connection
 from schedules import models as m
 from .manual_edits import authorized_administrator, copy_to_draft, revision_token, manual_edit_transaction, values
-from .repair_rules import windows, entry_errors
+from .repair_rules import windows, entry_errors, scenario_days
 from .conflicts import validate_entry, individual_entry_errors, schedule_validation_messages
 from .meetings import scheduled_requirement_errors
 from .placements import PlacementOccupancy
@@ -47,7 +47,12 @@ def validate_scenario(source, scenario):
             start, end = time.fromisoformat(scenario['start']),time.fromisoformat(scenario['end'])
         except (ValueError,KeyError,TypeError) as exc:
             raise ValidationError('Enter a valid recurring time window.') from exc
-        if scenario.get('day') not in ALLOWED_DAYS or start >= end or start.second or end.second or start.microsecond or end.microsecond:
+        days = scenario_days(scenario)
+        if not isinstance(days, (list, tuple)) or not days or any(type(day) is not int or day not in ALLOWED_DAYS for day in days):
+            raise ValidationError('Select at least one day from Monday to Saturday.')
+        scenario['days'] = sorted(set(days))
+        scenario.pop('day', None)
+        if start >= end or start.second or end.second or start.microsecond or end.microsecond:
             raise ValidationError('Use a weekday and whole-minute start time before the end time.')
         owners = {e.effective_faculty.pk if kind=='faculty' else e.room_id for e in entries}
         if scenario['resource'] not in owners:
@@ -154,7 +159,7 @@ def propose(draft_id, actor):
     for e in all_entries:
         e.schedule=draft
     affected={e.assignment_id for e in all_entries if not e.pk or entry_errors(e)}
-    domains={}; blockers=list(requirement_errors)
+    domains={}; blockers=list(requirement_errors); candidate_checks=0
     rooms=list(m.Room.objects.filter(is_active=True).order_by('pk'))
     for entry in all_entries:
         options=[]
@@ -181,9 +186,12 @@ def propose(draft_id, actor):
                         for left,right in p.effective_intervals(day):
                             boundaries.update((left,add_minutes(right,-duration)))
                     for window in rule_windows:
-                        if window['day']==day:
+                        if day in scenario_days(window):
                             boundaries.update((time.fromisoformat(window['end']),add_minutes(time.fromisoformat(window['start']),-duration)))
                     for start in sorted(boundaries):
+                        candidate_checks += 1
+                        if candidate_checks > 100000:
+                            raise ValidationError('Candidate limit reached. Review availability or narrow the repair scope; no placements were changed.')
                         end=add_minutes(start,duration)
                         if end<=start or end>SCHOOL_END or any(p.rejection_reason(day,start,end) for p in (faculty_policy,section_policy,policy)):
                             continue
@@ -264,7 +272,11 @@ def propose(draft_id, actor):
                 search(todo[1:],chosen+[candidate],replace)
             if visits>=BUDGET:
                 capped=True;break
+    best_scope=None
     for stage,movable,replace in stages:
+        scope=(stage,len(movable))
+        if best is not None and scope != best_scope:
+            break
         if requirement_errors:
             break
         frozen=[e for e in original if e.assignment_id not in movable]
@@ -276,7 +288,8 @@ def propose(draft_id, actor):
             continue
         search(sorted(movable,key=lambda pk:(len(domains[pk]),pk)),frozen,replace)
         if best is not None:
-            stage_used=stage;break
+            stage_used=stage
+            best_scope=scope
         if capped:break
     if initial_stamp!=stamp(draft):
         raise ValidationError('Scheduling inputs changed during repair. Generate a new preview.')
@@ -310,18 +323,28 @@ def apply(draft_id,actor,token,confirmed=False):
     draft=m.Schedule.objects.get(pk=draft_id)
     if stamp(draft)!=payload['stamp']:raise ValidationError('This repair preview is stale. Generate it again.')
     with manual_edit_transaction(schedule_id=draft_id,entry_id=None,actor=actor,revision=payload['revision'],draft_only=True) as (draft,_,__,user):
-        before=[];after=[]
+        before=[];after=[];instructor_overrides=[]
         for row in payload['entries']:
             e=draft.entries.get(pk=row['entry']) if row['entry'] else m.ScheduleEntry(schedule=draft,assignment_id=row['assignment'])
             previous=values(e) if e.pk else {}
+            original_faculty=e.effective_faculty
             e.faculty_override_id=row['faculty'];e.room_id=row['room'];e.day=row['day']
             e.start_time=time.fromisoformat(row['start']);e.end_time=time.fromisoformat(row['end'])
+            if e.effective_faculty.pk != original_faculty.pk:
+                instructor_overrides.append({
+                    'meeting_id':e.assignment_id,'entry_id':e.pk,
+                    'original_faculty_id':original_faculty.pk,'original_faculty':original_faculty.full_name,
+                    'replacement_faculty_id':e.effective_faculty.pk,'replacement_faculty':e.effective_faculty.full_name,
+                    'reason':'Original instructor unavailable in the recurring window; no direct same-instructor repair found within the search scope.',
+                    'scenario':setup(draft)['scenario'],
+                })
             if previous!=values(e):
                 e.save()
                 m.ScheduleEntryAudit.objects.create(schedule=draft,entry=e,user=user,previous_values=previous,new_values=values(e))
             before.append(previous);after.append(values(e))
         errors=schedule_validation_messages(draft)
         if errors:raise ValidationError(errors)
-        audit.previous_values={'entries':before};audit.new_values={'action':'smart_repair_apply','entries':after}
+        audit.previous_values={'entries':before}
+        audit.new_values={'action':'smart_repair_apply','entries':after,'instructor_overrides':instructor_overrides}
         audit.save(update_fields=['previous_values','new_values'])
     return draft

@@ -10,6 +10,9 @@
 <div class="panel table-wrap"><table><thead><tr><th data-sort>Name</th><th data-sort>Code</th></tr></thead><tbody><tr><td>Zebra</td><td>2</td></tr><tr><td>Alpha</td><td>1</td></tr></tbody></table></div>
 <div class="toast warning">Warning: review the entered information.</div>
 <div class="login-modal-shell" data-login-modal aria-hidden="true"><section class="login-modal-card" role="dialog" aria-modal="true" aria-label="Login"><button data-login-close type="button">Close</button><form><label for="username">Username</label><input id="username" name="username"><button type="submit">Sign in</button></form></section></div>
+<form class="panel form" data-form-draft data-draft-save-url="/synthetic-draft/" data-draft-resource="rooms">
+<label for="draft-name">Draft name</label><input id="draft-name" name="name"><p data-draft-status></p>
+</form>
 <pre id="results" style="white-space:pre-wrap;overflow-wrap:anywhere">RUNNING</pre>
 <script>window.addEventListener('error', e => document.querySelector('#results').textContent = 'FAIL: '+e.message);</script>
 <script src="../../static/js/app.js"></script>
@@ -56,6 +59,22 @@
  document.querySelector('[data-theme-toggle]').click();
  icon.focus(); await wait(200);
  check(getComputedStyle(icon).outlineStyle!=='none','help focus outline present');
+ const requests=[];const originalFetch=window.fetch;
+ window.fetch=(url,options)=>new Promise((resolve,reject)=>requests.push({resolve,reject,payload:JSON.parse(options.body)}));
+ const draft=document.querySelector('#draft-name'),status=document.querySelector('[data-draft-status]');
+ draft.value='First';draft.dispatchEvent(new Event('input',{bubbles:true}));await wait(1000);
+ check(requests.length===1,'first autosave started');
+ draft.value='Newer';draft.dispatchEvent(new Event('input',{bubbles:true}));await wait(1000);
+ check(requests.length===1,'autosaves serialized while response pending');
+ requests[0].resolve({ok:true});await wait(30);
+ check(status.dataset.state==='pending','old response does not mark newer edits saved');
+ await wait(1000);check(requests.length===2&&requests[1].payload.payload.name==='Newer','newer edits queued for saving');
+ requests[1].reject(new Error('Simulated connection failure'));await wait(30);
+ check(status.dataset.state==='error','failed save shown accurately');
+ draft.dispatchEvent(new Event('input',{bubbles:true}));await wait(1000);
+ requests[2].resolve({ok:true});await wait(30);
+ check(status.dataset.state==='saved','successful retry marks current edits saved');
+ window.fetch=originalFetch;
  document.querySelector('#results').textContent='PASS '+results.length+' checks\n'+results.join('\n');
  } catch(error) {document.querySelector('#results').textContent='FAIL '+error.message;}
 })();
