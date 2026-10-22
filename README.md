@@ -42,7 +42,7 @@ Teaching assignments and manual schedule-entry edits validate faculty qualificat
 
 ## Setup
 
-Use **Python 3.12** (verified with **3.12.10**) and **Django 5.0.6** for this project's current development baseline. Do not create this environment with Python 3.14: Django 5.0's template-context copying is incompatible with it. `.python-version` records the intended Python series; explicitly select it when creating the environment.
+Use **Python 3.12** (verified with **3.12.10**) and **Django 5.2.18 LTS** for this project's development baseline. `.python-version` records the intended Python series; explicitly select it when creating the environment. Earlier compatibility results below describe the historical Django 5.0.6 baseline, not the current dependency pin. See [Django 5.2 upgrade verification](DJANGO_52_UPGRADE.md) for isolated validation results and existing-environment update instructions.
 
 This compatibility baseline preserves the existing framework and application behavior. Django 5.0 is no longer maintained; a supported-framework upgrade remains a separate task before deployment. See [Django's Python compatibility notes](https://docs.djangoproject.com/en/5.2/releases/5.0/#python-compatibility) and [release support status](https://www.djangoproject.com/download/#supported-versions).
 

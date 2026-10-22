@@ -1,5 +1,12 @@
 # Production security preparation (Task 8.1)
 
+## Dependency baseline update
+
+The current dependency pin is Django 5.2.18 LTS on Python 3.12. See
+[the isolated upgrade report](DJANGO_52_UPGRADE.md) for verification and limitations.
+The Django 5.0.6 references below describe the original Task 8.1 audit.
+This dependency upgrade does not certify hosting, HTTPS, backups, or production readiness.
+
 ## Initial audit
 
 The starting working tree was clean. The existing Python 3.12.10 / Django 5.0.6 baseline and Phases 1–7 are preserved.
@@ -82,7 +89,7 @@ SQLite development behavior, transaction handling, leases, snapshots and academi
 
 Before a future deployment:
 
-1. Upgrade to a supported Django release and review pinned dependencies in a separately tested change. The present compatibility baseline is not a supported production security baseline.
+1. Keep the Django 5.2 LTS patch current and review the complete pinned dependency set for security advisories before release. See `DJANGO_52_UPGRADE.md`; dependency compatibility alone does not establish production readiness.
 2. Choose a host, domain, production WSGI server, TLS arrangement, private backend boundary and protected secret injection mechanism.
 3. Inject the production variables into each worker and management-command environment. Do not use sample accounts or run demo seed commands on production data.
 4. Prepare backups and the database plan separately; review filesystem and log access.
