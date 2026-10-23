@@ -10,6 +10,8 @@ if environment_mode(os.environ) == 'development':
     load_dotenv(BASE_DIR / '.env')
 
 globals().update(security_settings(os.environ))
+from .login_security import login_settings
+globals().update(login_settings(os.environ))
 
 INSTALLED_APPS = [
     "django.contrib.admin",

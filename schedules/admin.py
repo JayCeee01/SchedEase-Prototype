@@ -1,4 +1,7 @@
 from django.contrib import admin
+from .auth_forms import LimitedAdminAuthenticationForm
+
+admin.site.login_form = LimitedAdminAuthenticationForm
 from django.contrib.auth.admin import UserAdmin, GroupAdmin
 from django.contrib.auth.models import User, Group
 from django.core.exceptions import ValidationError

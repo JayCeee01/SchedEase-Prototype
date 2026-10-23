@@ -2,7 +2,7 @@ import re
 
 from django import forms
 from django.core.exceptions import ValidationError
-from django.contrib.auth.forms import AuthenticationForm
+from .auth_forms import LimitedAuthenticationForm
 from django.contrib.auth import get_user_model
 from django.forms import BaseInlineFormSet, inlineformset_factory, modelform_factory
 from .models import (
@@ -227,9 +227,10 @@ class ScheduleEntryFilterForm(forms.Form):
     )
 
 
-class EmailOrUsernameAuthenticationForm(AuthenticationForm):
+class EmailOrUsernameAuthenticationForm(LimitedAuthenticationForm):
     username = forms.CharField(
         label="Email or username",
+        max_length=254,
         widget=forms.TextInput(attrs={"autofocus": True, "autocomplete": "username"}),
     )
 

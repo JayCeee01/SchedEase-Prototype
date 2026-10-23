@@ -1,5 +1,10 @@
 # SchedEase
 
+Login protection configuration and production Redis requirements are documented
+in [Login abuse protection](LOGIN_ABUSE_PROTECTION.md). Production login fails
+closed until its shared storage is configured; local single-process development
+uses the explicitly development-only memory limiter.
+
 SchedEase is a Django-based academic scheduling system for colleges. It manages departments, programs, year levels, sections, subjects, faculty, students, rooms, academic terms, and generated class schedules.
 
 ## Technology Choices
