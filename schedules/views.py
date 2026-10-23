@@ -1,4 +1,4 @@
-import csv
+from schedules.services import csv_export
 import json
 import logging
 import re
@@ -486,7 +486,7 @@ def export_room_utilization_csv(request):
     )
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = 'attachment; filename="room-utilization.csv"'
-    writer = csv.writer(response)
+    writer = csv_export.writer(response)
     writer.writerow(["Room", "Room Type", "Capacity", "Monday %", "Tuesday %", "Wednesday %", "Thursday %", "Friday %", "Saturday %", "Weekly Utilization %", "Seat Utilization %", "Available Hours", "Scheduled Hours", "Assigned Classes", "Status"])
     for row in rows:
         writer.writerow([
@@ -1140,7 +1140,7 @@ def export_csv(request, pk):
     schedule = visible_schedule(request, pk)
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="{schedule.name}.csv"'
-    writer = csv.writer(response)
+    writer = csv_export.writer(response)
     writer.writerow(["Day", "Start", "End", "Course", "Section", "Faculty", "Room"])
     entries = entries_visible_to_user(schedule.entries.select_related(
         "assignment__subject", "assignment__section", "assignment__faculty", "room",

@@ -1,5 +1,6 @@
 """Bounded spreadsheet parsing and transactional academic-data import."""
 import csv
+from schedules.services import csv_export
 import hashlib
 import io
 import json
@@ -173,7 +174,7 @@ def template_bytes(xlsx=False, include_samples=True):
     rows = [headers] + ([[row.get(key, '') for key in headers] for row in SAMPLE_ROWS] if include_samples else [])
     if not xlsx:
         stream = io.StringIO(newline='')
-        csv.writer(stream).writerows(rows)
+        csv_export.writer(stream).writerows(rows)
         return stream.getvalue().encode('utf-8-sig')
     stream = io.BytesIO()
     with zipfile.ZipFile(stream, 'w', zipfile.ZIP_DEFLATED) as z:

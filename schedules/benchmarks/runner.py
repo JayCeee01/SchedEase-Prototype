@@ -1,5 +1,5 @@
 """Parent process has no model imports or database access."""
-import csv
+from schedules.services import csv_export
 import io
 import json
 import math
@@ -59,7 +59,7 @@ def export_results(rows, path):
                              sort_keys=True, indent=2, allow_nan=False) + '\n'
     elif path.suffix.lower() == '.csv':
         buffer = io.StringIO(newline='')
-        writer = csv.DictWriter(buffer, fieldnames=sorted(rows[0]) if rows else [])
+        writer = csv_export.DictWriter(buffer, fieldnames=sorted(rows[0]) if rows else [])
         writer.writeheader()
         for row in rows:
             writer.writerow({key: json.dumps(value, sort_keys=True, allow_nan=False)

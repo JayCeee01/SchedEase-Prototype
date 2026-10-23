@@ -1,4 +1,4 @@
-import csv
+from schedules.services import csv_export
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -116,7 +116,7 @@ def generate_report(inputs, output, *, generated_at=None):
         stat_names = ('n', 'mean', 'median', 'min', 'max', 'sample_sd')
         fields += [f'{metric}_{stat}' for metric in metrics for stat in stat_names]
         with (target / 'summary.csv').open('w', newline='', encoding='utf-8') as stream:
-            writer = csv.DictWriter(stream, fieldnames=fields)
+            writer = csv_export.DictWriter(stream, fieldnames=fields)
             writer.writeheader()
             for group in report['groups']:
                 row = {k: group[k] for k in fields if k in group and k not in metrics}

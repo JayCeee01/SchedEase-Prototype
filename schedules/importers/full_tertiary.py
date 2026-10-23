@@ -1,4 +1,4 @@
-import csv
+from schedules.services import csv_export
 import hashlib
 import json
 import re
@@ -247,7 +247,7 @@ def write_reports(directory, analysis, audit, rejected, duplicates, conflicts=No
     with (directory / "import_summary.json").open("w", encoding="utf-8") as handle:
         json.dump(import_summary, handle, indent=2, default=str)
     with (directory / "normalizations.csv").open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["sheet", "row", "field", "original", "normalized", "reason"])
+        writer = csv_export.DictWriter(handle, fieldnames=["sheet", "row", "field", "original", "normalized", "reason"])
         writer.writeheader(); writer.writerows(audit)
     for name, value in (("rejected_rows.json", rejected), ("duplicate_signatures.json", duplicates),
                         ("original_conflicts.json", conflicts or []), ("room_utilization.json", utilization or [])):

@@ -1,4 +1,4 @@
-import csv
+from schedules.services import csv_export
 from datetime import timedelta
 
 from django import forms
@@ -181,11 +181,8 @@ def academic_import_errors(request, pk):
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="import-errors.csv"'
     response.write('\ufeff')
-    writer = csv.writer(response)
+    writer = csv_export.writer(response)
     writer.writerow(['Spreadsheet row', 'Column', 'Problem', 'How to fix'])
-    def safe(value):
-        value = str(value)
-        return "'" + value if value.lstrip().startswith(('=', '+', '-', '@', '\t', '\r', '\n')) else value
     for issue in issues_for(batch.payload.get('preview', {})):
-        writer.writerow([safe(value) for value in [issue['row'] or 'Related records', issue['column_labels'], issue['problem'], issue['fix']]])
+        writer.writerow([issue['row'] or 'Related records', issue['column_labels'], issue['problem'], issue['fix']])
     return response
