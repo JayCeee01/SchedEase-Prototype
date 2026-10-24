@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Availability owner regression</title>
+<script>localStorage.setItem('schedease-theme', new URLSearchParams(location.search).get('theme') || 'light');</script>
+<link rel="stylesheet" href="../../static/css/app.css"></head>
+<body style="padding:16px"><h1>Availability</h1>
+<form class="panel form" data-form-draft data-draft-save-url="/synthetic-draft/">
+<p><label for="owner">Availability for</label><select id="owner" name="owner_type" required data-availability-owner-type><option value="">Choose who this applies to</option><option value="faculty" selected>Faculty member</option><option value="room">Room</option><option value="section">Section</option></select></p>
+<p><label for="faculty">Faculty</label><select id="faculty" name="faculty" data-availability-owner="faculty"><option value=""></option><option value="1" selected>Example faculty</option></select></p>
+<p><label for="room">Room</label><select id="room" name="room" data-availability-owner="room"><option value=""></option><option value="2" selected>Example room</option></select></p>
+<p><label for="section">Section</label><select id="section" name="section" data-availability-owner="section"><option value=""></option><option value="3" selected>Example section</option></select></p>
+<p><label for="day">Day</label><input id="day" name="day" value="2"></p>
+<p><label for="start">Start</label><input id="start" name="start_time" type="time" value="09:00"></p>
+<p><label for="end">End</label><input id="end" name="end_time" type="time" value="10:00"></p>
+<p><label for="kind">Availability type</label><input id="kind" name="kind" value="AVAILABLE"></p>
+<div data-draft-status></div><div class="toolbar form-actions"><button type="submit">Save</button></div>
+</form><pre id="results">RUNNING</pre>
+<script>const requests=[]; window.fetch=async(url, options)=>{requests.push(JSON.parse(options.body));return {ok:true};};</script>
+<script src="../../static/js/app.js"></script>
+<script>
+(async()=>{
+ const checks=[]; const check=(ok,label)=>{if(!ok)throw Error(label);checks.push(label);};
+ try {
+ check(innerWidth>=300,'viewport width '+innerWidth);
+ const form=document.querySelector('form'), selector=document.querySelector('#owner');
+ const fields=['faculty','room','section'].map(id=>document.getElementById(id));
+ const verify=active=>fields.forEach(field=>{
+   check((getComputedStyle(field.closest('p')).display!=='none')===(field.name===active),'visibility '+field.name);
+   check(field.disabled===(field.name!==active),'disabled '+field.name);
+   if(field.name!==active)check(field.value==='','inactive value cleared '+field.name);
+ });
+ verify('faculty');
+ for(const type of ['room','section','faculty','room']) {
+   selector.value=type;selector.dispatchEvent(new Event('change',{bubbles:true}));verify(type);
+   const field=document.getElementById(type);field.value=field.options[1].value;
+   field.dispatchEvent(new Event('change',{bubbles:true}));
+   const data=new FormData(form);
+   check(fields.filter(f=>data.has(f.name)).length===1,'only active owner submitted');
+   check(data.get('day')==='2'&&data.get('start_time')==='09:00'&&data.get('end_time')==='10:00'&&data.get('kind')==='AVAILABLE','other settings preserved');
+ }
+ await new Promise(resolve=>setTimeout(resolve,1200));
+ check(requests.length>0,'autosave ran');
+ const saved=requests.at(-1).payload;
+ check(saved.owner_type==='room'&&saved.room==='2'&&!('faculty' in saved)&&!('section' in saved),'autosave excludes inactive owners');
+ selector.focus();check(document.activeElement===selector,'selector keyboard focus');
+ check(document.documentElement.scrollWidth<=innerWidth,'no horizontal page overflow');
+ document.querySelector('#results').textContent='PASS '+checks.length+' checks\n'+checks.join('\n');
+ }catch(error){document.querySelector('#results').textContent='FAIL '+error.message;}
+})();
+</script></body></html>

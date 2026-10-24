@@ -1129,6 +1129,7 @@ tr:nth-child(3n + 3) .subject-chip { background: var(--warning-surface); color: 
   gap: 7px;
   margin: 0;
 }
+.form .availability-owner-field[hidden] { display: none; }
 .form label {
   display: inline-flex;
   align-items: center;
@@ -2062,3 +2063,44 @@ body.modal-open .table-scroll-proxy, body.sidebar-open .table-scroll-proxy { vis
 [data-picker-summary] { flex-wrap: wrap; }
 [data-picker-summary] button { max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; }
 @media (max-width: 620px) { .workload-scope-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Shared record lists: controls and counts stay outside horizontal scrolling. */
+.record-list-panel { min-width: 0; padding: 0; }
+.record-list-panel .record-summary {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-meta);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.record-list-panel .record-table-scroll { border-radius: 0 0 var(--radius) var(--radius); }
+.record-list-panel td:not(.actions-cell) { overflow-wrap: normal; word-break: normal; line-height: 1.5; }
+.record-list-panel td.record-date { white-space: nowrap; }
+/* Keep natural sizing for other record types; assignments need room for
+   several descriptive columns even when this makes the table scroll. */
+.record-list-panel .assignments-table :is(th, td):nth-child(1) { min-width: 15rem; }
+.record-list-panel .assignments-table :is(th, td):nth-child(2),
+.record-list-panel .assignments-table :is(th, td):nth-child(3) { min-width: 10rem; }
+.record-list-panel .assignments-table :is(th, td):nth-child(6) { min-width: 16rem; }
+.record-list-panel .assignments-table :is(th, td):nth-child(4) { min-width: 14rem; }
+.record-list-panel th a { display: inline-block; padding-block: var(--space-1); }
+.record-list-panel .record-actions-heading { text-align: right; }
+.record-list-panel .record-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+}
+.record-list-panel td.actions-cell .record-actions .button {
+  width: auto;
+  min-width: 60px;
+  margin: 0;
+  white-space: nowrap;
+}
+.record-list-panel .table-empty { padding: var(--space-6) var(--space-4); }
+@media (max-width: 600px) {
+  .record-list-panel .table-tools { padding: var(--space-3); }
+  .record-list-panel .record-summary { padding-inline: var(--space-3); }
+  .record-list-panel td.actions-cell .record-actions .button { min-height: 44px; }
+}

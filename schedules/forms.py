@@ -103,6 +103,82 @@ for resource, guidance in EDITOR_HELP.items():
 MODEL_FORMS["availability"].base_fields["kind"].label = "Availability type"
 
 
+class AvailabilityForm(MODEL_FORMS["availability"]):
+    owner_type = forms.ChoiceField(
+        label="Availability for",
+        choices=[("", "Choose who this applies to"), ("faculty", "Faculty member"), ("room", "Room"), ("section", "Section")],
+        error_messages={"required": "Please select a faculty member, room, or section.",
+                        "invalid_choice": "Please select a faculty member, room, or section."},
+        help_text="Choose one type, then select its record. Without JavaScript, leave the other two record fields blank.",
+        widget=forms.Select(attrs={"data-availability-owner-type": ""}),
+    )
+    owners = ("faculty", "room", "section")
+
+    def __init__(self, *args, locked_faculty=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.order_fields(["owner_type", *self.owners, "day", "start_time", "end_time", "kind"])
+        for name, guidance in EDITOR_HELP["availability"].items():
+            self.fields[name].help_text = guidance
+        self.fields["kind"].label = "Availability type"
+        self.locked_faculty = locked_faculty
+        for name in self.owners:
+            self.fields[name].widget.attrs["data-availability-owner"] = name
+        if locked_faculty is not None:
+            self.fields["owner_type"].initial = "faculty"
+            self.fields["owner_type"].disabled = True
+            self.initial.update(owner_type="faculty", faculty=locked_faculty.pk, room=None, section=None)
+            for name in self.owners:
+                self.fields[name].disabled = True
+        elif not self.is_bound:
+            selected = self.initial.get("owner_type")
+            present = [name for name in self.owners if self.initial.get(name)]
+            if selected not in self.owners:
+                selected = present[0] if len(present) == 1 else ""
+            self.initial["owner_type"] = selected
+            # Old/ambiguous drafts must never silently submit multiple owners.
+            for name in self.owners:
+                if name != selected:
+                    self.initial[name] = None
+        elif "owner_type" not in self.data:
+            # Older clients/drafts posted only the original model fields.
+            present = [name for name in self.owners if self.data.get(name)]
+            if len(present) == 1:
+                self.data = self.data.copy()
+                self.data["owner_type"] = present[0]
+
+    def clean(self):
+        cleaned = super().clean()
+        selected = cleaned.get("owner_type")
+        owners = [name for name in self.owners if cleaned.get(name)]
+        if self.locked_faculty is not None:
+            cleaned.update(owner_type="faculty", faculty=self.locked_faculty, room=None, section=None)
+            return cleaned
+        if len(owners) > 1:
+            self.add_error("owner_type", "Choose only one owner: a faculty member, room, or section.")
+        elif selected in self.owners:
+            if owners and owners[0] != selected:
+                self.add_error("owner_type", "The selected record does not match Availability for. Choose the matching record.")
+            elif not cleaned.get(selected) and selected not in self.errors:
+                label = {"faculty": "faculty member", "room": "room", "section": "section"}[selected]
+                self.add_error(selected, f"Please choose a {label}.")
+            else:
+                for name in self.owners:
+                    if name != selected:
+                        cleaned[name] = None
+        return cleaned
+
+    def _post_clean(self):
+        # Invalid owner/time inputs must not reach model checks with incomplete
+        # values or expose the database constraint name. Valid forms still run
+        # the unchanged model validation and database constraint validation.
+        if any(name in self.errors for name in ("owner_type", *self.owners, "start_time", "end_time")):
+            return
+        super()._post_clean()
+
+
+MODEL_FORMS["availability"] = AvailabilityForm
+
+
 class StudentForm(forms.ModelForm):
     student_number = forms.CharField(
         label="Student ID", max_length=40, strip=False,

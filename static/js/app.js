@@ -666,6 +666,27 @@
     window.addEventListener("pageshow", resetGenerationState);
   });
 
+  // Initialize before autosave takes its first snapshot of the form.
+  document.querySelectorAll("[data-availability-owner-type]").forEach((selector) => {
+    const form = selector.form;
+    const owners = [...form.querySelectorAll("[data-availability-owner]")];
+    owners.forEach((field) => { field.dataset.ownerLocked = String(field.disabled); });
+    const updateOwner = () => {
+      owners.forEach((field) => {
+        const active = field.dataset.availabilityOwner === selector.value;
+        const row = field.closest("p") || field.parentElement;
+        row.classList.add("availability-owner-field");
+        row.hidden = !active;
+        if (!active) field.value = "";
+        field.disabled = !active || field.dataset.ownerLocked === "true";
+        field.required = active && !field.disabled;
+      });
+    };
+    selector.addEventListener("change", updateOwner);
+    form.addEventListener("submit", updateOwner, true);
+    updateOwner();
+  });
+
   document.querySelectorAll("[data-form-draft]").forEach((form) => {
     const status = form.querySelector("[data-draft-status]");
     const csrf = form.querySelector("input[name='csrfmiddlewaretoken']")?.value || "";

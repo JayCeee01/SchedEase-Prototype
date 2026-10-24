@@ -24,7 +24,7 @@
   {% endfor %}
 </section>
 {% endif %}
-<div class="panel table-wrap">
+<div class="panel record-list-panel">
   <div class="table-tools">
     <form method="get" class="toolbar record-controls{% if resource == 'assignments' %} assignment-filters{% endif %}" data-auto-tooltips="false">
       {% if resource == 'schedules' %}<input type="hidden" name="tab" value="{{ schedule_tab }}">{% endif %}
@@ -46,9 +46,10 @@
     </form>
   </div>
   {% for error in filter_errors %}<p class="badge danger" role="alert">{{ error }}</p>{% endfor %}
-  <p class="subtle" role="status">{{ total_count }} total{% if resource == 'schedules' %} in this tab{% endif %} · {{ filtered_count }} matching · Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}{% if filters_active %} · Filters applied{% endif %}</p>
+  <p class="subtle record-summary" role="status">{{ total_count }} total{% if resource == 'schedules' %} in this tab{% endif %} · {{ filtered_count }} matching · Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}{% if filters_active %} · Filters applied{% endif %}</p>
+  <div class="table-wrap record-table-scroll" role="region" aria-label="{{ resource_label }} records" tabindex="0">
   <table{% if resource == 'assignments' %} class="assignments-table"{% endif %}>
-    <thead><tr>{% for header in column_headers %}<th scope="col" aria-sort="{{ header.direction }}"><a href="{{ header.url }}">{{ header.label }}</a></th>{% endfor %}{% if resource == 'assignments' %}<th>Meetings</th><th class="assignment-actions" scope="col">Actions</th>{% endif %}{% if has_created_at %}<th>Date Added</th>{% endif %}{% if has_updated_at %}<th>Last Modified</th>{% endif %}{% if resource != 'assignments' %}<th>Actions</th>{% endif %}</tr></thead>
+    <thead><tr>{% for header in column_headers %}{% if resource != "assignments" or not forloop.last %}<th scope="col" aria-sort="{{ header.direction }}"><a href="{{ header.url }}">{{ header.label }}</a></th>{% endif %}{% endfor %}{% if resource == 'assignments' %}<th scope="col">Meetings</th><th class="assignment-actions" scope="col">Actions</th>{% for header in column_headers %}{% if forloop.last %}<th scope="col" aria-sort="{{ header.direction }}"><a href="{{ header.url }}">{{ header.label }}</a></th>{% endif %}{% endfor %}{% endif %}{% if has_created_at %}<th scope="col">Date Added</th>{% endif %}{% if has_updated_at %}<th scope="col">Last Modified</th>{% endif %}{% if resource != 'assignments' %}<th class="record-actions-heading" scope="col">Actions</th>{% endif %}</tr></thead>
     <tbody>
       {% for obj in objects %}
       <tr>
@@ -56,21 +57,23 @@
         <td class="assignment-course"><span class="subject-chip" tabindex="0" data-tooltip="{{ obj.subject.title }}">{{ obj.subject.code }}</span><small>{{ obj.subject.title }}</small></td>
         <td><strong>{{ obj.section }}</strong></td>
         <td>{{ obj.faculty }}</td>
-        <td><span class="assignment-term">{{ obj.term.name }}</span><small>{{ obj.term.school_year }}</small></td>
         <td><div class="meeting-badges">{% for meeting in obj.meetings.all %}<span class="badge"><strong>{{ meeting.get_component_display }}</strong> · {{ meeting.required_duration_minutes }} min <small>#{{ meeting.meeting_index }}</small></span>{% empty %}<span class="badge danger">No meetings</span>{% endfor %}</div></td>
         {% else %}<td>{{ obj }}</td>{% endif %}
-        {% if resource != 'assignments' %}{% if has_created_at %}<td>{% if resource == 'schedules' %}{{ obj.generated_at|date:"M j, Y g:i A" }}{% else %}{{ obj.created_at|date:"M j, Y g:i A" }}{% endif %}</td>{% endif %}{% if has_updated_at %}<td>{{ obj.updated_at|date:"M j, Y g:i A" }}</td>{% endif %}{% endif %}
+        {% if resource != 'assignments' %}{% if has_created_at %}<td class="record-date">{% if resource == 'schedules' %}{{ obj.generated_at|date:"M j, Y g:i A" }}{% else %}{{ obj.created_at|date:"M j, Y g:i A" }}{% endif %}</td>{% endif %}{% if has_updated_at %}<td class="record-date">{{ obj.updated_at|date:"M j, Y g:i A" }}</td>{% endif %}{% endif %}
         <td class="actions-cell{% if resource == 'assignments' %} assignment-actions{% endif %}">
+          <div class="record-actions">
           {% if resource == "schedules" %}<a class="button primary" href="{% url 'schedule_detail' obj.pk %}">{% if obj.status == 'ARCHIVED' %}View Timetable{% else %}Edit Schedule{% endif %}</a><a class="button" href="{% url 'resource_update' resource obj.pk %}">Edit Details</a>{% else %}<a class="button" href="{% url 'resource_update' resource obj.pk %}">Edit</a>{% endif %}
           <a class="button" href="{% url 'resource_delete' resource obj.pk %}">Delete</a>
+          </div>
         </td>
-        {% if resource == 'assignments' %}{% if has_created_at %}<td>{{ obj.created_at|date:"M j, Y g:i A" }}</td>{% endif %}{% if has_updated_at %}<td>{{ obj.updated_at|date:"M j, Y g:i A" }}</td>{% endif %}{% endif %}
+        {% if resource == 'assignments' %}<td><span class="assignment-term">{{ obj.term.name }}</span><small>{{ obj.term.school_year }}</small></td>{% if has_created_at %}<td class="record-date">{{ obj.created_at|date:"M j, Y g:i A" }}</td>{% endif %}{% if has_updated_at %}<td class="record-date">{{ obj.updated_at|date:"M j, Y g:i A" }}</td>{% endif %}{% endif %}
       </tr>
       {% empty %}
       <tr><td colspan="10" class="table-empty">{% if filter_errors %}Check the selections above to see matching records.{% elif filters_active %}No records match your filters{% if q %} and search{% endif %}.{% elif q %}No records match your search.{% else %}No records in this view.{% endif %}</td></tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 {% include "schedules/_pagination.html" %}
 {% endblock %}

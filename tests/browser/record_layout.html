@@ -1,0 +1,40 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Record readability regression</title>
+<link rel="stylesheet" href="../../static/css/app.css">
+<style>body{padding:24px}main{margin-left:260px;min-width:0}#results{white-space:pre-wrap} @media(max-width:900px){main{margin-left:0}}</style>
+<script>document.documentElement.dataset.theme=new URLSearchParams(location.search).get('theme')||'light';</script></head><body><main>
+<h1>Assignments</h1><div class="panel record-list-panel">
+<div class="table-tools"><label>Search Assignments <input placeholder="Search Assignments"></label></div>
+<p class="record-summary">2 total · 2 matching · Showing 1–2</p>
+<div class="table-wrap record-table-scroll" id="assignments" tabindex="0" aria-label="Assignments records"><table class="assignments-table">
+<thead><tr><th>Course</th><th>Section</th><th>Faculty</th><th>Meetings</th><th class="assignment-actions">Actions</th><th>Term</th><th>Date Added</th><th>Last Modified</th></tr></thead>
+<tbody><tr><td class="assignment-course"><span class="subject-chip">ENGR1052</span><small>Capstone Design 1</small></td><td><strong>BSCPE 3-201</strong></td><td>Ada Santos</td><td><span class="assignment-term">Second Term - Representative Workbook Sample</span><small>2025–2026</small></td><td><div class="meeting-badges"><span class="badge">Lecture · 90 min #1</span><span class="badge">Lecture · 90 min #2</span></div></td><td class="actions-cell assignment-actions"><div class="record-actions"><a class="button" href="#edit">Edit</a><a class="button" href="#delete">Delete</a></div></td><td><span class="assignment-term">Second Term - Representative Workbook Sample</span><small>2025?2026</small></td><td class="record-date">Oct 16, 2026 7:34 PM</td><td class="record-date">Oct 16, 2026 7:39 PM</td></tr></tbody></table></div></div>
+<p>Page 1 of 1</p><div id="other-records"></div><pre id="results">RUNNING</pre></main>
+<script>
+window.addEventListener('error',event=>document.querySelector('#results').textContent='FAIL '+event.message);
+for(const [label, text] of [['Faculty','Santos, Alexandra Marie'],['Students','001234 — Example Student'],['Courses','Computer Programming and Laboratory Applications'],['Sections','BSCPE 3-201'],['Rooms','Computer Laboratory — capacity 50'],['Availability','Faculty: Example Instructor — Monday 9:00 AM to 10:00 AM — Available'],['Credentials','Master of Science in Computer Engineering']]) {
+ document.querySelector('#other-records').insertAdjacentHTML('beforeend',`<h2>${label}</h2><div class="panel record-list-panel"><div class="table-wrap record-table-scroll"><table><thead><tr><th>${label}</th><th>Date Added</th><th>Actions</th></tr></thead><tbody><tr><td>${text}</td><td class="record-date">Oct 16, 2026 7:34 PM</td><td class="actions-cell"><div class="record-actions"><a class="button" href="#edit">Edit</a><a class="button" href="#delete">Delete</a></div></td></tr></tbody></table></div></div>`);
+}
+</script><script src="../../static/js/table-scroll.js"></script><script>
+(async()=>{const checks=[];const check=(ok,name)=>{if(!ok)throw Error(name);checks.push(name)};const wait=()=>new Promise(r=>setTimeout(r,150));
+try{check(innerWidth>=300,'viewport width '+innerWidth);await wait();
+const wrap=document.querySelector('#assignments'),row=wrap.querySelector('tbody tr'),cells=row.cells;
+check(cells[5].getBoundingClientRect().width>=256,'term minimum width');
+check(cells[2].getBoundingClientRect().width>=160,'faculty minimum width');
+check(row.getBoundingClientRect().height<160,'compact assignment row');
+check(getComputedStyle(cells[5]).overflowWrap==='normal','words wrap naturally');
+check([...document.querySelectorAll('.record-date')].every(cell=>getComputedStyle(cell).whiteSpace==='nowrap'),'dates stay readable');
+check(wrap.scrollWidth>wrap.clientWidth,'assignments scroll instead of compressing');
+check(document.documentElement.scrollWidth<=innerWidth,'no page overflow');
+const summary=document.querySelector('.record-summary'),left=summary.getBoundingClientRect().left;
+const initialActions=cells[4].getBoundingClientRect(),initialBounds=wrap.getBoundingClientRect();
+check(initialActions.left>=initialBounds.left&&initialActions.right<=initialBounds.right+1,'sticky actions accessible without scrolling');
+wrap.scrollLeft=wrap.scrollWidth;await wait();
+check(wrap.scrollLeft>0,'horizontal scrolling works');
+check(summary.getBoundingClientRect().left===left,'summary stays stationary');
+const actions=cells[4].getBoundingClientRect(),bounds=wrap.getBoundingClientRect();
+check(cells[6].getBoundingClientRect().left>=actions.right-1,'dates do not overlap actions at scroll end');
+check([...document.querySelectorAll('#other-records tbody td:first-child')].every(c=>getComputedStyle(c).overflowWrap==='normal'),'other record types retain natural widths');
+wrap.scrollLeft=0;await wait();
+document.querySelector('#results').textContent='PASS '+checks.length+' checks\n'+checks.join('\n');
+}catch(error){document.querySelector('#results').textContent='FAIL '+error.message;}})();
+</script></body></html>

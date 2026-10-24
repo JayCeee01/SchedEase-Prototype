@@ -304,7 +304,7 @@ def my_availability(request):
 def my_availability_create(request):
     faculty = get_object_or_404(Faculty, user=request.user)
     form_class = MODEL_FORMS["availability"]
-    form = form_class(request.POST or None)
+    form = form_class(request.POST or None, locked_faculty=faculty)
     form.fields["faculty"].initial = faculty
     form.fields["faculty"].disabled = True
     form.fields["room"].disabled = True
@@ -326,7 +326,7 @@ def my_availability_update(request, pk):
     faculty = get_object_or_404(Faculty, user=request.user)
     item = get_object_or_404(Availability, pk=pk, faculty=faculty)
     form_class = MODEL_FORMS["availability"]
-    form = form_class(request.POST or None, instance=item)
+    form = form_class(request.POST or None, instance=item, locked_faculty=faculty)
     form.fields["faculty"].disabled = True
     form.fields["room"].disabled = True
     form.fields["section"].disabled = True

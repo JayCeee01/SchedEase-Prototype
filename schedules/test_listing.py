@@ -25,6 +25,22 @@ class AcademicListTests(TestCase):
     def get(self, resource='departments', **params):
         return self.client.get(reverse('resource_list', args=[resource]), params)
 
+    def test_record_summary_and_actions_remain_outside_control_scrolling(self):
+        response = self.get()
+        self.assertContains(response, 'class="panel record-list-panel"')
+        self.assertContains(response, 'class="subtle record-summary" role="status"')
+        self.assertContains(response, '45 total')
+        self.assertContains(response, '45 matching')
+        self.assertContains(response, 'Showing 1\u201320')
+        self.assertContains(response, 'class="table-wrap record-table-scroll" role="region"')
+        self.assertContains(response, 'class="record-actions"', count=20)
+        obj = response.context['objects'][0]
+        self.assertContains(response, reverse('resource_update', args=['departments', obj.pk]))
+        self.assertContains(response, reverse('resource_delete', args=['departments', obj.pk]))
+        html = response.content.decode()
+        self.assertLess(html.index('record-controls'), html.index('record-table-scroll'))
+        self.assertLess(html.index('record-summary'), html.index('record-table-scroll'))
+
     def test_first_middle_last_and_stable_order(self):
         seen = []
         for number, expected in ((1, 20), (2, 20), (3, 5)):
