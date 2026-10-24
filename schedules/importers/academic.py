@@ -1,4 +1,5 @@
 """Bounded spreadsheet parsing and transactional academic-data import."""
+from schedules.identity import identity_query, normalize_identity, RULES
 import csv
 from schedules.services import csv_export
 import hashlib
@@ -244,9 +245,9 @@ class Importer:
         return int(value)
 
     def upsert(self, model, keys, values, required=()):
-        identity = (model.__name__, tuple((k, str(getattr(v, 'pk', v))) for k, v in keys.items()))
+        identity = (model.__name__, tuple((k, normalize_identity(str(getattr(v, "pk", v))) if k in RULES.get(model.__name__, ((), ()))[0] else str(getattr(v, "pk", v))) for k, v in keys.items()))
         provided = {k: v for k, v in values.items() if v is not None}
-        obj = model.objects.filter(**keys).first()
+        obj = identity_query(model, keys).first()
         if identity in self.seen:
             old = self.seen[identity]
             for key, value in provided.items():

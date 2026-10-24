@@ -124,6 +124,16 @@ def compatibility(connection):
             if getattr(constraint, 'fields', ()):
                 if (tuple(model._meta.get_field(field).column for field in constraint.fields),True) not in indexes:
                     return False
+            elif getattr(constraint, 'expressions', ()):
+                from django.db.backends.sqlite3.base import DatabaseWrapper
+                # Render SQL without touching the application's connection/cache.
+                wrapper = DatabaseWrapper({'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'})
+                editor = wrapper.schema_editor(collect_sql=True)
+                expected = str(constraint.create_sql(model, editor))
+                actual = connection.execute("SELECT sql FROM sqlite_master WHERE type='index' AND name=?", (constraint.name,)).fetchone()
+                normalize_sql = lambda sql: ' '.join(sql.strip().rstrip(';').split())
+                if actual is None or normalize_sql(actual[0]) != normalize_sql(expected):
+                    return False
             elif constraint.name not in table_sql:
                 return False
     guards = {}
@@ -135,6 +145,8 @@ def compatibility(connection):
 
 
 def verify(connection, *, require_current=False):
+    from schedules.identity import normalize_identity
+    connection.create_function("schedease_identity_v1", 1, normalize_identity, deterministic=True)
     if connection.execute('PRAGMA integrity_check').fetchall() != [('ok',)]:
         raise BackupError('SQLite integrity verification failed. Preserve the source for investigation.')
     if connection.execute('PRAGMA foreign_key_check').fetchone() is not None:

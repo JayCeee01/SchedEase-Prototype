@@ -98,6 +98,8 @@ def create(root, source):
     with closing(sqlite3.connect(restored)) as db:
         db.execute('PRAGMA foreign_keys=ON')
         # Match an ordinary application connection, with no privileged workflow.
+        from schedules.identity import normalize_identity
+        db.create_function('schedease_identity_v1', 1, normalize_identity, deterministic=True)
         db.create_function('schedease_archiving', 0, lambda: 0)
         db.create_function('schedease_term_sync', 2, lambda *args: 0)
         attempts = [

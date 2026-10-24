@@ -1,3 +1,4 @@
+from schedules.identity import identity_get_or_create
 import re
 from collections import Counter, defaultdict
 from datetime import date
@@ -50,28 +51,28 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"Imported {result['counts']}; original conflicts={len(conflicts)}"))
 
     def persist(self, meetings):
-        term, _ = AcademicTerm.objects.get_or_create(name="Second Term - Full Workbook", school_year="2025-2026",
+        term, _ = identity_get_or_create(AcademicTerm, name="Second Term - Full Workbook", school_year="2025-2026",
             defaults={"starts_on": date(2025, 11, 1), "ends_on": date(2026, 4, 30), "is_active": False})
         years = {n: YearLevel.objects.get_or_create(level=n, defaults={"label": f"Year {n}"})[0] for n in {m["year"] for m in meetings}}
         programs = {}
         for code in {m["program"] for m in meetings}:
             dept_code, dept_name, program_name = PROGRAMS[code]
-            dept, _ = Department.objects.get_or_create(code=dept_code, defaults={"name": dept_name})
-            programs[code], _ = Program.objects.get_or_create(code=code, defaults={"department": dept, "name": program_name})
+            dept, _ = identity_get_or_create(Department, code=dept_code, defaults={"name": dept_name})
+            programs[code], _ = identity_get_or_create(Program, code=code, defaults={"department": dept, "name": program_name})
         sections = {}
         for m in meetings:
             key = (m["program"], m["year"], m["section"])
-            sections[key], _ = Section.objects.get_or_create(program=programs[m["program"]], year_level=years[m["year"]], name=m["section"], defaults={"size": 30})
+            sections[key], _ = identity_get_or_create(Section, program=programs[m["program"]], year_level=years[m["year"]], name=m["section"], defaults={"size": 30})
         faculty = {}
         faculty_minutes = Counter()
         for m in meetings:
             faculty_minutes[m["faculty"]] += m["duration"]
             eid = "XLS-" + re.sub(r"[^A-Z0-9]+", "-", m["faculty"]).strip("-")
             derived_limit = max(24, (faculty_minutes[m["faculty"]] + 59) // 60)
-            faculty[m["faculty"]], _ = Faculty.objects.get_or_create(employee_id=eid, defaults={"department": programs[m["program"]].department, "full_name": m["faculty"], "max_weekly_hours": derived_limit})
+            faculty[m["faculty"]], _ = identity_get_or_create(Faculty, employee_id=eid, defaults={"department": programs[m["program"]].department, "full_name": m["faculty"], "max_weekly_hours": derived_limit})
         rooms = {}
         for m in meetings:
-            rooms[m["room"]], _ = Room.objects.get_or_create(name=m["room"], defaults={"room_type": m["room_type"], "capacity": CAPACITY_DEFAULTS[m["room_type"]]})
+            rooms[m["room"]], _ = identity_get_or_create(Room, name=m["room"], defaults={"room_type": m["room_type"], "capacity": CAPACITY_DEFAULTS[m["room_type"]]})
         for room in rooms.values():
             for day in range(6):
                 Availability.objects.get_or_create(room=room, day=day, start_time=SCHOOL_START, end_time=SCHOOL_END, kind=AvailabilityKind.AVAILABLE)
@@ -81,7 +82,7 @@ class Command(BaseCommand):
             units = 0
             try: units = float(m["units"] or 0)
             except ValueError: pass
-            subject, _ = Subject.objects.get_or_create(code=m["code"], defaults={"title": m["title"], "department": programs[m["program"]].department, "units": units,
+            subject, _ = identity_get_or_create(Subject, code=m["code"], defaults={"title": m["title"], "department": programs[m["program"]].department, "units": units,
                 "lecture_hours": 0, "lab_hours": 0, "required_room_type": m["room_type"]})
             section = sections[(m["program"], m["year"], m["section"])]
             key = (subject.id, section.id, m["component"]); indices[key] += 1

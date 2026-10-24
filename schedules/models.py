@@ -7,6 +7,7 @@ from django.db import models, transaction
 from django.db.models import Q
 from .protection import ProtectedContentMixin
 from .validators import validate_student_id
+from .identity import IdentityValidationMixin, NormalizedIdentity
 
 
 class Role(models.TextChoices):
@@ -40,24 +41,28 @@ class Profile(models.Model):
         return f"{self.user.get_full_name() or self.user.username} ({self.get_role_display()})"
 
 
-class Department(ProtectedContentMixin, models.Model):
+class Department(IdentityValidationMixin, ProtectedContentMixin, models.Model):
     code = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=120)
 
     class Meta:
         ordering = ["code"]
+        constraints = [models.UniqueConstraint(NormalizedIdentity("code"), name="normalized_department_identity")]
+
 
     def __str__(self):
         return self.code
 
 
-class Program(ProtectedContentMixin, models.Model):
+class Program(IdentityValidationMixin, ProtectedContentMixin, models.Model):
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     code = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=160)
 
     class Meta:
         ordering = ["code"]
+        constraints = [models.UniqueConstraint(NormalizedIdentity("code"), name="normalized_program_identity")]
+
 
     def __str__(self):
         return self.code
@@ -74,7 +79,7 @@ class YearLevel(ProtectedContentMixin, models.Model):
         return self.label
 
 
-class AcademicTerm(ProtectedContentMixin, models.Model):
+class AcademicTerm(IdentityValidationMixin, ProtectedContentMixin, models.Model):
     name = models.CharField(max_length=80)
     school_year = models.CharField(max_length=20)
     starts_on = models.DateField()
@@ -84,6 +89,8 @@ class AcademicTerm(ProtectedContentMixin, models.Model):
     class Meta:
         ordering = ["-starts_on"]
         constraints = [models.UniqueConstraint(fields=["name", "school_year"], name="unique_term")]
+        constraints += [models.UniqueConstraint(NormalizedIdentity("name"), NormalizedIdentity("school_year"), name="normalized_academicterm_identity")]
+
 
     def __str__(self):
         return f"{self.name} {self.school_year}"
@@ -94,7 +101,7 @@ class AcademicTerm(ProtectedContentMixin, models.Model):
             raise ValidationError("Academic term end date must be after its start date.")
 
 
-class Section(ProtectedContentMixin, models.Model):
+class Section(IdentityValidationMixin, ProtectedContentMixin, models.Model):
     program = models.ForeignKey(Program, on_delete=models.CASCADE)
     year_level = models.ForeignKey(YearLevel, on_delete=models.PROTECT)
     name = models.CharField(max_length=30)
@@ -104,6 +111,8 @@ class Section(ProtectedContentMixin, models.Model):
     class Meta:
         ordering = ["program__code", "year_level__level", "name"]
         constraints = [models.UniqueConstraint(fields=["program", "year_level", "name"], name="unique_section")]
+        constraints += [models.UniqueConstraint(NormalizedIdentity("name"), models.F("program"), models.F("year_level"), name="normalized_section_identity")]
+
 
     @property
     def section_code(self):
@@ -136,7 +145,7 @@ class Section(ProtectedContentMixin, models.Model):
         return self.display_name
 
 
-class Faculty(ProtectedContentMixin, models.Model):
+class Faculty(IdentityValidationMixin, ProtectedContentMixin, models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     department = models.ForeignKey(Department, on_delete=models.PROTECT)
     employee_id = models.CharField(max_length=40, unique=True)
@@ -145,17 +154,21 @@ class Faculty(ProtectedContentMixin, models.Model):
 
     class Meta:
         ordering = ["full_name"]
+        constraints = [models.UniqueConstraint(NormalizedIdentity("employee_id"), name="normalized_faculty_identity")]
+
 
     def __str__(self):
         return self.full_name
 
 
-class Credential(models.Model):
+class Credential(IdentityValidationMixin, models.Model):
     name = models.CharField(max_length=120, unique=True)
     description = models.TextField(blank=True)
 
     class Meta:
         ordering = ["name"]
+        constraints = [models.UniqueConstraint(NormalizedIdentity("name"), name="normalized_credential_identity")]
+
 
     def __str__(self):
         return self.name
@@ -177,7 +190,7 @@ class FacultyCredential(models.Model):
         return f"{self.faculty} - {self.credential}"
 
 
-class Student(models.Model):
+class Student(IdentityValidationMixin, models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     section = models.ForeignKey(Section, on_delete=models.PROTECT)
     student_number = models.CharField(max_length=40, unique=True, validators=[validate_student_id])
@@ -185,12 +198,14 @@ class Student(models.Model):
 
     class Meta:
         ordering = ["full_name"]
+        constraints = [models.UniqueConstraint(NormalizedIdentity("student_number"), name="normalized_student_identity")]
+
 
     def __str__(self):
         return self.full_name
 
 
-class Room(ProtectedContentMixin, models.Model):
+class Room(IdentityValidationMixin, ProtectedContentMixin, models.Model):
     name = models.CharField(max_length=80, unique=True)
     room_type = models.CharField(max_length=30, choices=RoomKind.choices)
     capacity = models.PositiveIntegerField()
@@ -198,12 +213,14 @@ class Room(ProtectedContentMixin, models.Model):
 
     class Meta:
         ordering = ["name"]
+        constraints = [models.UniqueConstraint(NormalizedIdentity("name"), name="normalized_room_identity")]
+
 
     def __str__(self):
         return f"{self.name} ({self.get_room_type_display()})"
 
 
-class Subject(ProtectedContentMixin, models.Model):
+class Subject(IdentityValidationMixin, ProtectedContentMixin, models.Model):
     code = models.CharField(max_length=30, unique=True)
     title = models.CharField(max_length=180)
     department = models.ForeignKey(Department, on_delete=models.PROTECT)
@@ -216,6 +233,8 @@ class Subject(ProtectedContentMixin, models.Model):
 
     class Meta:
         ordering = ["code"]
+        constraints = [models.UniqueConstraint(NormalizedIdentity("code"), name="normalized_subject_identity")]
+
 
     def __str__(self):
         return f"{self.code} — {self.title}"
