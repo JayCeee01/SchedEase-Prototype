@@ -116,6 +116,14 @@ class ScheduleEntryAdmin(WorkflowReadOnlyAdmin):
     search_fields = ("assignment__subject__code", "assignment__section__name", "room__name")
 
 
+from .forms import StudentForm
+
+
+@admin.register(Student)
+class StudentAdmin(ProtectedScheduleAdmin):
+    form = StudentForm
+
+
 for model in [
     AcademicTerm,
     Assignment,
@@ -129,7 +137,6 @@ for model in [
     Profile,
     Room,
     Section,
-    Student,
     Subject,
     SubjectCredentialRequirement,
     TeachingAssignment,

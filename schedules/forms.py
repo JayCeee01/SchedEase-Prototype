@@ -66,6 +66,95 @@ MODEL_FORMS = {
 }
 
 
+# Shared editor guidance only; model fields and validation remain unchanged.
+for resource in ("faculty", "students"):
+    field = MODEL_FORMS[resource].base_fields["user"]
+    field.label = "Login account (optional)"
+    field.help_text = "Leave blank to create this record without a login. You can link an existing account later. This does not create an account."
+
+EDITOR_HELP = {
+    "faculty": {"employee_id": "Letters and numbers are accepted, for example EMP001A."},
+    "subjects": {
+        "lecture_hours": "Total lecture hours required for each section each week, across all its lecture meetings.",
+        "lab_hours": "Total laboratory hours required for each section each week, across all its laboratory meetings."},
+    "faculty-credentials": {
+        "credential": "Choose a credential held by this faculty member. Add another record for each additional credential.",
+        "issued_on": "Needed to confirm eligibility. The issue date must be on or before the term starts.",
+        "expires_on": "Leave blank if it does not expire. Otherwise, it must remain valid through the term end date."},
+    "subject-credential-requirements": {
+        "required_credential": "Faculty must meet every requirement listed for this course, using the named credential or one of its accepted equivalents.",
+        "acceptable_equivalents": "Any one of these credentials can satisfy this requirement instead. It must be valid for the full term."},
+    "credential-overrides": {
+        "assignment": "Select the specific meeting covered by this exception. It must match the faculty member and course.",
+        "reason": "An authorized administrator must explain why this credential exception is approved. Other scheduling rules still apply.",
+        "missing_credentials": "List the required credentials that are missing or not valid for the full term."},
+    "availability": {
+        "faculty": "For faculty availability, select one faculty member and leave Room and Section blank.",
+        "room": "For room availability, select one room and leave Faculty and Section blank.",
+        "section": "For section availability, select one section and leave Faculty and Room blank.",
+        "kind": "Available: classes must fit the available periods you record. Unavailable: classes cannot overlap this period. Preferred: a preference, not a guarantee; not supported for sections.",
+        "day": "This period applies on the selected weekday. Once Available periods are recorded, days without them are unavailable.",
+        "start_time": "Start of this period.",
+        "end_time": "End of this period; must be later than the start."},
+}
+for resource, guidance in EDITOR_HELP.items():
+    for name, text in guidance.items():
+        MODEL_FORMS[resource].base_fields[name].help_text = text
+MODEL_FORMS["availability"].base_fields["kind"].label = "Availability type"
+
+
+class StudentForm(forms.ModelForm):
+    student_number = forms.CharField(
+        label="Student ID", max_length=40, strip=False,
+        help_text="Use digits 0-9 only, without spaces. Leading zeros are kept. An existing legacy ID may remain unchanged when editing other fields.",
+        widget=forms.TextInput(attrs={"inputmode": "numeric"}),
+    )
+
+    class Meta:
+        model = Student
+        fields = ["user", "section", "student_number", "full_name"]
+        labels = {"user": "Login account (optional)"}
+        help_texts = {"user": "Leave blank to create this record without a login. You can link an existing account later. This does not create an account."}
+
+    def clean_student_number(self):
+        from .validators import validate_student_id
+        value = self.cleaned_data["student_number"]
+        self._unchanged_legacy_id = False
+        try:
+            validate_student_id(value)
+        except ValidationError:
+            # Consult persisted state, not initial data or a client-supplied value.
+            if self.instance._state.adding or not Student.objects.using(
+                self.instance._state.db or "default"
+            ).filter(pk=self.instance.pk, student_number=value).exists():
+                raise
+            self._unchanged_legacy_id = True
+        return value
+
+    def _get_validation_exclusions(self):
+        exclude = super()._get_validation_exclusions()
+        if getattr(self, "_validating_legacy_field", False):
+            exclude.add("student_number")
+        return exclude
+
+    def _post_clean(self):
+        # Only this edit form permits an unchanged legacy value. Direct model
+        # full_clean remains strict; all other fields still receive validation.
+        self._validating_legacy_field = getattr(self, "_unchanged_legacy_id", False)
+        try:
+            super()._post_clean()
+        finally:
+            self._validating_legacy_field = False
+
+    def validate_unique(self):
+        # Restore the ID to uniqueness validation even for legacy edits.
+        self._validating_legacy_field = False
+        super().validate_unique()
+
+
+MODEL_FORMS["students"] = StudentForm
+
+
 class SectionForm(forms.ModelForm):
     class Meta:
         model = Section
@@ -114,6 +203,7 @@ class AssignmentMeetingForm(forms.ModelForm):
     class Meta:
         model = TeachingAssignment
         fields = ["meeting_index", "component", "duration_minutes", "required_room_type_override"]
+        help_texts = {"duration_minutes": "Length of this meeting in minutes: 90 minutes = 1.5 hours. All lecture meetings must add up to the course lecture hours; laboratory meetings must add up to its lab hours."}
         labels = {"component": "Session Type", "duration_minutes": "Required Duration (minutes)",
                   "required_room_type_override": "Required Room Type"}
 

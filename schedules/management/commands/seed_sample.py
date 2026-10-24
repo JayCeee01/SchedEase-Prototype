@@ -60,7 +60,7 @@ class Command(BaseCommand):
         student_user.set_password("password123")
         student_user.save()
         Profile.objects.get_or_create(user=student_user, defaults={"role": Role.STUDENT})
-        Student.objects.get_or_create(user=student_user, student_number="S2026-0001", defaults={"section": sec_a, "full_name": "Juan Dela Cruz"})
+        Student.objects.get_or_create(user=student_user, student_number="20260001", defaults={"section": sec_a, "full_name": "Juan Dela Cruz"})
 
         lec_101, _ = Room.objects.get_or_create(name="Lec 101", defaults={"room_type": RoomKind.LECTURE, "capacity": 45})
         lec_102, _ = Room.objects.get_or_create(name="Lec 102", defaults={"room_type": RoomKind.LECTURE, "capacity": 35})

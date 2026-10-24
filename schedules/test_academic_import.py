@@ -121,7 +121,7 @@ class AcademicImportTests(TestCase):
         result = self.preview([self.row])
         self.assertTrue(any('LABORATORY totals' in e for e in result['errors']))
         result = self.preview([self.row, {**self.rows[1], 'meeting_index': '1'}])
-        self.assertTrue(any('indexes must be unique' in e for e in result['errors']))
+        self.assertTrue(any('Each meeting in this assignment must have a different meeting number.' in e for e in result['errors']))
 
     def test_identical_duplicate_row_is_counted_once_conflicting_duplicate_rejected(self):
         result = self.commit(self.rows + [self.row])

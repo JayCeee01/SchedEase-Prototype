@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import Q
 from .protection import ProtectedContentMixin
+from .validators import validate_student_id
 
 
 class Role(models.TextChoices):
@@ -179,7 +180,7 @@ class FacultyCredential(models.Model):
 class Student(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     section = models.ForeignKey(Section, on_delete=models.PROTECT)
-    student_number = models.CharField(max_length=40, unique=True)
+    student_number = models.CharField(max_length=40, unique=True, validators=[validate_student_id])
     full_name = models.CharField(max_length=160)
 
     class Meta:
@@ -428,10 +429,10 @@ class Availability(models.Model):
         ]
 
     def __str__(self):
-        if self.section_id:
-            return (f"{self.section} - {self.get_day_display()} "
-                    f"{self.start_time:%H:%M}-{self.end_time:%H:%M} - {self.get_kind_display()}")
-        return super().__str__()
+        owner = self.faculty if self.faculty_id else self.room if self.room_id else self.section if self.section_id else "No owner selected"
+        start = self.start_time.strftime("%H:%M") if self.start_time else "--:--"
+        end = self.end_time.strftime("%H:%M") if self.end_time else "--:--"
+        return f"{owner} - {self.get_day_display()} {start}-{end} - {self.get_kind_display()}"
 
     def clean(self):
         if sum(bool(value) for value in (self.faculty_id, self.room_id, self.section_id)) != 1:

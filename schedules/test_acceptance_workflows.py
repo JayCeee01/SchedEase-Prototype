@@ -52,7 +52,7 @@ class AcceptanceWorkflowTests(TestCase):
             student = User.objects.create_user(f'acceptance-student-{index}')
             m.Profile.objects.create(user=student, role='STUDENT')
             self.create('students', m.Student, user=student.pk, section=section.pk,
-                        student_number=f'SYN{index}', full_name=f'Synthetic Student {index}')
+                        student_number=f'2026{index:04d}', full_name=f'Synthetic Student {index}')
             parent = self.create('assignments', m.Assignment, term=self.term.pk, subject=self.course.pk,
                                  section=section.pk, faculty=teacher.pk, **self.meeting_payload())
             self.faculty_users.append(faculty_user)

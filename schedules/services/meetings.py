@@ -21,10 +21,10 @@ def meeting_requirement_errors(subject, meetings):
     errors = []
     for index, component, minutes in meetings:
         if index in seen:
-            errors.append(("meeting_index", "Meeting indexes must be unique within an assignment."))
+            errors.append(("meeting_index", "Each meeting in this assignment must have a different meeting number."))
         seen.add(index)
         if component not in totals:
-            errors.append(("component", "Choose LECTURE or LABORATORY to match the course hours."))
+            errors.append(("component", "Choose Lecture or Laboratory to match the course hours."))
         else:
             totals[component] += minutes
         errors.extend(("duration_minutes", message) for message in duration_errors(minutes))
@@ -33,7 +33,7 @@ def meeting_requirement_errors(subject, meetings):
     for component, hours in (("LECTURE", subject.lecture_hours), ("LABORATORY", subject.lab_hours)):
         expected = hours * 60
         if totals[component] != expected:
-            errors.append(("duration_minutes", f"{component} totals {totals[component]} minutes; course requires {expected}."))
+            errors.append(("duration_minutes", f"{component} totals {totals[component]} minutes; course requires {expected}. Adjust the meeting durations so their total matches the course requirement."))
     return errors
 
 
