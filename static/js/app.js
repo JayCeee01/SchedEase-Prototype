@@ -953,6 +953,7 @@
         }
       }
     }, true);
+    form.addEventListener("meetings:refresh", () => render(active()[0]));
     form.classList.add("meeting-tabs-ready");
     form.querySelector("[data-meeting-toolbar]").hidden = false;
     render(active().find((panel) => panel.querySelector(".errorlist")) || active()[0]);

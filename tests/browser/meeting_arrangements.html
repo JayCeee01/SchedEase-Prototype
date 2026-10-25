@@ -1,0 +1,40 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="../../static/css/app.css"><script>document.documentElement.dataset.theme=new URLSearchParams(location.search).get('theme')||'light';</script></head>
+<body style="padding:24px"><form class="panel form" data-assignment-editor>
+<label>Course<select name="subject"><option value="1">Lecture and lab</option><option value="2">Lecture only</option></select></label><input type="hidden" name="term" value="1">
+<script type="application/json" id="meeting-requirements">{"1":{"LECTURE":180,"LABORATORY":120},"2":{"LECTURE":60,"LABORATORY":0}}</script>
+<script type="application/json" id="arrangement-suggestions">{"1":{"LECTURE":[[180],[90,90],[60,60,60]],"LABORATORY":[[120],[60,60],[30,30,30,30]]},"2":{"LECTURE":[[60],[30,30]],"LABORATORY":[]}}</script>
+<div data-meeting-hours class="meeting-hours-summary"></div><div data-arrangement-controls class="meeting-hours-summary" hidden></div>
+<input type="hidden" name="meetings-TOTAL_FORMS" value="3"><input type="hidden" name="meetings-MAX_NUM_FORMS" value="1000">
+<div class="meeting-tab-toolbar" data-meeting-toolbar hidden><div class="meeting-tabs" data-meeting-tabs></div><button type="button" data-add-meeting>Add Meeting</button></div><p data-meeting-status></p>
+<div data-meeting-list></div><template data-empty-meeting></template></form><pre id="results" style="white-space:pre-wrap">RUNNING</pre>
+<script>
+const markup=(i,id,type,minutes,room)=>`<fieldset data-meeting-form><legend>Meeting <span data-meeting-number>${i+1}</span></legend><input type="hidden" name="meetings-${i}-id" value="${id}"><label>Number<input name="meetings-${i}-meeting_index" value="${i+1}"></label><label>Session<select name="meetings-${i}-component"><option ${type==='LECTURE'?'selected':''}>LECTURE</option><option ${type==='LABORATORY'?'selected':''}>LABORATORY</option></select></label><label>Minutes<input name="meetings-${i}-duration_minutes" value="${minutes}"></label><label>Room<select name="meetings-${i}-required_room_type_override"><option value="">Default</option><option ${room==='LECTURE'?'selected':''}>LECTURE</option><option ${room==='COMPUTER_LAB'?'selected':''}>COMPUTER_LAB</option><option ${room==='SPECIAL'?'selected':''}>SPECIAL</option></select></label><input type="checkbox" name="meetings-${i}-DELETE"><button type="button" data-remove-meeting hidden>Remove Meeting</button></fieldset>`;
+document.querySelector('[data-meeting-list]').innerHTML=markup(0,11,'LECTURE',90,'SPECIAL')+markup(1,12,'LECTURE',90,'LECTURE')+markup(2,13,'LABORATORY',120,'COMPUTER_LAB');
+document.querySelector('template').innerHTML=markup('__prefix__','','LECTURE',0,'');
+</script><script src="../../static/js/app.js"></script><script src="../../static/js/meeting-hours.js"></script><script src="../../static/js/meeting-arrangements.js"></script>
+<script>
+try {
+const checks=[];const check=(ok,name)=>{if(!ok)throw Error(name);checks.push(name)};
+check(innerWidth>=300,'viewport width '+innerWidth);
+const form=document.querySelector('form'), select=document.querySelector('#arrangement-LECTURE'), room=document.querySelector('#arrangement-room-LECTURE'), button=select.parentElement.querySelector('button');
+const field=(i,name)=>form.elements.namedItem(`meetings-${i}-${name}`);const choose=value=>{select.value=JSON.stringify(value);select.dispatchEvent(new Event('change'));};
+const snapshot=()=>[...form.querySelectorAll('[data-meeting-list] input,[data-meeting-list] select')].map(e=>[e.name,e.value,e.checked]);
+const initial=JSON.stringify(snapshot());check(select.value===''&&button.disabled,'restored meetings start custom');
+choose([180]);window.confirm=()=>false;button.click();check(JSON.stringify(snapshot())===initial,'cancel preserves all values');
+choose([90,90]);window.confirm=()=>true;button.click();check(JSON.stringify(snapshot())===initial,'matching identities and settings unchanged');
+choose([60,60,60]);button.click();check(JSON.stringify(snapshot())===initial,'new meetings require explicit room');
+room.value='LECTURE';button.click();check(field(0,'id').value==='11'&&field(0,'required_room_type_override').value==='SPECIAL','reused identity and room preserved');
+check(field(2,'duration_minutes').value==='120'&&field(2,'required_room_type_override').value==='COMPUTER_LAB','other component unchanged');
+check(field(3,'duration_minutes').value==='60'&&field(3,'meeting_index').value==='4','new meeting and numbering');
+check(document.querySelectorAll('[data-meeting-tabs] button').length===4,'tabs refreshed');
+choose([180]);button.click();check(field(1,'DELETE').checked&&field(3,'DELETE').checked,'surplus removed through formset');
+check(document.querySelector('[data-meeting-hours]').textContent.includes('Complete'),'totals refreshed');
+const before=JSON.stringify(snapshot());form.elements.subject.value='2';form.elements.subject.dispatchEvent(new Event('change'));check(JSON.stringify(snapshot())===before,'course change never applies');
+check(document.querySelector('#arrangement-LABORATORY').disabled,'zero hours no suggestions');
+check(![...document.querySelector('#arrangement-room-LABORATORY').options].some(o=>o.value==='LECTURE'),'no lecture room substitution for lab');
+select.focus();check(document.activeElement===select,'keyboard control');
+check(document.documentElement.scrollWidth<=innerWidth,'no horizontal page overflow');
+document.querySelector('#results').textContent='PASS '+checks.length+' checks\n'+checks.join('\n');
+}catch(e){document.querySelector('#results').textContent='FAIL '+e.message;}
+</script></body></html>

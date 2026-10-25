@@ -17,6 +17,11 @@
   <div class="form-section-heading"><div><h2>Meetings</h2><p class="subtle">Lecture and laboratory time must match the selected course requirements.</p></div></div>
   {{ form.meeting_requirements|json_script:"meeting-requirements" }}
   <div class="meeting-hours-summary" data-meeting-hours role="status" aria-live="polite" aria-atomic="true">Choose a course to see its required hours.</div>
+  {% if meetings.arrangements_allowed %}
+  {{ form.arrangement_suggestions|json_script:"arrangement-suggestions" }}
+  <div class="meeting-hours-summary" data-arrangement-controls hidden></div>
+  <p class="helptext">Suggestions divide required hours only. Availability and timetable conflicts are checked separately. Custom keeps your current meetings.</p>
+  {% else %}<p class="helptext">Arrangement suggestions are unavailable because this assignment is used by a schedule.</p>{% endif %}
   <p class="helptext">90 minutes = 1.5 hours. A duration of 0 uses the course default.</p>
   <noscript><p class="helptext">Live hour totals require JavaScript. Requirements are still checked when you save.</p></noscript>
   {{ meetings.management_form }}
@@ -37,5 +42,6 @@
 </form>
 <script src="{% static 'js/faculty-suggestions.js' %}" defer></script>
 <script src="{% static 'js/meeting-hours.js' %}" defer></script>
+<script src="{% static 'js/meeting-arrangements.js' %}" defer></script>
 </div>
 {% endblock %}

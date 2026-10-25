@@ -310,6 +310,12 @@ MODEL_FORMS["sections"] = SectionForm
 
 
 class AssignmentForm(forms.ModelForm):
+    def arrangement_suggestions(self):
+        from .services.arrangements import suggested_arrangements
+        return {str(subject.pk): {"LECTURE": suggested_arrangements(subject.lecture_hours),
+                                  "LABORATORY": suggested_arrangements(subject.lab_hours)}
+                for subject in self.fields["subject"].queryset}
+
     def meeting_requirements(self):
         return {str(subject.pk): {"LECTURE": subject.lecture_hours * 60,
                                   "LABORATORY": subject.lab_hours * 60}
@@ -347,10 +353,26 @@ class AssignmentMeetingForm(forms.ModelForm):
 
 
 class AssignmentMeetingFormSet(BaseInlineFormSet):
+    def arrangements_allowed(self):
+        return not self.instance.pk or not ScheduleEntry.objects.filter(
+            assignment__assignment_id=self.instance.pk).exists()
+
+    def check_scheduled_arrangement(self):
+        if self.arrangements_allowed():
+            return
+        existing = {row[0]: row[1:] for row in self.instance.meetings.values_list(
+            "pk", "component", "duration_minutes", "meeting_index")}
+        submitted = {form.instance.pk: (form.cleaned_data.get("component"),
+                     form.cleaned_data.get("duration_minutes"), form.cleaned_data.get("meeting_index"))
+                     for form in self.forms if form.cleaned_data and not form.cleaned_data.get("DELETE")}
+        if submitted != existing:
+            raise forms.ValidationError("Meeting arrangements cannot change because a meeting in this assignment is already used by a schedule. Use an unscheduled assignment.")
+
     def clean(self):
         super().clean()
         if any(self.errors) or not self.instance.subject_id:
             return
+        self.check_scheduled_arrangement()
         from .services.meetings import meeting_requirement_errors, meeting_records
         active = [form.instance for form in self.forms if form.cleaned_data and not form.cleaned_data.get("DELETE")]
         errors = meeting_requirement_errors(self.instance.subject, meeting_records(active))

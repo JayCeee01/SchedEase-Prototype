@@ -641,6 +641,7 @@ def assignment_editor(request, assignment=None):
         if credential_result["qualified"] or covered or (confirmed and reason):
             try:
                 with transaction.atomic():
+                    meetings.check_scheduled_arrangement()
                     parent = form.save()
                     meetings.save(commit=False)
                     for removed in meetings.deleted_objects:
