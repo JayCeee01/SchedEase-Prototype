@@ -3,8 +3,10 @@ from . import views, concern_views
 from . import import_views
 from . import workload_views
 from . import repair_views
+from .faculty_suggestions import qualified_faculty
 
 urlpatterns = [
+    path("qualified-faculty/", qualified_faculty, name="qualified_faculty"),
     path('<int:pk>/repair/', repair_views.repair_start, name='repair_start'),
     path('<int:pk>/repair/review/', repair_views.repair_review, name='repair_review'),
     path("workload-proposals/", workload_views.workload_proposals, name="workload_proposals"),
@@ -24,6 +26,7 @@ urlpatterns = [
     path("manage/<slug:resource>/", views.resource_list, name="resource_list"),
     path("room-utilization/", views.room_utilization_dashboard, name="room_utilization"),
     path("room-utilization/export/csv/", views.export_room_utilization_csv, name="room_utilization_csv"),
+    path("room-utilization/export/xlsx/", views.export_room_utilization_xlsx, name="room_utilization_xlsx"),
     path("room-utilization/export/pdf/", views.export_room_utilization_pdf, name="room_utilization_pdf"),
     path("room-schedule/", views.room_schedule_dashboard, name="room_schedule"),
     path("room-capacity-planning/", views.room_capacity_planning, name="room_capacity_planning"),
@@ -42,5 +45,6 @@ urlpatterns = [
     path("<int:pk>/entry/<int:entry_pk>/remove/", views.entry_remove, name="entry_remove"),
     path("<int:pk>/publish/", views.publish_schedule, name="publish_schedule"),
     path("<int:pk>/export/csv/", views.export_csv, name="export_csv"),
+    path("<int:pk>/export/xlsx/", views.export_xlsx, name="export_xlsx"),
     path("<int:pk>/export/pdf/", views.export_pdf, name="export_pdf"),
 ]

@@ -1,0 +1,34 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meeting hours</title><link rel="stylesheet" href="../../static/css/app.css">
+<script>document.documentElement.dataset.theme=new URLSearchParams(location.search).get('theme')||'light';</script></head>
+<body style="padding:24px"><form class="panel form">
+<label>Course<select name="subject"><option value="">Choose</option><option value="1" selected>Lecture and lab</option><option value="2">Lecture only</option></select></label>
+<script type="application/json" id="meeting-requirements">{"1":{"LECTURE":180,"LABORATORY":120},"2":{"LECTURE":60,"LABORATORY":0}}</script>
+<div class="meeting-hours-summary" data-meeting-hours role="status" aria-live="polite"></div><div data-meeting-list>
+<fieldset data-meeting-form><label>Session<select name="meetings-0-component"><option>LECTURE</option><option>LABORATORY</option><option>GENERAL</option></select></label>
+<label>Minutes<input name="meetings-0-duration_minutes" value="90"></label><label>Remove<input type="checkbox" name="meetings-0-DELETE"></label></fieldset>
+</div></form><pre id="results" style="white-space:pre-wrap">RUNNING</pre>
+<script src="../../static/js/meeting-hours.js"></script><script>
+try {
+const form=document.querySelector('form'), output=document.querySelector('[data-meeting-hours]'), list=document.querySelector('[data-meeting-list]');
+const checks=[]; const check=(ok,name)=>{if(!ok)throw Error(name);checks.push(name)};
+check(innerWidth>=300,'viewport width '+innerWidth);
+const refresh=()=>form.dispatchEvent(new Event('change',{bubbles:true}));
+const card=type=>output.querySelector(`[data-component=${type}]`);
+const values=type=>[...card(type).querySelectorAll('dd')].map(el=>el.textContent);
+check(values('LECTURE')[1]==='1.5h', 'fractional conversion');
+check(values('LECTURE')[2]==='1.5h', 'remaining lecture');
+const next=list.firstElementChild.cloneNode(true); next.querySelectorAll('[name]').forEach(el=>el.name=el.name.replace('-0-','-1-'));list.append(next);refresh();
+check(values('LECTURE')[1]==='3h' && card('LECTURE').querySelector('small').textContent==='Complete', 'added meeting counted');
+next.querySelector('select').value='LABORATORY';refresh();
+check(values('LABORATORY')[0]==='2h' && values('LABORATORY')[1]==='1.5h', 'separate lab allocation');
+next.querySelector('input').value='150';refresh();check(card('LABORATORY').querySelector('small').textContent==='Overallocated by 0.5h' && values('LABORATORY')[2]==='0h', 'excess guidance');
+next.querySelector('[type=checkbox]').checked=true;refresh();check(values('LABORATORY')[1]==='0h', 'deleted meeting excluded');
+form.elements.subject.value='2';refresh();check(!card('LABORATORY'),'lecture-only course');
+list.firstElementChild.querySelector('input').value='0';refresh();check(values('LECTURE')[1]==='1h', 'zero uses existing default');
+list.firstElementChild.querySelector('input').value='';refresh();check(output.textContent.includes('Complete each meeting'),'incomplete input');
+form.elements.subject.value='';refresh();check(output.textContent.includes('Choose a course'),'missing course');
+check(document.documentElement.scrollWidth<=innerWidth,'no page overflow');
+document.querySelector('#results').textContent='PASS '+checks.length+' checks\n'+checks.join('\n');
+} catch(e){document.querySelector('#results').textContent='FAIL '+e.message;}
+</script></body></html>

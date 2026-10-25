@@ -98,13 +98,13 @@
     "faculty-credentials|faculty": "Choose the faculty member who has this credential.",
     "faculty-credentials|credential": "Choose the credential this faculty member has earned.",
     "faculty-credentials|issued by": "Enter the school or organization that granted it, if known.",
-    "faculty-credentials|issued on": "Enter the issue date to confirm eligibility; it must be on or before the term starts.",
+    "faculty-credentials|issued on": "Enter the issue date to confirm eligibility; it must be on or before the term ends.",
     "faculty-credentials|expires on": "Choose the expiration date, if this credential expires.",
     "faculty-credentials|notes": "Add helpful details about this faculty credential.",
 
     "subject-credential-requirements|subject": "Choose the subject that needs a teaching credential.",
     "subject-credential-requirements|required credential": "Choose the credential required to teach this subject.",
-    "subject-credential-requirements|acceptable equivalents": "Any one accepted equivalent can satisfy this requirement instead; it must be valid for the full term.",
+    "subject-credential-requirements|acceptable equivalents": "Any one accepted equivalent can satisfy this requirement instead; it must be issued by the term end date and remain valid through that date.",
     "subject-credential-requirements|notes": "Add helpful details about this subject requirement.",
 
     "faculty|login account (optional)": "Leave blank to create the record without a login. Link an existing account later if needed.",

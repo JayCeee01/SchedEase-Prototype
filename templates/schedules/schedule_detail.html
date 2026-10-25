@@ -17,8 +17,9 @@
     {% endif %}
     <a class="button" href="?check=1">Check Conflicts</a>
     {% endif %}
-    <a class="button" href="{% url 'export_csv' schedule.pk %}">CSV</a>
-    <a class="button" href="{% url 'export_pdf' schedule.pk %}">PDF</a>
+    <a class="button" href="{% url 'export_csv' schedule.pk %}?{{ request.GET.urlencode }}">CSV</a>
+    <a class="button" href="{% url 'export_pdf' schedule.pk %}?{{ request.GET.urlencode }}">PDF</a>
+    <a class="button" href="{% url 'export_xlsx' schedule.pk %}?{{ request.GET.urlencode }}">Excel (.xlsx)</a>
     {% if can_manage and schedule.status != "PUBLISHED" and schedule.status != "ARCHIVED" %}
     <form method="post" action="{% url 'publish_schedule' schedule.pk %}" onsubmit="return confirm('Publish this schedule? Published schedules become visible to faculty and students.');">
       {% csrf_token %}

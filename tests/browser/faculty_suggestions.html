@@ -1,0 +1,38 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Faculty credential guidance</title><link rel="stylesheet" href="../../static/css/app.css">
+<script>document.documentElement.dataset.theme=new URLSearchParams(location.search).get('theme')||'light';</script></head>
+<body style="padding:24px"><h1>Assignment Information</h1><form class="panel form">
+<p><label for="subject">Course</label><select id="subject" name="subject"><option value="">Choose course</option><option value="1" selected>Example Course</option><option value="2">Another Course</option></select></p>
+<p><label for="term">Term</label><select id="term" name="term"><option value="">Choose term</option><option value="1" selected>Example Term</option></select></p>
+<p><label for="faculty">Faculty</label><select id="faculty" name="faculty"><option value="">Choose faculty</option><option value="2" selected>Current Faculty</option><option value="3">Override Faculty</option><option value="1">Qualified Faculty</option></select></p>
+<div class="credential-guidance" data-faculty-suggestions data-url="/qualified-faculty/" data-assignment="1"><p id="faculty-credential-guidance" class="subtle">Credential guidance only. Availability, workload and timetable conflicts are checked separately.</p><div data-faculty-feedback role="status" aria-live="polite"></div></div>
+</form><pre id="results" style="white-space:pre-wrap">RUNNING</pre>
+<script>const requests=[];window.fetch=(url,options)=>new Promise((resolve,reject)=>requests.push({url,resolve,reject}));window.addEventListener('error',e=>document.querySelector('#results').textContent='FAIL '+e.message);</script>
+<script src="../../static/js/faculty-suggestions.js"></script>
+<script>
+(async()=>{const checks=[];const check=(ok,name)=>{if(!ok)throw Error(name);checks.push(name)};const wait=()=>new Promise(r=>setTimeout(r,30));
+const response=rows=>({ok:true,json:async()=>({faculty:rows})});const rows=[{id:1,status:'qualified',missing:[]},{id:2,status:'unqualified',missing:['License'],reasons:['License: issued after the term ends.']},{id:3,status:'override',missing:['License']}];
+try{
+check(innerWidth>=300,'viewport width '+innerWidth);
+const faculty=document.querySelector('#faculty'),subject=document.querySelector('#subject'),term=document.querySelector('#term'),feedback=document.querySelector('[data-faculty-feedback]');let changes=0;faculty.addEventListener('change',()=>changes++);
+check(feedback.textContent.includes('Checking'),'loading status');
+requests[0].resolve(response(rows));await wait();
+check(faculty.value==='2','restored selection preserved');check(changes===0,'guidance does not trigger autosave changes');
+check(faculty.options[1].value==='1','qualified faculty prioritized');
+check(faculty.options[1].textContent==='Qualified Faculty \u2014 Meets credential requirements','clean em dash separator');
+check(feedback.querySelector('strong').textContent==='Not qualified: override required','selected unqualified faculty explained');
+faculty.value='1';faculty.dispatchEvent(new Event('change'));check(feedback.querySelector('strong').textContent==='Qualified','qualified label has no decorative punctuation');
+faculty.value='2';faculty.dispatchEvent(new Event('change'));
+check(feedback.textContent.includes('issued after the term ends'),'specific date explanation shown');
+faculty.value='3';faculty.dispatchEvent(new Event('change'));check(feedback.textContent.includes('New meetings need'),'saved override limitation');
+subject.value='2';subject.dispatchEvent(new Event('change'));subject.value='1';subject.dispatchEvent(new Event('change'));
+requests[2].resolve(response(rows.map(row=>({...row,status:'unqualified'}))));await wait();requests[1].resolve(response(rows));await wait();
+check(feedback.textContent.includes('0 eligible faculty members'),'stale response ignored and empty-qualified state');check(faculty.value==='3','context change preserves selection');
+term.value='';term.dispatchEvent(new Event('change'));check(feedback.textContent.includes('Choose a course'),'missing context guidance');check(faculty.options[1].textContent==='Current Faculty','plain options restored');
+term.value='1';term.dispatchEvent(new Event('change'));requests[3].reject(new Error('Offline'));await wait();
+check(feedback.textContent.includes('could not be loaded'),'network failure fallback');check(faculty.value==='3','failure preserves selection');
+faculty.focus();check(document.activeElement===faculty,'keyboard focus');check(faculty.getAttribute('aria-describedby').includes('faculty-credential-guidance'),'guidance associated');
+check(document.documentElement.scrollWidth<=innerWidth,'no page overflow');
+document.querySelector('#results').textContent='PASS '+checks.length+' checks\n'+checks.join('\n');
+}catch(error){document.querySelector('#results').textContent='FAIL '+error.message;}})();
+</script></body></html>

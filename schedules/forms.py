@@ -1,4 +1,5 @@
 import re
+from copy import deepcopy
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -79,15 +80,15 @@ EDITOR_HELP = {
         "lab_hours": "Total laboratory hours required for each section each week, across all its laboratory meetings."},
     "faculty-credentials": {
         "credential": "Choose a credential held by this faculty member. Add another record for each additional credential.",
-        "issued_on": "Needed to confirm eligibility. The issue date must be on or before the term starts.",
+        "issued_on": "Needed to confirm eligibility. The issue date must be on or before the term ends.",
         "expires_on": "Leave blank if it does not expire. Otherwise, it must remain valid through the term end date."},
     "subject-credential-requirements": {
         "required_credential": "Faculty must meet every requirement listed for this course, using the named credential or one of its accepted equivalents.",
-        "acceptable_equivalents": "Any one of these credentials can satisfy this requirement instead. It must be valid for the full term."},
+        "acceptable_equivalents": "Any one of these credentials can satisfy this requirement instead. It must be issued by the term end date and remain valid through that date."},
     "credential-overrides": {
         "assignment": "Select the specific meeting covered by this exception. It must match the faculty member and course.",
         "reason": "An authorized administrator must explain why this credential exception is approved. Other scheduling rules still apply.",
-        "missing_credentials": "List the required credentials that are missing or not valid for the full term."},
+        "missing_credentials": "List the missing credentials or dates that do not meet the term-end eligibility rule."},
     "availability": {
         "faculty": "For faculty availability, select one faculty member and leave Room and Section blank.",
         "room": "For room availability, select one room and leave Faculty and Section blank.",
@@ -101,6 +102,46 @@ for resource, guidance in EDITOR_HELP.items():
     for name, text in guidance.items():
         MODEL_FORMS[resource].base_fields[name].help_text = text
 MODEL_FORMS["availability"].base_fields["kind"].label = "Availability type"
+
+
+class FacultyCredentialBatchForm(forms.Form):
+    """Add associations together; the existing single-record editor is unchanged."""
+    faculty = deepcopy(MODEL_FORMS["faculty-credentials"].base_fields["faculty"])
+    credential = forms.ModelMultipleChoiceField(
+        queryset=Credential.objects.all(), label="Credentials",
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "workload-checkboxes"}),
+        help_text="Select one or more credentials. The issuer, dates and notes below apply to every selected credential. Add separate batches if these details differ.",
+        error_messages={"required": "Select at least one credential."},
+    )
+    issued_by = deepcopy(MODEL_FORMS["faculty-credentials"].base_fields["issued_by"])
+    issued_on = deepcopy(MODEL_FORMS["faculty-credentials"].base_fields["issued_on"])
+    expires_on = deepcopy(MODEL_FORMS["faculty-credentials"].base_fields["expires_on"])
+    notes = deepcopy(MODEL_FORMS["faculty-credentials"].base_fields["notes"])
+
+    def clean(self):
+        cleaned = super().clean()
+        faculty, credentials = cleaned.get("faculty"), cleaned.get("credential")
+        if faculty and credentials is not None:
+            existing = FacultyCredential.objects.filter(faculty=faculty, credential__in=credentials)
+            if existing.exists():
+                self.add_error("credential", "Already assigned: " + ", ".join(
+                    existing.values_list("credential__name", flat=True)) +
+                    ". Deselect these credentials, or edit their existing records. Nothing has been changed.")
+        return cleaned
+
+    def save_batch(self):
+        from django.db import transaction
+        with transaction.atomic():
+            records = []
+            for credential in self.cleaned_data["credential"]:
+                record = FacultyCredential(credential=credential, **{
+                    name: self.cleaned_data[name]
+                    for name in ("faculty", "issued_by", "issued_on", "expires_on", "notes")
+                })
+                record.full_clean()
+                record.save()
+                records.append(record)
+            return records
 
 
 class AvailabilityForm(MODEL_FORMS["availability"]):
@@ -269,6 +310,11 @@ MODEL_FORMS["sections"] = SectionForm
 
 
 class AssignmentForm(forms.ModelForm):
+    def meeting_requirements(self):
+        return {str(subject.pk): {"LECTURE": subject.lecture_hours * 60,
+                                  "LABORATORY": subject.lab_hours * 60}
+                for subject in self.fields["subject"].queryset}
+
     class Meta:
         model = Assignment
         fields = ["term", "subject", "section", "faculty"]
@@ -285,6 +331,8 @@ class AssignmentMeetingForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.instance.pk and "component" not in (kwargs.get("initial") or {}):
+            self.initial["component"] = TeachingAssignment.Component.LECTURE
         for name in ("component", "meeting_index", "duration_minutes", "required_room_type_override"):
             self.fields[name].required = name in {"component", "meeting_index", "duration_minutes"}
 

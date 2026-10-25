@@ -13,10 +13,9 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST, require_http_methods
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
+from .services.pdf_export import write_table_pdf
 
-from .forms import AssignmentMeetingFormSetFactory, DiagnosticFilterForm, EmailOrUsernameAuthenticationForm, MODEL_FORMS, ScheduleEntryFilterForm, ScheduleEntryForm, ScheduleGenerationForm, ScheduleSearchForm
+from .forms import AssignmentMeetingFormSetFactory, DiagnosticFilterForm, EmailOrUsernameAuthenticationForm, FacultyCredentialBatchForm, MODEL_FORMS, ScheduleEntryFilterForm, ScheduleEntryForm, ScheduleGenerationForm, ScheduleSearchForm
 from .models import (
     AcademicTerm,
     Assignment,
@@ -473,9 +472,7 @@ def room_capacity_planning(request):
     })
 
 
-@login_required
-@user_passes_test(admin_required)
-def export_room_utilization_csv(request):
+def room_export_rows(request):
     schedule = Schedule.objects.filter(pk=request.GET.get("schedule")).first() if request.GET.get("schedule") else latest_schedule()
     rows = filtered_rows(
         utilization_rows(schedule),
@@ -484,6 +481,13 @@ def export_room_utilization_csv(request):
         utilization_range=request.GET.get("utilization", ""),
         room_group=request.GET.get("room_group", ""), day=request.GET.get("day", ""),
     )
+    return schedule, rows
+
+
+@login_required
+@user_passes_test(admin_required)
+def export_room_utilization_csv(request):
+    schedule, rows = room_export_rows(request)
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = 'attachment; filename="room-utilization.csv"'
     writer = csv_export.writer(response)
@@ -500,31 +504,33 @@ def export_room_utilization_csv(request):
 
 @login_required
 @user_passes_test(admin_required)
+def export_room_utilization_xlsx(request):
+    from openpyxl import Workbook
+    from .services.xlsx_export import sheet, workbook_bytes
+    schedule, rows = room_export_rows(request)
+    workbook = Workbook()
+    workbook.remove(workbook.active)
+    sheet(workbook, "Room Utilization", "Room utilization", str(schedule.term) if schedule else "No schedule selected",
+          ["Room", "Room Type", "Capacity", "Weekly Utilization %", "Seat Utilization %", "Available Hours", "Scheduled Hours", "Assigned Classes", "Status"],
+          [[row.room.name, row.room.get_room_type_display(), row.room.capacity, row.utilization_percentage,
+            row.capacity_utilization, row.available_hours, row.scheduled_hours, row.assigned_classes, row.status] for row in rows],
+          [24, 24, 12, 16, 16, 16, 16, 16, 24])
+    response = HttpResponse(workbook_bytes(workbook), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response["Content-Disposition"] = 'attachment; filename="room-utilization.xlsx"'
+    return response
+
+
+@login_required
+@user_passes_test(admin_required)
 def export_room_utilization_pdf(request):
-    schedule = Schedule.objects.filter(pk=request.GET.get("schedule")).first() if request.GET.get("schedule") else latest_schedule()
-    rows = filtered_rows(
-        utilization_rows(schedule),
-        query=request.GET.get("q", ""),
-        room_type=request.GET.get("room_type", ""),
-        utilization_range=request.GET.get("utilization", ""),
-        room_group=request.GET.get("room_group", ""), day=request.GET.get("day", ""),
-    )
+    schedule, rows = room_export_rows(request)
     response = HttpResponse(content_type="application/pdf")
     response["Content-Disposition"] = 'attachment; filename="room-utilization.pdf"'
-    pdf = canvas.Canvas(response, pagesize=letter)
-    pdf.drawString(40, 750, "SchedEase Room Utilization Report")
-    y = 720
-    for row in rows:
-        pdf.drawString(
-            40,
-            y,
-            f"{row.room.name} | {row.room.get_room_type_display()} | {row.utilization_percentage}% | {row.status} | {row.scheduled_hours}/{row.available_hours} hrs",
-        )
-        y -= 18
-        if y < 50:
-            pdf.showPage()
-            y = 750
-    pdf.save()
+    write_table_pdf(response, "SchedEase Room Utilization Report", str(schedule.term) if schedule else "No schedule selected",
+        ["Room", "Room type", "Utilization", "Status", "Scheduled / available hours"],
+        ([row.room.name, row.room.get_room_type_display(), f"{row.utilization_percentage}%",
+          row.status, f"{row.scheduled_hours} / {row.available_hours}"] for row in rows),
+        [2, 2, 1, 2, 2])
     return response
 
 
@@ -534,10 +540,23 @@ def resource_create(request, resource):
     resource_model(resource)
     if resource == "assignments":
         return assignment_editor(request)
-    form_class = MODEL_FORMS[resource]
+    form_class = FacultyCredentialBatchForm if resource == "faculty-credentials" else MODEL_FORMS[resource]
     draft = FormDraft.objects.filter(user=request.user, resource=resource, object_pk="").first()
     form = form_class(request.POST or None, initial=draft.payload if draft and request.method == "GET" else None)
     if request.method == "POST" and form.is_valid():
+        if resource == "faculty-credentials":
+            try:
+                with transaction.atomic():
+                    records = form.save_batch()
+                    FormDraft.objects.filter(user=request.user, resource=resource, object_pk="").delete()
+            except (ValidationError, IntegrityError):
+                form.add_error("credential", "The selected credentials could not be added. A credential may have just been assigned by another administrator. Review the existing records and try again. No credentials from this batch were saved.")
+            else:
+                messages.success(request, f"{len(records)} faculty credential records created.")
+                return redirect("resource_list", resource=resource)
+            return render(request, "schedules/form.html", {"form": form, "title": "New faculty credentials",
+                "description": RESOURCE_DESCRIPTIONS.get(resource), "tooltip_context": resource,
+                "draft": draft, "draft_resource": resource, "draft_object_pk": ""})
         obj = form.save(commit=False)
         if resource == 'credential-overrides':
             obj.admin_user = request.user
@@ -669,7 +688,7 @@ def assignment_editor(request, assignment=None):
         if confirmed and not reason:
             form.add_error(None, "An override reason is required.")
         else:
-            form.add_error(None, "The selected faculty member does not meet this course's credential requirements.")
+            form.add_error(None, missing_credential_message(form.cleaned_data["faculty"], form.cleaned_data["subject"], form.cleaned_data["term"]))
     return render(request, "schedules/assignment_form.html", {
         "form": form, "meetings": meetings, "assignment": assignment,
         "credential_result": credential_result,
@@ -948,9 +967,7 @@ def generation_error_detail(request, pk):
     return render(request, "schedules/error_detail.html", {"issue": issue, "statuses": GenerationIssue.Status.choices, "affected_meetings": affected})
 
 
-@login_required
-def schedule_detail(request, pk):
-    schedule = visible_schedule(request, pk)
+def schedule_export_entries(request, schedule):
     entries = schedule.entries.select_related(
         "assignment__subject__department", "assignment__faculty",
         "assignment__section__program__department", "assignment__section__year_level", "room",
@@ -1014,6 +1031,13 @@ def schedule_detail(request, pk):
         "assignment__section__program__code", "assignment__section__year_level__level",
         "assignment__section__name", "assignment__subject__code", "assignment__component", "day", "start_time",
     ))
+    return entries, filter_form
+
+
+@login_required
+def schedule_detail(request, pk):
+    schedule = visible_schedule(request, pk)
+    entries, filter_form = schedule_export_entries(request, schedule)
     if schedule.status in (ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED):
         snapshot = schedule.snapshot
         return render(request, "schedules/schedule_detail.html", {
@@ -1142,11 +1166,21 @@ def export_csv(request, pk):
     response["Content-Disposition"] = f'attachment; filename="{schedule.name}.csv"'
     writer = csv_export.writer(response)
     writer.writerow(["Day", "Start", "End", "Course", "Section", "Faculty", "Room"])
-    entries = entries_visible_to_user(schedule.entries.select_related(
-        "assignment__subject", "assignment__section", "assignment__faculty", "room",
-        "subject_override", "section_override", "faculty_override"), request.user)
+    entries, _ = schedule_export_entries(request, schedule)
     for e in historical_entries(entries):
         writer.writerow([e.get_day_display(), e.start_time, e.end_time, e.effective_subject.code, e.effective_section, e.effective_faculty, e.room.name])
+    return response
+
+
+@login_required
+def export_xlsx(request, pk):
+    from .services.xlsx_export import schedule_workbook, workbook_bytes
+    schedule = visible_schedule(request, pk)
+    entries, _ = schedule_export_entries(request, schedule)
+    term = historical_term(schedule.snapshot) if schedule.status in (ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED) else schedule.term
+    response = HttpResponse(workbook_bytes(schedule_workbook(schedule.name, term, historical_entries(entries), Weekday.choices)),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response["Content-Disposition"] = f'attachment; filename="schedule-{schedule.pk}.xlsx"'
     return response
 
 
@@ -1155,19 +1189,14 @@ def export_pdf(request, pk):
     schedule = visible_schedule(request, pk)
     response = HttpResponse(content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="{schedule.name}.pdf"'
-    pdf = canvas.Canvas(response, pagesize=letter)
-    pdf.drawString(40, 750, schedule.name)
-    y = 720
-    entries = entries_visible_to_user(schedule.entries.select_related(
-        "assignment__subject", "assignment__section", "assignment__faculty", "room",
-        "subject_override", "section_override", "faculty_override"), request.user)
-    for e in historical_entries(entries):
-        pdf.drawString(40, y, f"{e.get_day_display()} {e.start_time}-{e.end_time} {e.effective_subject.code} {e.effective_section} {e.effective_faculty} {e.room.name}")
-        y -= 18
-        if y < 50:
-            pdf.showPage()
-            y = 750
-    pdf.save()
+    entries, _ = schedule_export_entries(request, schedule)
+    term = historical_term(schedule.snapshot) if schedule.status in (ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED) else schedule.term
+    write_table_pdf(response, schedule.name, str(term),
+        ["Day / time", "Course", "Section", "Faculty", "Room", "Session"],
+        ([f"{e.get_day_display()}\n{e.start_time:%H:%M} - {e.end_time:%H:%M}",
+          f"{e.effective_subject.code}\n{e.effective_subject.title}", e.effective_section,
+          e.effective_faculty, e.room.name, e.effective_component_display]
+         for e in historical_entries(entries)), [1.4, 2.6, 1.5, 1.8, 1.4, 1.3])
     return response
 
 

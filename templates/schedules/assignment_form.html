@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
 <div class="record-editor">
 {% include "schedules/_editor_heading.html" with editor_eyebrow="Scheduling Requirement" description="Set the shared course, section, and faculty once, then define every independently scheduled meeting." %}
@@ -8,7 +9,16 @@
   {% csrf_token %}
   <h2>Assignment Information</h2>
   {{ form.as_p }}
+  <div class="credential-guidance" data-faculty-suggestions data-url="{% url 'qualified_faculty' %}" data-assignment="{{ assignment.pk|default_if_none:'' }}">
+    <div data-faculty-feedback role="status" aria-live="polite" aria-atomic="true">Choose a course and academic term to check credentials.</div>
+    <p id="faculty-credential-guidance" class="subtle">Credential guidance only. Availability, workload and timetable conflicts are checked separately.</p>
+    <noscript><p class="subtle">Automatic suggestions require JavaScript. Credentials are still checked when you save.</p></noscript>
+  </div>
   <div class="form-section-heading"><div><h2>Meetings</h2><p class="subtle">Lecture and laboratory time must match the selected course requirements.</p></div></div>
+  {{ form.meeting_requirements|json_script:"meeting-requirements" }}
+  <div class="meeting-hours-summary" data-meeting-hours role="status" aria-live="polite" aria-atomic="true">Choose a course to see its required hours.</div>
+  <p class="helptext">90 minutes = 1.5 hours. A duration of 0 uses the course default.</p>
+  <noscript><p class="helptext">Live hour totals require JavaScript. Requirements are still checked when you save.</p></noscript>
   {{ meetings.management_form }}
   {% if meetings.non_form_errors %}<div class="errorlist" role="alert">{{ meetings.non_form_errors }}</div>{% endif %}
   <div class="meeting-tab-toolbar" data-meeting-toolbar hidden><div class="meeting-tabs" role="tablist" aria-label="Assignment meetings" data-meeting-tabs></div><button class="button" type="button" data-add-meeting>+ Add Meeting</button></div>
@@ -25,5 +35,7 @@
   <div class="draft-save-status" data-draft-status role="status" aria-live="polite">{% if draft %}Draft saved{% endif %}</div>
   <div class="toolbar form-actions"><button class="primary" type="submit">Save Assignment</button><a class="button" href="{% url 'resource_list' 'assignments' %}">Cancel</a></div>
 </form>
+<script src="{% static 'js/faculty-suggestions.js' %}" defer></script>
+<script src="{% static 'js/meeting-hours.js' %}" defer></script>
 </div>
 {% endblock %}

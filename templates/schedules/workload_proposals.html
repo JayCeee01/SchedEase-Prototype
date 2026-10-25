@@ -20,12 +20,12 @@
 <div class="toolbar form-actions"><button class="button primary" name="action" value="analyze">Analyze Workload</button><a class="button" href="{% url 'resource_list' 'assignments' %}">Cancel</a></div></form>
 <div id="workload-output">
 {% if analysis %}<section class="panel" aria-labelledby="eligibility-heading"><h2 id="eligibility-heading" tabindex="-1">2. Eligibility summary</h2>
-<p>{{ analysis.term }} ? {{ analysis.department }}</p>
-<ul><li>{{ analysis.total }} assignments evaluated</li><li>{{ analysis.eligible }} eligible candidates ? authorization still required</li><li>{{ analysis.excluded }} excluded assignments</li><li>{{ analysis.alternatives }} qualified alternative instructors with a feasible reassignment</li></ul>
+<p>{{ analysis.term }}. Department: {{ analysis.department }}</p>
+<ul><li>{{ analysis.total }} assignments evaluated</li><li>{{ analysis.eligible }} eligible candidates (approval required)</li><li>{{ analysis.excluded }} excluded assignments</li><li>{{ analysis.alternatives }} qualified alternative instructors with a feasible reassignment</li></ul>
 {% for warning in analysis.warnings %}<p role="alert">{{ warning }}</p>{% endfor %}
 {% if analysis.can_proceed %}<p>Ready for your review. These candidates passed the current checks, but they are not yet authorized for reassignment.</p>
 <h3>Assignments to authorize</h3><ul>{% for candidate in analysis.candidates %}<li>{{ candidate.label }}</li>{% endfor %}</ul>
-<h3>Instructor group to confirm</h3><ul>{% for teacher in analysis.teachers %}<li>{{ teacher.name }} ? weekly limit {{ teacher.limit }} hours</li>{% endfor %}</ul>
+<h3>Instructor group to confirm</h3><ul>{% for teacher in analysis.teachers %}<li>{{ teacher.name }}: weekly limit {{ teacher.limit }} hours</li>{% endfor %}</ul>
 <form method="post" class="form">{% csrf_token %}<input type="hidden" name="analysis_token" value="{{ analysis_token }}"><input type="hidden" name="scope_state" value="{{ scope_state }}">
 <p><label><input type="checkbox" name="authorize_scope" value="yes" required> I authorize the candidate assignments listed above to be considered for reassignment.</label></p>
 <p><label><input type="checkbox" name="comparable" value="yes" required> I confirm this instructor group has comparable teaching responsibilities and compatible workload policies.</label></p>
@@ -34,10 +34,10 @@
 {% if analysis.exclusions %}<details><summary>Excluded assignments and reasons ({{ analysis.excluded }})</summary><ul>{% for item in analysis.exclusions %}<li><strong>{{ item.label }}</strong><p>{{ item.reason }}</p></li>{% endfor %}</ul></details>{% endif %}
 </section>{% endif %}
 {% if token %}
-<section class="panel"><h2 id="preview-heading" tabindex="-1">3. Review proposals</h2><div data-batch-metrics><p>{{ choices|length }} proposed · {{ selected|length }} selected · {{ attention|length }} alternatives need attention</p>
+<section class="panel"><h2 id="preview-heading" tabindex="-1">3. Review proposals</h2><div data-batch-metrics><p>{{ choices|length }} proposed &middot; {{ selected|length }} selected &middot; {{ attention|length }} alternatives need attention</p>
 <p>Fairness uses the variance of workload percentages (lower is better). Limits are ceilings, not teaching targets. Only the administrator-selected group is compared.</p>
-<p>Variance: {{ result.before.variance|floatformat:2 }} → {{ result.after.variance|floatformat:2 }}. Percentage spread: {{ result.before.spread|floatformat:2 }} → {{ result.after.spread|floatformat:2 }}.</p>
-<p>Minimum utilization: {{ result.before.minimum|floatformat:2 }}% → {{ result.after.minimum|floatformat:2 }}%. Maximum: {{ result.before.maximum|floatformat:2 }}% → {{ result.after.maximum|floatformat:2 }}%.</p>
+<p>Variance: {{ result.before.variance|floatformat:2 }} &rarr; {{ result.after.variance|floatformat:2 }}. Percentage spread: {{ result.before.spread|floatformat:2 }} &rarr; {{ result.after.spread|floatformat:2 }}.</p>
+<p>Minimum utilization: {{ result.before.minimum|floatformat:2 }}% &rarr; {{ result.after.minimum|floatformat:2 }}%. Maximum: {{ result.before.maximum|floatformat:2 }}% &rarr; {{ result.after.maximum|floatformat:2 }}%.</p>
 <p>Hard-constraint violations in the verified placement: {{ result.hard_violations }}. This preview does not save a timetable.</p>
 {% if result.improvement > 0 %}<p>Recommended: the selected batch reduces utilization variance by {{ result.improvement|floatformat:2 }}.</p>{% else %}<p>No improvement in this selection. It cannot be approved.</p>{% endif %}
 <h3>Combined proposed instructor loads</h3><ul>{% for row in result.after.rows %}<li>{{ row.name }}: {{ row.minutes }} minutes / {{ row.hours|floatformat:2 }} hours ({{ row.percentage|floatformat:2 }}%)</li>{% endfor %}</ul>
@@ -48,9 +48,9 @@
 <div class="toolbar form-actions"><button class="button" name="action" value="preview">Preview selection</button><a class="button" href="{% url 'resource_list' 'assignments' %}">Cancel</a></div>
 <p><label><input type="checkbox" name="confirm" value="yes"> I approve the selected instructor changes as one batch.</label></p><button class="button primary" name="action" value="approve"{% if result.improvement <= 0 %} disabled{% endif %}>Approve selected batch</button>
 </form>
-{% for row in result.proposals %}<article class="panel" data-batch-metrics><h3>{{ row.subject }} — {{ row.section }}</h3><p>{{ row.current }} → {{ row.proposed }}</p><p>{{ row.explanation }}</p><p>Contribution to this batch: {{ row.contribution|floatformat:2 }} variance points lower than omitting this change (arithmetic comparison, not a separately validated batch).</p><p>Before:</p><ul>{% for f in row.before %}<li>{{ f.name }}: {{ f.minutes }} minutes / {{ f.hours|floatformat:2 }} hours ({{ f.percentage|floatformat:2 }}%)</li>{% endfor %}</ul><p>After selected batch:</p><ul>{% for f in row.after %}<li>{{ f.name }}: {{ f.minutes }} minutes / {{ f.hours|floatformat:2 }} hours ({{ f.percentage|floatformat:2 }}%)</li>{% endfor %}</ul></article>{% endfor %}
+{% for row in result.proposals %}<article class="panel" data-batch-metrics><h3>{{ row.subject }} &mdash; {{ row.section }}</h3><p>{{ row.current }} &rarr; {{ row.proposed }}</p><p>{{ row.explanation }}</p><p>Contribution to this batch: {{ row.contribution|floatformat:2 }} variance points lower than omitting this change (arithmetic comparison, not a separately validated batch).</p><p>Before:</p><ul>{% for f in row.before %}<li>{{ f.name }}: {{ f.minutes }} minutes / {{ f.hours|floatformat:2 }} hours ({{ f.percentage|floatformat:2 }}%)</li>{% endfor %}</ul><p>After selected batch:</p><ul>{% for f in row.after %}<li>{{ f.name }}: {{ f.minutes }} minutes / {{ f.hours|floatformat:2 }} hours ({{ f.percentage|floatformat:2 }}%)</li>{% endfor %}</ul></article>{% endfor %}
 {% if attention %}<details><summary>Alternatives requiring attention</summary><ul>{% for issue in attention %}<li>{{ issue }}</li>{% endfor %}</ul></details>{% endif %}
 </section>{% endif %}
-</div><section class="panel"><h2>Recent approvals</h2>{% for audit in history %}<details><summary>#{{ audit.pk }} · {{ audit.created_at }} · {{ audit.administrator }}</summary>{% for row in audit.evidence.result.proposals %}<p>{{ row.subject }} / {{ row.section }}: {{ row.current }} → {{ row.proposed }}</p>{% endfor %}<p>Variance: {{ audit.evidence.result.before.variance|floatformat:2 }} → {{ audit.evidence.result.after.variance|floatformat:2 }}</p></details>{% empty %}<p>No approved batches yet.</p>{% endfor %}</section>
+</div><section class="panel"><h2>Recent approvals</h2>{% for audit in history %}<details><summary>#{{ audit.pk }} &middot; {{ audit.created_at }} &middot; {{ audit.administrator }}</summary>{% for row in audit.evidence.result.proposals %}<p>{{ row.subject }} / {{ row.section }}: {{ row.current }} &rarr; {{ row.proposed }}</p>{% endfor %}<p>Variance: {{ audit.evidence.result.before.variance|floatformat:2 }} &rarr; {{ audit.evidence.result.after.variance|floatformat:2 }}</p></details>{% empty %}<p>No approved batches yet.</p>{% endfor %}</section>
 <script src="{% static 'js/workload_balancing.js' %}" defer></script>
 {% endblock %}

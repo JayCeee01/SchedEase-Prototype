@@ -99,12 +99,12 @@ class AcademicImportTests(TestCase):
                 self.assertFalse(m.Subject.objects.exists())
         m.FacultyCredential.objects.all().delete()
         result = self.preview([{**row, 'faculty_credentials': ''} for row in self.rows])
-        self.assertTrue(any('missing required credential' in e for e in result['errors']))
+        self.assertTrue(any('No required or accepted equivalent credential is assigned' in e for e in result['errors']))
 
     def test_import_does_not_invent_dates_or_approve_undated_credentials(self):
         m.FacultyCredential.objects.all().delete()
         result = self.preview()
-        self.assertTrue(any('missing issue date' in error for error in result['errors']))
+        self.assertTrue(any('issue date is missing' in error for error in result['errors']))
         self.assertFalse(m.FacultyCredential.objects.exists())
         self.assertFalse(m.Subject.objects.exists())
 

@@ -26,7 +26,7 @@ class WorkloadDiscoveryTests(SchedulingDefectFixture):
         self.assertFalse(m.WorkloadApproval.objects.exists())
         self.client.force_login(self.admin)
         analyzed = self.http_analyze()
-        self.assertContains(analyzed, 'authorization still required')
+        self.assertContains(analyzed, 'eligible candidates (approval required)')
         response = self.client.post(reverse('workload_proposals'), {'action':'generate','analysis_token':analyzed.context['analysis_token'], 'comparable':'yes'})
         self.assertContains(response, 'Authorize the listed candidate assignments')
         self.assertNotIn('token', response.context)

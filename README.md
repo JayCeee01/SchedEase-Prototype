@@ -66,6 +66,8 @@ python -m django --version
 python -m pip check
 ```
 
+Excel (.xlsx) export requires `openpyxl==3.1.5` and its dependency `et-xmlfile==2.0.0`, both included in `requirements.txt`. Install dependencies with `python -m pip install -r requirements.txt`; the command above also applies the verified version constraints.
+
 The execution-policy setting lasts only for this PowerShell session. If activation is blocked by organizational policy, use `.\.venv\Scripts\python.exe` instead of `python` in the commands below. In your editor, select `.venv\Scripts\python.exe` as the interpreter.
 
 If `.venv` was created with another Python version, stop the development server and open a fresh terminal. Rename the old environment to an unused backup name before running the setup commands; do not reuse its installed packages. For Task 1.1, the old Python 3.14 environment was preserved as `.venv-python314-backup`.

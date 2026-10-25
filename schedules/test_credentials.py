@@ -28,7 +28,7 @@ class CredentialValidityTests(SchedulingDefectFixture):
         if expected:
             self.entry().full_clean()
         else:
-            with self.assertRaisesMessage(ValidationError, 'valid for the full academic term'):
+            with self.assertRaisesMessage(ValidationError, 'does not meet the credential requirements'):
                 self.entry().full_clean()
 
     def test_term_boundaries_missing_dates_and_no_expiry(self):
@@ -38,7 +38,9 @@ class CredentialValidityTests(SchedulingDefectFixture):
             (self.term.starts_on - timedelta(days=1), self.term.ends_on + timedelta(days=1), True),
             (date(2024, 1, 1), self.term.starts_on - timedelta(days=1), False),
             (date(2024, 1, 1), self.term.ends_on - timedelta(days=1), False),
-            (self.term.starts_on + timedelta(days=1), None, False),
+            (self.term.starts_on + timedelta(days=1), None, True),
+            (self.term.ends_on, None, True),
+            (self.term.ends_on + timedelta(days=1), None, False),
             (None, None, False), (None, self.term.ends_on, False),
         ]:
             with self.subTest(issued=issued, expires=expires):
@@ -120,7 +122,7 @@ class CredentialValidityTests(SchedulingDefectFixture):
         self.assertEqual((override.faculty_id, override.subject_id, override.assignment_id),
                          (self.faculty.pk, self.subject.pk, self.meetings[0].pk))
         self.assertEqual(override.admin_user_id, self.admin.pk)
-        self.assertIn('full academic term', override.missing_credentials)
+        self.assertIn('credential requirements', override.missing_credentials)
         entry = self.schedule.entries.get()
         edit_url = f'/schedules/{self.schedule.pk}/entry/{entry.pk}/edit/'
         edit_payload = {**self.payload(), 'revision': self.client.get(edit_url).context['form'].initial['revision']}

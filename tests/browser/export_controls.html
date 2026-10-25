@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="../../static/css/app.css"><script>document.documentElement.dataset.theme=new URLSearchParams(location.search).get('theme')||'light';</script></head>
+<body style="padding:24px"><div class="page-hero"><div><h1>Schedule Review</h1><p>Representative academic schedule</p></div><div class="actions">
+<a class="button" href="#csv">CSV</a><a class="button" href="#pdf">PDF</a><a class="button" href="#xlsx">Excel (.xlsx)</a><button class="primary">Publish</button>
+</div></div><pre id="results"></pre><script>
+const checks=[];const check=(ok,name)=>{if(!ok)throw Error(name);checks.push(name)};
+try {check(innerWidth>=300,'viewport width '+innerWidth);
+check(document.documentElement.scrollWidth<=innerWidth,'no horizontal overflow');
+for(const link of document.querySelectorAll('a')){const r=link.getBoundingClientRect();check(r.left>=0&&r.right<=innerWidth,'visible '+link.textContent);link.focus();check(document.activeElement===link,'keyboard '+link.textContent);}
+document.querySelector('#results').textContent='PASS '+checks.length+' checks\n'+checks.join('\n');
+}catch(e){document.querySelector('#results').textContent='FAIL '+e.message;}
+</script></body></html>

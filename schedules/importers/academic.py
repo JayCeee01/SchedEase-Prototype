@@ -157,7 +157,7 @@ def read_spreadsheet(upload):
         raise ValueError('A header row is required in row 1.')
     headers = [str(v).strip() for v in rows[0][1]]
     if not headers or len(headers) > 80 or any(not h for h in headers) or len(set(h.casefold() for h in headers)) != len(headers):
-        raise ValueError('Provide 1â€“80 unique, nonempty column headers.')
+        raise ValueError('Provide 1-80 unique, nonempty column headers.')
     data = []
     for number, values in rows[1:]:
         if not any(str(v).strip() for v in values):
@@ -337,7 +337,7 @@ class Importer:
             day = days.get(r['availability_day'].lower(), r['availability_day'])
             start, end = time.fromisoformat(r['availability_start']), time.fromisoformat(r['availability_end'])
             if not time(7) <= start < end <= time(19):
-                raise ValueError('availability_start/end: use an interval within 07:00â€“19:00.')
+                raise ValueError('availability_start/end: use an interval within 07:00-19:00.')
             action_count = len(self.actions)
             self.upsert(m.Availability, {'faculty': faculty if owner == 'FACULTY' else None,
                 'room': room if owner == 'ROOM' else None, 'day': self.integer(day, 'availability_day'),

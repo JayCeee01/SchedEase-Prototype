@@ -35,6 +35,21 @@ class MeetingEditorTests(TestCase):
     def save_draft(self, payload):
         return self.client.post('/schedules/drafts/save/', json.dumps({'resource':'assignments', 'object_pk':str(self.parent.pk), 'payload':payload, 'changed':True}), content_type='application/json')
 
+    def test_course_hour_guidance_and_new_meeting_defaults(self):
+        response = self.client.get('/schedules/manage/assignments/new/')
+        self.assertContains(response, 'data-meeting-hours')
+        self.assertEqual(response.context['form'].meeting_requirements()[str(self.subject.pk)],
+                         {'LECTURE': 120, 'LABORATORY': 60})
+        meetings = response.context['meetings']
+        self.assertEqual(meetings.forms[0]['component'].value(), 'LECTURE')
+        self.assertEqual(meetings.empty_form['component'].value(), 'LECTURE')
+        response = self.client.get(self.url)
+        self.assertEqual(response.context['meetings'].forms[1]['component'].value(), 'LABORATORY')
+        data = self.payload()
+        data['meetings-1-duration_minutes'] = 'bad'
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.context['meetings'].forms[1]['component'].value(), 'LABORATORY')
+
     def test_editor_has_only_existing_meetings_and_one_new_meeting(self):
         response = self.client.get(self.url)
         self.assertContains(response, 'data-meeting-tabs')
