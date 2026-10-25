@@ -74,6 +74,16 @@ class AcademicImportTests(TestCase):
         self.assertEqual(m.Assignment.objects.count(), 1)
         self.assertEqual(m.TeachingAssignment.objects.count(), 2)
 
+    def test_incompatible_component_room_requirements_roll_back(self):
+        for index, kind, message in ((1, '', 'Laboratory cannot use Lecture Room'),
+                                     (0, 'COMPUTER_LAB', 'Lecture requires Lecture Room')):
+            rows = [dict(row) for row in self.rows]
+            rows[index]['meeting_room_type'] = kind
+            result = self.preview(rows)
+            self.assertTrue(any(message in error for error in result['errors']), result['errors'])
+            self.assertFalse(m.Assignment.objects.exists())
+            self.assertFalse(m.Subject.objects.exists())
+
     def test_skip_preserves_and_update_changes_only_supplied_attributes(self):
         self.commit()
         changed = [{**row, 'course_description': 'New title'} for row in self.rows]

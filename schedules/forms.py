@@ -331,7 +331,7 @@ class AssignmentMeetingForm(forms.ModelForm):
     class Meta:
         model = TeachingAssignment
         fields = ["meeting_index", "component", "duration_minutes", "required_room_type_override"]
-        help_texts = {"duration_minutes": "Length of this meeting in minutes: 90 minutes = 1.5 hours. All lecture meetings must add up to the course lecture hours; laboratory meetings must add up to its lab hours."}
+        help_texts = {"required_room_type_override": "Lecture requires Lecture Room. For laboratory meetings, choose a compatible laboratory type when the course default does not apply. Gym or Specialized Room must be explicitly configured.", "duration_minutes": "Length of this meeting in minutes: 90 minutes = 1.5 hours. All lecture meetings must add up to the course lecture hours; laboratory meetings must add up to its lab hours."}
         labels = {"component": "Session Type", "duration_minutes": "Required Duration (minutes)",
                   "required_room_type_override": "Required Room Type"}
 
@@ -376,6 +376,8 @@ class AssignmentMeetingFormSet(BaseInlineFormSet):
         from .services.meetings import meeting_requirement_errors, meeting_records
         active = [form.instance for form in self.forms if form.cleaned_data and not form.cleaned_data.get("DELETE")]
         errors = meeting_requirement_errors(self.instance.subject, meeting_records(active))
+        from .services.room_compatibility import meeting_room_errors
+        errors.extend(("required_room_type_override", message) for meeting in active for message in meeting_room_errors(meeting, self.instance.subject))
         if errors:
             raise forms.ValidationError([message for _, message in errors])
 

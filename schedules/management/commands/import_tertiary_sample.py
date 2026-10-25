@@ -126,6 +126,10 @@ class Command(BaseCommand):
                 defaults={"notes": "Test-only requirement; the workbook contains no credential data."})
             FacultyCredential.objects.get_or_create(faculty=instructor, credential=credential,
                 defaults={"issued_by": "SchedEase workbook sample", "notes": "Test-only; not asserted by source workbook."})
+            from schedules.services.room_compatibility import meeting_room_errors
+            room_errors = meeting_room_errors(assignment, subject)
+            if room_errors:
+                raise CommandError(" ".join(room_errors))
             assignments.append(assignment)
         for m in meetings:
             instructor = faculty[re.sub(r"\s+", " ", m["row"].instructor.strip()).upper()]

@@ -385,8 +385,15 @@ class TeachingAssignment(ProtectedContentMixin, models.Model):
         super().clean()
         from .services.meetings import duration_errors
         errors = duration_errors(self.required_duration_minutes)
+        from .services.room_compatibility import meeting_room_errors
+        room_errors = meeting_room_errors(self)
+        problems = {}
         if errors:
-            raise ValidationError({"duration_minutes": errors})
+            problems["duration_minutes"] = errors
+        if room_errors:
+            problems["required_room_type_override"] = room_errors
+        if problems:
+            raise ValidationError(problems)
 
     @transaction.atomic
     def save(self, *args, **kwargs):

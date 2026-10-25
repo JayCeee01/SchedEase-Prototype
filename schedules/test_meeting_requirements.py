@@ -54,6 +54,7 @@ class MeetingRequirementsTests(SchedulingDefectFixture):
             for field in ("id", "meeting_index", "component", "duration_minutes"):
                 data[f"meetings-{i}-{field}"] = getattr(meeting, field)
         data.update({"meetings-2-meeting_index": 3, "meetings-2-component": "LABORATORY", "meetings-2-duration_minutes": 60})
+        data["meetings-2-required_room_type_override"] = "COMPUTER_LAB"
         forms = AssignmentMeetingFormSetFactory(data, instance=self.parent, prefix="meetings")
         self.assertFalse(forms.is_valid())
         self.assertIn("LABORATORY totals 60", str(forms.non_form_errors()))

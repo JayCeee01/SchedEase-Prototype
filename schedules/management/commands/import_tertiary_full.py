@@ -90,6 +90,10 @@ class Command(BaseCommand):
                 component=m["component"], meeting_index=indices[key], defaults={"faculty": faculty[m["faculty"]],
                 "duration_minutes": m["duration"], "required_room_type_override": m["room_type"],
                 "source_key": m["source_key"], "source_sheet": m["sheet"], "source_row": m["row"]})
+            from schedules.services.room_compatibility import meeting_room_errors
+            room_errors = meeting_room_errors(assignment, subject)
+            if room_errors:
+                raise CommandError(" ".join(room_errors))
             assignments.append((assignment, m))
         persisted_minutes = Counter()
         for assignment, _ in assignments:

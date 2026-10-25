@@ -161,7 +161,13 @@ def propose(draft_id, actor):
     affected={e.assignment_id for e in all_entries if not e.pk or entry_errors(e)}
     domains={}; blockers=list(requirement_errors); candidate_checks=0
     rooms=list(m.Room.objects.filter(is_active=True).order_by('pk'))
+    from .room_compatibility import meeting_room_errors
     for entry in all_entries:
+        room_errors = meeting_room_errors(entry.assignment)
+        if room_errors:
+            blockers.extend(room_errors)
+            domains[entry.assignment_id] = []
+            continue
         options=[]
         faculty=[entry.effective_faculty]
         if entry.assignment_id in scenario.get('replacement_meetings',[]) and entry.assignment_id in affected:

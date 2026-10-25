@@ -2126,3 +2126,26 @@ body.modal-open .table-scroll-proxy, body.sidebar-open .table-scroll-proxy { vis
 .meeting-hours-card dt { font-size: .8rem; color: var(--muted); }
 .meeting-hours-card dd { margin: 0; font-weight: 600; }
 .meeting-hours-note { grid-column: 1 / -1; margin: 0; font-size: .85rem; }
+
+/* Arrangement controls share row tracks so previews and actions stay aligned. */
+[data-arrangement-controls] { margin-top: var(--space-3); gap: var(--space-2) var(--space-3); }
+[data-arrangement-controls] .arrangement-card {
+  display: grid;
+  grid-row: span 7;
+  grid-template-rows: subgrid;
+  row-gap: var(--space-2);
+}
+.arrangement-card > :nth-child(1) { grid-row: 1; font-weight: 600; }
+.arrangement-card > :nth-child(2) { grid-row: 2; }
+.arrangement-card > :nth-child(3) { grid-row: 3; }
+.arrangement-card > :nth-child(4) { grid-row: 4; }
+.arrangement-card > :nth-child(5) { grid-row: 5; }
+.arrangement-card > :nth-child(6) { grid-row: 6; }
+.arrangement-card > :nth-child(7) { grid-row: 7; }
+.arrangement-card > select, .arrangement-card > button { width: 100%; min-width: 0; min-height: 44px; margin: 0; }
+.arrangement-card > label, .arrangement-card > p { margin: 0; }
+.arrangement-card > [hidden], .arrangement-card > p:empty { display: none; }
+.arrangement-card .arrangement-warning { color: var(--danger); font-weight: 600; }
+@media (max-width: 640px) {
+  [data-arrangement-controls] { grid-template-columns: minmax(0, 1fr); }
+}

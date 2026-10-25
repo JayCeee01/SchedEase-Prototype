@@ -46,6 +46,11 @@ def entry_requirement_errors(entry, issue_sink=None):
     errors = duration_errors(entry.assignment.required_duration_minutes)
     if issue_sink is not None:
         issue_sink.extend(Diagnostic.for_meetings('INVALID_DURATION', message, [entry.assignment]) for message in errors)
+    from .room_compatibility import meeting_room_errors
+    room_errors = meeting_room_errors(entry.assignment)
+    errors.extend(room_errors)
+    if issue_sink is not None:
+        issue_sink.extend(Diagnostic.for_meetings('ROOM_TYPE', message, [entry.assignment]) for message in room_errors)
     duration_count = len(errors)
     if entry.effective_subject.pk != entry.assignment.subject_id:
         errors.append("Course must match the assigned course. Edit the assignment to change its requirements.")

@@ -47,11 +47,11 @@ class ArrangementEditorTests(SchedulingDefectFixture):
     def test_custom_unequal_durations_keep_identity_and_room_settings(self):
         data = self.payload()
         data.update({'meetings-0-duration_minutes': 45, 'meetings-1-duration_minutes': 75,
-                     'meetings-0-required_room_type_override': 'SPECIAL'})
+                     'meetings-0-required_room_type_override': 'LECTURE'})
         self.assertEqual(self.client.post(self.url, data).status_code, 302)
         self.meetings[0].refresh_from_db()
         self.assertEqual(self.meetings[0].duration_minutes, 45)
-        self.assertEqual(self.meetings[0].required_room_type_override, 'SPECIAL')
+        self.assertEqual(self.meetings[0].required_room_type_override, 'LECTURE')
         self.assertEqual(set(self.parent.meetings.values_list('pk', flat=True)), {m.pk for m in self.meetings})
 
     def test_nonexact_total_is_rejected(self):

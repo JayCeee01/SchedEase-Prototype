@@ -381,6 +381,10 @@ class Importer:
         for parent in m.Assignment.objects.filter(subject_id__in=subject_ids).select_related('subject', 'faculty'):
             self.issue_rows = self.parent_rows.get(parent.pk, [None])
             meetings = list(parent.meetings.all())
+            from schedules.services.room_compatibility import meeting_room_errors
+            for meeting in meetings:
+                for message in meeting_room_errors(meeting, parent.subject):
+                    self.error('meeting_room_type', message)
             from schedules.services.meetings import meeting_requirement_errors, meeting_records
             for column, message in meeting_requirement_errors(parent.subject, meeting_records(meetings)):
                 self.error(column, f'{parent}: {message}')

@@ -255,6 +255,9 @@ class GeneticScheduler:
                 )
             if not self.qualification_cache[assignment.id]:
                 add(f"{assignment.subject.code} / {assignment.section}: {assignment.faculty} lacks the required credential or override.", "FACULTY_CREDENTIAL", [assignment])
+            from .room_compatibility import meeting_room_errors
+            for message in meeting_room_errors(assignment):
+                add(message, "ROOM_TYPE", [assignment])
             for message in duration_errors(assignment.required_duration_minutes):
                 add(f"{assignment.subject.code} / {assignment.section}: {message}", "INVALID_DURATION", [assignment])
         faculty_by_id = {assignment.faculty_id: assignment.faculty for assignment in self.assignments}
