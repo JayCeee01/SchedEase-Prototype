@@ -13,11 +13,11 @@ TERM_MESSAGE = "Academic terms must match across the schedule, assignment, and m
 
 # Only content and relationships are locked. Source metadata and timestamps remain editable.
 FIELDS = {
-    "academicterm": "name school_year starts_on ends_on",
+    "academicterm": "name school_year starts_on ends_on education_level calendar_context",
     "department": "code name",
-    "program": "department_id code name",
+    "program": "department_id code name education_level",
     "yearlevel": "level label",
-    "section": "program_id year_level_id name size",
+    "section": "program_id year_level_id name size cohort_id",
     "faculty": "user_id department_id employee_id full_name max_weekly_hours",
     "room": "name room_type capacity is_active",
     "subject": "code title department_id units lecture_hours lab_hours required_room_type",

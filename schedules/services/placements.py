@@ -9,12 +9,14 @@ from .conflicts import individual_entry_errors
 from .credentials import teaching_eligibility, missing_credential_message
 from .meetings import entry_requirement_errors
 from .time import ALLOWED_DAYS, add_minutes, overlaps, slot_starts
+from .resource_occupancy import published_commitments, placement_conflicts, placement_boundaries
 
 
-def feasible_placements(assignment, term, rooms, *, eligible=None, faculty_policy=None, room_policies=None, section_policy=None, checkpoint=None, issue_sink=None):
+def feasible_placements(assignment, term, rooms, *, eligible=None, faculty_policy=None, room_policies=None, section_policy=None, checkpoint=None, issue_sink=None, external_occupancy=None):
     """Return immutable (room, day, start, end) options and failure explanations.
 
-    No inter-meeting conflicts are checked here. Inputs are a run-local snapshot;
+    External published conflicts are checked; local inter-meeting conflicts are not.
+    Inputs are a run-local snapshot;
     persistence must still use current database validation.
     """
     entry = SimpleNamespace(assignment=assignment, schedule=SimpleNamespace(term=term, term_id=term.pk),
@@ -44,6 +46,7 @@ def feasible_placements(assignment, term, rooms, *, eligible=None, faculty_polic
     duration = assignment.required_duration_minutes
     grid = tuple(slot_starts(duration))
     options = set()
+    external_occupancy = published_commitments(term) if external_occupancy is None else external_occupancy
     for room in rooms:
         policy = room_policies[room.pk]
         for day in ALLOWED_DAYS:
@@ -56,11 +59,14 @@ def feasible_placements(assignment, term, rooms, *, eligible=None, faculty_polic
                         continue
                     # Include interval boundaries so narrow/non-grid windows work.
                     starts = set(grid) | {start, add_minutes(end, -duration)}
+                    starts.update(placement_boundaries(assignment.faculty_id, room.pk, day, duration, external_occupancy))
                     for left, right in section_policy.effective_intervals(day):
                         starts.update((left, add_minutes(right, -duration)))
                     for candidate in sorted(starts):
                         finish = add_minutes(candidate, duration)
                         if not (start <= candidate < finish <= end):
+                            continue
+                        if placement_conflicts(term, assignment.faculty_id, room.pk, day, candidate, finish, external_occupancy):
                             continue
                         entry.room, entry.day, entry.start_time, entry.end_time = room, day, candidate, finish
                         if not individual_entry_errors(entry, eligible=eligible,
@@ -68,7 +74,7 @@ def feasible_placements(assignment, term, rooms, *, eligible=None, faculty_polic
                             options.add((room.pk, day, candidate, finish))
     if not options:
         return (), (f'No common faculty, section and room availability window fits the required {duration} minutes '
-                    'within operating hours. Review available and unavailable periods.',)
+                    'within operating hours without conflicting with another published term. Review availability and published commitments.',)
     return tuple(sorted(options)), ()
 
 

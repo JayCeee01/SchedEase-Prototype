@@ -5,6 +5,7 @@ from datetime import datetime, date, timedelta
 from .availability import AvailabilityPolicy
 from .credentials import missing_credential_message, teaching_eligibility
 from .time import ALLOWED_DAYS, SCHOOL_END, SCHOOL_START, contains, overlaps
+from .resource_occupancy import weekday_intersects
 
 
 # Covers both default and overridden identities plus inherited duration/labels.
@@ -99,9 +100,8 @@ def validate_entry(entry):
                                   'section_override', 'room'):
         if other.schedule_id != entry.schedule_id:
             # Inclusive date ranges must intersect on this meeting's weekday.
-            start = max(term.starts_on, other.schedule.term.starts_on)
-            end = min(term.ends_on, other.schedule.term.ends_on)
-            if start + timedelta(days=(entry.day - start.weekday()) % 7) > end:
+            if not weekday_intersects(term.starts_on, term.ends_on,
+                    other.schedule.term.starts_on, other.schedule.term.ends_on, entry.day):
                 continue
         if not overlaps(entry.start_time, entry.end_time, other.start_time, other.end_time):
             continue

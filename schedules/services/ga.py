@@ -15,6 +15,7 @@ from .generation_issues import fail_run, unexpected_diagnostic
 from .diagnostics import Diagnostic, GenerationFailure
 from .generation_lock import generation_lease, GenerationLeaseLost
 from .placements import feasible_placements, PlacementOccupancy
+from .resource_occupancy import published_commitments
 from .meetings import duration_errors
 from .repair import overlap_conflicts, repair_candidate
 from .credentials import teaching_eligibility
@@ -91,6 +92,7 @@ class GeneticScheduler:
         self.room_policies = {room.pk: AvailabilityPolicy.for_resource(room) for room in self.rooms}
         self.faculty_preferred = self._availability_map(AvailabilityKind.PREFERRED)
         self._placement_cache = {}
+        self._external_occupancy = published_commitments(self.term)
         self._placement_sets = {}
         self._fitness_cache = {}
         self.generation_statistics = []
@@ -298,7 +300,7 @@ class GeneticScheduler:
             options, errors = feasible_placements(assignment, self.term, self.rooms,
                 eligible=self.qualification_cache[assignment.pk],
                 faculty_policy=self.faculty_policies[assignment.faculty_id], room_policies=self.room_policies, section_policy=self.section_policies[assignment.section_id],
-                checkpoint=self._checkpoint, issue_sink=domain_issues)
+                checkpoint=self._checkpoint, issue_sink=domain_issues, external_occupancy=self._external_occupancy)
             if not options:
                 message = f"{assignment.subject.code} / {assignment.section} / Meeting {assignment.meeting_index} ({assignment.faculty}): no individually feasible placement. " + " ".join(errors)
                 raise GenerationFailure(message, domain_issues or [Diagnostic.for_meetings('NO_SLOT', message, [assignment],

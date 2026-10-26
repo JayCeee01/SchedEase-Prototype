@@ -16,6 +16,320 @@ class Role(models.TextChoices):
     STUDENT = "STUDENT", "Student"
 
 
+class EducationLevel(models.TextChoices):
+    TERTIARY = "TERTIARY", "Tertiary"
+    SHS = "SHS", "Senior High School"
+
+
+class AcademicIdentity(models.Model):
+    """Validate identity records on ordinary saves, including admin and scripts."""
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+
+class CurriculumVersion(AcademicIdentity):
+    class Verification(models.TextChoices):
+        UNVERIFIED = "UNVERIFIED", "Unverified"
+        VERIFIED = "VERIFIED", "Verified"
+
+    family = models.CharField(max_length=80, help_text="Curriculum family, not a subject list.")
+    revision = models.CharField(max_length=80)
+    education_level = models.CharField(max_length=8, choices=EducationLevel.choices, default=EducationLevel.SHS)
+    reference_title = models.CharField(max_length=200, blank=True)
+    reference_url = models.URLField(blank=True)
+    reference_notes = models.TextField(blank=True)
+    verification_status = models.CharField(max_length=10, choices=Verification.choices, default=Verification.UNVERIFIED)
+    is_active = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["family", "revision"]
+        constraints = [
+            models.UniqueConstraint(NormalizedIdentity("family"), NormalizedIdentity("revision"), models.F("education_level"), name="unique_curriculum_version_identity"),
+            models.CheckConstraint(condition=Q(is_active=False) | Q(verification_status="VERIFIED"), name="curriculum_activation_verified"),
+            models.CheckConstraint(condition=Q(education_level__in=EducationLevel.values), name="curriculum_valid_level"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.is_active and self.verification_status != self.Verification.VERIFIED:
+            raise ValidationError({"is_active": "Verify the curriculum references before activation."})
+        if self.verification_status == self.Verification.VERIFIED and not self.reference_title.strip():
+            raise ValidationError({"reference_title": "Identify the reference used to verify this curriculum."})
+        if self.pk and (self.cohort_set.exists() or self.academicpathway_set.exists() or self.curriculumsubjectrequirement_set.exists()):
+            previous = type(self).objects.get(pk=self.pk)
+            if any(getattr(previous, f) != getattr(self, f) for f in ("family", "revision", "education_level")):
+                raise ValidationError("This curriculum identity is in use. Create a new version instead.")
+
+    def __str__(self):
+        return f"{self.family} / {self.revision}"
+
+
+class AcademicPathway(AcademicIdentity):
+    class Kind(models.TextChoices):
+        TRACK = "TRACK", "Track"
+        STRAND = "STRAND", "Strand"
+        ELECTIVE_CLUSTER = "ELECTIVE_CLUSTER", "Elective cluster"
+
+    curriculum_version = models.ForeignKey(CurriculumVersion, on_delete=models.PROTECT)
+    code = models.CharField(max_length=40)
+    name = models.CharField(max_length=160)
+    kind = models.CharField(max_length=16, choices=Kind.choices)
+    parent = models.ForeignKey("self", on_delete=models.PROTECT, null=True, blank=True, related_name="children")
+
+    class Meta:
+        ordering = ["curriculum_version", "code"]
+        constraints = [models.UniqueConstraint(models.F("curriculum_version"), NormalizedIdentity("code"), name="unique_pathway_identity")]
+
+    def clean(self):
+        super().clean()
+        ancestor = self.parent if self.parent_id else None
+        visited = {self.pk} if self.pk else set()
+        while ancestor:
+            if ancestor.pk in visited:
+                raise ValidationError({"parent": "A pathway cannot be its own ancestor."})
+            visited.add(ancestor.pk)
+            if ancestor.curriculum_version_id != self.curriculum_version_id:
+                raise ValidationError({"parent": "Choose a parent from the same curriculum version."})
+            ancestor = ancestor.parent
+        if self.pk and (self.cohort_set.exists() or self.children.exists() or self.curriculumsubjectrequirement_set.exists()):
+            previous = type(self).objects.get(pk=self.pk)
+            if any(getattr(previous, f) != getattr(self, f) for f in ("curriculum_version_id", "code", "kind", "parent_id")):
+                raise ValidationError("This pathway identity is in use. Create a separate pathway instead.")
+
+    def __str__(self):
+        return f"{self.code} ({self.curriculum_version})"
+
+
+class Cohort(AcademicIdentity):
+    class Implementation(models.TextChoices):
+        UNCONFIRMED = "UNCONFIRMED", "Unconfirmed"
+        PILOT = "PILOT", "Pilot"
+        IMPLEMENTED = "IMPLEMENTED", "Implemented"
+
+    school_year = models.CharField(max_length=20)
+    grade_level = models.PositiveSmallIntegerField(choices=[(11, "Grade 11"), (12, "Grade 12")])
+    curriculum_version = models.ForeignKey(CurriculumVersion, on_delete=models.PROTECT)
+    implementation_status = models.CharField(max_length=12, choices=Implementation.choices, default=Implementation.UNCONFIRMED)
+    pathway = models.ForeignKey(AcademicPathway, on_delete=models.PROTECT, null=True, blank=True)
+
+    class Meta:
+        ordering = ["school_year", "grade_level"]
+        constraints = [
+            models.CheckConstraint(condition=Q(grade_level__in=[11, 12]), name="cohort_shs_grade"),
+            models.UniqueConstraint(NormalizedIdentity("school_year"), models.F("grade_level"), models.F("curriculum_version"), models.F("pathway"), condition=Q(pathway__isnull=False), name="unique_cohort_pathway"),
+            models.UniqueConstraint(NormalizedIdentity("school_year"), models.F("grade_level"), models.F("curriculum_version"), condition=Q(pathway__isnull=True), name="unique_cohort_without_pathway"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.curriculum_version_id and self.curriculum_version.education_level != EducationLevel.SHS:
+            raise ValidationError({"curriculum_version": "Choose a Senior High School curriculum."})
+        if self.pathway_id and self.pathway.curriculum_version_id != self.curriculum_version_id:
+            raise ValidationError({"pathway": "Choose a pathway from this curriculum version."})
+        if self.pk and (self.section_set.exists() or self.subjectoffering_set.exists()):
+            previous = type(self).objects.get(pk=self.pk)
+            if any(getattr(previous, f) != getattr(self, f) for f in ("school_year", "grade_level", "curriculum_version_id", "pathway_id")):
+                raise ValidationError("This cohort identity is in use. Create a separate cohort instead.")
+
+    def __str__(self):
+        return f"{self.school_year} / Grade {self.grade_level} / {self.pathway or self.curriculum_version}"
+
+
+class CurriculumSubjectRequirement(AcademicIdentity):
+    """Source requirements, deliberately separate from weekly tertiary hours."""
+    curriculum_version = models.ForeignKey(CurriculumVersion, on_delete=models.PROTECT)
+    subject = models.ForeignKey("Subject", on_delete=models.PROTECT)
+    pathway = models.ForeignKey(AcademicPathway, on_delete=models.PROTECT, null=True, blank=True)
+    grade_level = models.PositiveSmallIntegerField(choices=[(11, "Grade 11"), (12, "Grade 12")])
+    academic_period = models.CharField(max_length=40, help_text="Period identifier within the curriculum, for example Semester 1. Not a calendar date.")
+    classification = models.CharField(max_length=80, help_text="Use the classification stated by this curriculum version's source.")
+    selection = models.CharField(max_length=16, choices=[("REQUIRED", "Required"), ("ELECTIVE", "Elective choice")], default="REQUIRED")
+    quantity = models.DecimalField(max_digits=9, decimal_places=2)
+    unit = models.CharField(max_length=8, choices=[("HOURS", "Hours"), ("MINUTES", "Minutes")])
+    measurement_basis = models.CharField(max_length=10, choices=[("WEEK", "Per week"), ("PERIOD", "Total for academic period")])
+    reference_title = models.CharField(max_length=200, blank=True)
+    reference_url = models.URLField(blank=True)
+    reference_locator = models.CharField(max_length=200, blank=True, help_text="Page, table, or curriculum-guide section.")
+    reference_notes = models.TextField(blank=True)
+    verification_status = models.CharField(max_length=10, choices=CurriculumVersion.Verification.choices, default="UNVERIFIED")
+    is_active = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=Q(quantity__gt=0), name="curriculum_requirement_positive"),
+            models.CheckConstraint(condition=Q(grade_level__in=[11, 12]), name="curriculum_requirement_grade"),
+            models.CheckConstraint(condition=Q(is_active=False) | Q(verification_status="VERIFIED"), name="requirement_activation_verified"),
+            models.UniqueConstraint(models.F("curriculum_version"), models.F("subject"), models.F("grade_level"), NormalizedIdentity("academic_period"), models.F("pathway"), condition=Q(pathway__isnull=False), name="unique_requirement_pathway"),
+            models.UniqueConstraint(models.F("curriculum_version"), models.F("subject"), models.F("grade_level"), NormalizedIdentity("academic_period"), condition=Q(pathway__isnull=True), name="unique_requirement_common"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.curriculum_version_id and self.curriculum_version.education_level != EducationLevel.SHS:
+            raise ValidationError({"curriculum_version": "Choose an SHS curriculum version."})
+        if self.pathway_id and self.pathway.curriculum_version_id != self.curriculum_version_id:
+            raise ValidationError({"pathway": "Choose a pathway from this curriculum version."})
+        if self.verification_status == "VERIFIED" and not self.reference_title.strip():
+            raise ValidationError({"reference_title": "Identify the source used to verify this requirement."})
+        if self.is_active and self.curriculum_version_id and not (self.curriculum_version.is_active and self.curriculum_version.verification_status == "VERIFIED"):
+            raise ValidationError({"is_active": "The curriculum version must be verified and active first."})
+        if self.pk and self.subjectoffering_set.exists():
+            previous = type(self).objects.get(pk=self.pk)
+            fields = ("curriculum_version_id", "subject_id", "pathway_id", "grade_level", "academic_period", "classification", "selection", "quantity", "unit", "measurement_basis")
+            if any(getattr(previous, field) != getattr(self, field) for field in fields):
+                raise ValidationError("This requirement is used by an offering. Create a separate requirement or curriculum revision instead.")
+
+    @property
+    def approved_for_configuration(self):
+        # Read current approval state, including parent deactivation after approval.
+        return bool(self.pk and type(self).objects.filter(pk=self.pk, is_active=True, verification_status="VERIFIED", curriculum_version__is_active=True, curriculum_version__verification_status="VERIFIED", curriculum_version__education_level="SHS").exists())
+
+    def __str__(self):
+        return f"{self.subject} / Grade {self.grade_level} / {self.academic_period}"
+
+
+class SubjectOffering(AcademicIdentity):
+    """Approved configuration identity only; not a schedulable assignment."""
+    requirement = models.ForeignKey(CurriculumSubjectRequirement, on_delete=models.PROTECT)
+    cohort = models.ForeignKey(Cohort, on_delete=models.PROTECT)
+    academic_term = models.ForeignKey("AcademicTerm", on_delete=models.PROTECT)
+    academic_period = models.CharField(max_length=40)
+    is_approved = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["requirement", "cohort", "academic_term"], name="unique_subject_offering")]
+
+    def clean(self):
+        super().clean()
+        if self.pk and DeliveryPlan.objects.filter(offering_id=self.pk).exists():
+            previous = type(self).objects.get(pk=self.pk)
+            if any(getattr(previous, field) != getattr(self, field) for field in ("requirement_id", "cohort_id", "academic_term_id", "academic_period")):
+                raise ValidationError("This offering has a delivery plan. Create a separate offering or remove the draft plan before changing its identity.")
+        if not (self.requirement_id and self.cohort_id and self.academic_term_id):
+            return
+        from .identity import normalize_identity
+        requirement, cohort, term = self.requirement, self.cohort, self.academic_term
+        if requirement.curriculum_version_id != cohort.curriculum_version_id or requirement.grade_level != cohort.grade_level:
+            raise ValidationError({"cohort": "The cohort must match the requirement's curriculum version and grade."})
+        if requirement.pathway_id and requirement.pathway_id != cohort.pathway_id:
+            raise ValidationError({"cohort": "The cohort must match the requirement's pathway."})
+        if normalize_identity(self.academic_period) != normalize_identity(requirement.academic_period):
+            raise ValidationError({"academic_period": "Use the academic period specified by the requirement."})
+        if term.education_level != EducationLevel.SHS or normalize_identity(term.school_year) != normalize_identity(cohort.school_year):
+            raise ValidationError({"academic_term": "Choose an SHS term in the cohort's school year."})
+        if self.is_approved and not requirement.approved_for_configuration:
+            raise ValidationError({"is_approved": "Verify and activate the requirement and its curriculum before approving this offering."})
+
+    @property
+    def approved_for_configuration(self):
+        if not self.pk:
+            return False
+        current = type(self).objects.select_related("requirement__curriculum_version", "cohort", "academic_term").get(pk=self.pk)
+        if not current.is_approved:
+            return False
+        try:
+            current.full_clean()
+        except ValidationError:
+            return False
+        return True
+
+    def __str__(self):
+        return f"{self.requirement} / {self.cohort} / {self.academic_term}"
+
+
+class DeliveryPlan(AcademicIdentity):
+    """Institutional contact-time configuration; never a GA scheduling input."""
+    offering = models.OneToOneField(SubjectOffering, on_delete=models.PROTECT)
+    reference_title = models.CharField(max_length=200, blank=True)
+    reference_notes = models.TextField(blank=True)
+    approval_reference = models.CharField(max_length=200, blank=True, help_text="Institutional approval reference. Required before approval.")
+    is_approved = models.BooleanField(default=False)
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, editable=False)
+    approved_at = models.DateTimeField(null=True, blank=True, editable=False)
+
+    @property
+    def planned_minutes(self):
+        return sum(item.duration_minutes * item.meeting_count for item in self.components.all()) if self.pk else 0
+
+    def approval_errors(self):
+        if not self.offering_id:
+            return ["Choose a subject offering."]
+        # Fetch current state so cached related objects cannot retain approval.
+        offering = SubjectOffering.objects.select_related("requirement").get(pk=self.offering_id)
+        errors = []
+        if not offering.approved_for_configuration:
+            errors.append("The offering and its curriculum requirement must be verified, active, consistent, and approved.")
+        if not self.reference_title.strip() or not self.approval_reference.strip():
+            errors.append("Record the delivery-plan source and institutional approval reference.")
+        requirement = offering.requirement
+        required = requirement.quantity * (60 if requirement.unit == "HOURS" else 1)
+        if required != required.to_integral_value():
+            errors.append("The source requirement cannot be represented in whole minutes. Clarify it before approval.")
+        if not self.pk or not self.components.exists():
+            errors.append("Add at least one instructional component before approval.")
+        elif self.planned_minutes != required:
+            basis = "per week" if requirement.measurement_basis == "WEEK" else "for the whole academic period"
+            errors.append(f"Planned time must equal {required:g} minutes {basis}; currently {self.planned_minutes} minutes.")
+        return errors
+
+    def clean(self):
+        super().clean()
+        if self.pk:
+            previous = type(self).objects.get(pk=self.pk)
+            if self.components.exists() and previous.offering_id != self.offering_id:
+                raise ValidationError({"offering": "Remove draft components before changing the offering."})
+            if previous.is_approved and self.is_approved and any(getattr(previous, f) != getattr(self, f) for f in ("reference_title", "reference_notes", "approval_reference")):
+                raise ValidationError("Return the plan to draft before changing approved details.")
+        if self.is_approved:
+            errors = self.approval_errors()
+            if errors:
+                raise ValidationError({"is_approved": errors})
+
+    @property
+    def effective_status(self):
+        if not self.pk:
+            return "Draft"
+        current = type(self).objects.get(pk=self.pk)
+        return "Draft" if not current.is_approved else "Approval blocked" if current.approval_errors() else "Approved configuration"
+
+    def __str__(self):
+        return f"Delivery plan: {self.offering}"
+
+
+class DeliveryComponent(AcademicIdentity):
+    plan = models.ForeignKey(DeliveryPlan, on_delete=models.CASCADE, related_name="components")
+    position = models.PositiveSmallIntegerField(default=1)
+    instruction = models.CharField(max_length=120, help_text="Explicit instructional component from the institutional plan; not necessarily lecture or laboratory.")
+    duration_minutes = models.PositiveIntegerField(help_text="Minutes per meeting.")
+    meeting_count = models.PositiveIntegerField(help_text="Meetings per week for a weekly requirement, or total meetings for a period-total requirement. No weeks are inferred.")
+
+    class Meta:
+        ordering = ["position"]
+        constraints = [
+            models.UniqueConstraint(fields=["plan", "position"], name="unique_delivery_component_position"),
+            models.CheckConstraint(condition=Q(position__gt=0) & Q(duration_minutes__gt=0) & Q(meeting_count__gt=0), name="delivery_component_positive"),
+        ]
+
+    def clean(self):
+        super().clean()
+        ids = [self.plan_id]
+        if self.pk:
+            ids += list(type(self).objects.filter(pk=self.pk).values_list("plan_id", flat=True))
+        if DeliveryPlan.objects.filter(pk__in=ids, is_approved=True).exists():
+            raise ValidationError("Return the delivery plan to draft before changing its components.")
+
+    def delete(self, *args, **kwargs):
+        self.clean()
+        return super().delete(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.instruction}: {self.meeting_count} x {self.duration_minutes} minutes"
+
+
 class Weekday(models.IntegerChoices):
     MONDAY = 0, "Monday"
     TUESDAY = 1, "Tuesday"
@@ -55,6 +369,7 @@ class Department(IdentityValidationMixin, ProtectedContentMixin, models.Model):
 
 
 class Program(IdentityValidationMixin, ProtectedContentMixin, models.Model):
+    education_level = models.CharField(max_length=8, choices=EducationLevel.choices, default=EducationLevel.TERTIARY, db_default=EducationLevel.TERTIARY)
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     code = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=160)
@@ -66,6 +381,11 @@ class Program(IdentityValidationMixin, ProtectedContentMixin, models.Model):
 
     def __str__(self):
         return self.code
+
+    def clean(self):
+        super().clean()
+        if self.pk and self.education_level != EducationLevel.SHS and self.section_set.filter(cohort__isnull=False).exists():
+            raise ValidationError({"education_level": "Programs with SHS cohorts must remain Senior High School."})
 
 
 class YearLevel(ProtectedContentMixin, models.Model):
@@ -80,6 +400,8 @@ class YearLevel(ProtectedContentMixin, models.Model):
 
 
 class AcademicTerm(IdentityValidationMixin, ProtectedContentMixin, models.Model):
+    education_level = models.CharField(max_length=8, choices=EducationLevel.choices, default=EducationLevel.TERTIARY, db_default=EducationLevel.TERTIARY)
+    calendar_context = models.CharField(max_length=120, blank=True, default="", db_default="", help_text="Optional calendar label. Scheduling continues to use the existing start and end dates.")
     name = models.CharField(max_length=80)
     school_year = models.CharField(max_length=20)
     starts_on = models.DateField()
@@ -102,6 +424,7 @@ class AcademicTerm(IdentityValidationMixin, ProtectedContentMixin, models.Model)
 
 
 class Section(IdentityValidationMixin, ProtectedContentMixin, models.Model):
+    cohort = models.ForeignKey(Cohort, on_delete=models.PROTECT, null=True, blank=True)
     program = models.ForeignKey(Program, on_delete=models.CASCADE)
     year_level = models.ForeignKey(YearLevel, on_delete=models.PROTECT)
     name = models.CharField(max_length=30)
@@ -124,6 +447,11 @@ class Section(IdentityValidationMixin, ProtectedContentMixin, models.Model):
 
     def clean(self):
         super().clean()
+        if self.cohort_id:
+            if self.program_id and self.program.education_level != EducationLevel.SHS:
+                raise ValidationError({"cohort": "Only an SHS program can use an SHS cohort."})
+            if self.year_level_id and self.year_level.level != self.cohort.grade_level:
+                raise ValidationError({"cohort": "The cohort grade must match the section year level."})
         value = re.sub(r"\s+", " ", (self.name or "").strip().upper())
         if self.program_id and self.year_level_id:
             full_name = re.fullmatch(

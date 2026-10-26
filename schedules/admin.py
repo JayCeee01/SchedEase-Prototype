@@ -7,6 +7,13 @@ from django.contrib.auth.models import User, Group
 from django.core.exceptions import ValidationError
 from .protection import protected, MESSAGE
 from .models import (
+    CurriculumVersion,
+    CurriculumSubjectRequirement,
+    SubjectOffering,
+    DeliveryPlan,
+    DeliveryComponent,
+    AcademicPathway,
+    Cohort,
     AcademicTerm,
     Assignment,
     Availability,
@@ -78,6 +85,62 @@ class DiagnosticRecordAdmin(ProtectedScheduleAdmin):
     pass
 
 
+@admin.register(CurriculumSubjectRequirement)
+class CurriculumRequirementAdmin(ProtectedScheduleAdmin):
+    list_display = ("subject", "curriculum_version", "grade_level", "academic_period", "verification_status", "is_active", "effective_approval")
+    list_filter = ("verification_status", "is_active", "grade_level")
+    readonly_fields = ("effective_approval",)
+
+    @admin.display(boolean=True, description="Currently approved configuration")
+    def effective_approval(self, obj):
+        return obj.approved_for_configuration
+
+
+@admin.register(SubjectOffering)
+class SubjectOfferingAdmin(ProtectedScheduleAdmin):
+    list_display = ("requirement", "cohort", "academic_term", "is_approved", "effective_approval")
+    list_filter = ("is_approved", "academic_term")
+    readonly_fields = ("effective_approval",)
+
+    @admin.display(boolean=True, description="Currently approved configuration")
+    def effective_approval(self, obj):
+        return obj.approved_for_configuration
+
+
+@admin.register(DeliveryPlan)
+class DeliveryPlanAdmin(ProtectedScheduleAdmin):
+    list_display = ("offering", "effective_status", "planned_minutes", "approved_by", "approved_at")
+    list_filter = ("is_approved",)
+    readonly_fields = ("effective_status", "planned_minutes", "approved_by", "approved_at")
+
+    def save_model(self, request, obj, form, change):
+        from django.utils import timezone
+        if obj.is_approved and (not change or "is_approved" in form.changed_data):
+            obj.approved_by = request.user
+            obj.approved_at = timezone.now()
+        elif not obj.is_approved:
+            obj.approved_by = None
+            obj.approved_at = None
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(DeliveryComponent)
+class DeliveryComponentAdmin(ProtectedScheduleAdmin):
+    list_display = ("plan", "position", "instruction", "duration_minutes", "meeting_count")
+    list_filter = ("plan",)
+
+    def has_change_permission(self, request, obj=None):
+        return super().has_change_permission(request, obj) and (obj is None or not obj.plan.is_approved)
+
+    def has_delete_permission(self, request, obj=None):
+        return super().has_delete_permission(request, obj) and (obj is None or not obj.plan.is_approved)
+
+    def delete_queryset(self, request, queryset):
+        if queryset.filter(plan__is_approved=True).exists():
+            raise ValidationError("Return the delivery plan to draft before deleting its components.")
+        super().delete_queryset(request, queryset)
+
+
 class WorkflowReadOnlyAdmin(DiagnosticRecordAdmin):
     """Use application services for changes requiring revisions or audit creation."""
     def has_add_permission(self, request):
@@ -125,6 +188,9 @@ class StudentAdmin(ProtectedScheduleAdmin):
 
 
 for model in [
+    CurriculumVersion,
+    AcademicPathway,
+    Cohort,
     AcademicTerm,
     Assignment,
     Availability,

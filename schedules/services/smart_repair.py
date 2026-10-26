@@ -15,6 +15,7 @@ from .repair_rules import windows, entry_errors, scenario_days
 from .conflicts import validate_entry, individual_entry_errors, schedule_validation_messages
 from .meetings import scheduled_requirement_errors
 from .placements import PlacementOccupancy
+from .resource_occupancy import published_commitments, placement_conflicts, placement_boundaries
 from .ga import Gene, GeneticScheduler
 from .availability import AvailabilityPolicy
 from .credentials import teaching_eligibility
@@ -154,7 +155,7 @@ def propose(draft_id, actor):
     missing=m.TeachingAssignment.objects.filter(term=draft.term).exclude(pk__in=[e.assignment_id for e in all_entries])
     if missing.exists():
         requirement_errors.append('Other recorded classes are missing from this draft. Include their sections before requesting a complete repair.')
-    external=m.Schedule.objects.filter(status="PUBLISHED").exclude(term=draft.term).exists()
+    external=published_commitments(draft.term)
     policies={}; preferred={}
     for e in all_entries:
         e.schedule=draft
@@ -188,6 +189,7 @@ def propose(draft_id, actor):
                 policy=AvailabilityPolicy.for_resource(room)
                 for day in ALLOWED_DAYS:
                     boundaries=set(starts)
+                    boundaries.update(placement_boundaries(f.pk, room.pk, day, duration, external))
                     for p in (faculty_policy,section_policy,policy):
                         for left,right in p.effective_intervals(day):
                             boundaries.update((left,add_minutes(right,-duration)))
@@ -199,6 +201,8 @@ def propose(draft_id, actor):
                         if candidate_checks > 100000:
                             raise ValidationError('Candidate limit reached. Review availability or narrow the repair scope; no placements were changed.')
                         end=add_minutes(start,duration)
+                        if placement_conflicts(draft.term, f.pk, room.pk, day, start, end, external):
+                            continue
                         if end<=start or end>SCHOOL_END or any(p.rejection_reason(day,start,end) for p in (faculty_policy,section_policy,policy)):
                             continue
                         candidate=copy(entry);candidate._state=copy(entry._state);candidate._state.fields_cache=entry._state.fields_cache.copy()

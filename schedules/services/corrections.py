@@ -9,6 +9,7 @@ from schedules.models import Room, ScheduleEntry, ScheduleStatus
 from .availability import AvailabilityPolicy
 from .manual_edits import FIELDS, authorized_administrator, revision_token, save_manual_entry
 from .time import ALLOWED_DAYS, SCHOOL_END, add_minutes, slot_starts
+from .resource_occupancy import published_commitments, placement_conflicts, placement_boundaries
 
 SALT = "schedules.placement-suggestion.v1"
 
@@ -18,6 +19,7 @@ def placement_suggestions(entry, actor, limit=3):
     if entry.schedule.status != ScheduleStatus.DRAFT:
         return []
     duration = entry.assignment.required_duration_minutes
+    external = published_commitments(entry.schedule.term)
     from .meetings import entry_requirement_errors
     from .credentials import teaching_eligibility
     if entry_requirement_errors(entry) or not teaching_eligibility(
@@ -30,7 +32,11 @@ def placement_suggestions(entry, actor, limit=3):
     policies = {room.pk: AvailabilityPolicy.for_resource(room) for room in rooms}
     starts = set(slot_starts(duration))
     starts.add(entry.start_time)
-    placements = sorted(((day, start) for day in ALLOWED_DAYS for start in starts),
+    dated_starts = {(day, start) for day in ALLOWED_DAYS for start in starts}
+    for day in ALLOWED_DAYS:
+        for room in rooms:
+            dated_starts.update((day, start) for start in placement_boundaries(entry.effective_faculty.pk, room.pk, day, duration, external))
+    placements = sorted(dated_starts,
                         key=lambda pair: (pair[0] != entry.day, abs(pair[0] - entry.day),
                             abs(pair[1].hour * 60 + pair[1].minute - entry.start_time.hour * 60 - entry.start_time.minute), pair))
     results = []
@@ -40,6 +46,8 @@ def placement_suggestions(entry, actor, limit=3):
         if end <= start or end > SCHOOL_END or faculty_policy.rejection_reason(day, start, end):
             continue
         for room in rooms:
+            if placement_conflicts(entry.schedule.term, entry.effective_faculty.pk, room.pk, day, start, end, external):
+                continue
             if (day, start, end, room.pk) == (entry.day, entry.start_time, entry.end_time, entry.room_id):
                 continue
             if policies[room.pk].rejection_reason(day, start, end):
