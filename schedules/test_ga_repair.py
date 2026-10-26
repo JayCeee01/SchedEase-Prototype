@@ -161,7 +161,8 @@ class TargetedRepairTests(SchedulingDefectFixture):
 
     def test_laboratory_component_and_duration_remain_intact(self):
         m.TeachingAssignment.objects.filter(pk__in=[a.pk for a in self.meetings]).update(component='LABORATORY', duration_minutes=90)
-        m.Subject.objects.filter(pk=self.subject.pk).update(lecture_hours=0, lab_hours=3)
+        m.Subject.objects.filter(pk=self.subject.pk).update(lecture_hours=0, lab_hours=3, required_room_type='COMPUTER_LAB')
+        m.Room.objects.filter(pk=self.room.pk).update(room_type='COMPUTER_LAB')
         ga = self.ga()
         genes = [replace(g, end_time=time(9, 30)) for g in self.collision()]
         result = ga._repair(genes)

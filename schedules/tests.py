@@ -26,9 +26,9 @@ class SchedulingTestCase(TestCase):
         self.section = Section.objects.create(program=self.program, year_level=self.year, name="A", size=30)
         self.faculty = Faculty.objects.create(department=self.department, employee_id="F1", full_name="Ada")
         self.room = Room.objects.create(name="Lab 1", room_type=RoomKind.COMPUTER_LAB, capacity=35)
-        self.subject = Subject.objects.create(code="IT101", title="Programming", department=self.department, lecture_hours=3, lab_hours=0, required_room_type=RoomKind.COMPUTER_LAB)
+        self.subject = Subject.objects.create(code="IT101", title="Programming", department=self.department, lecture_hours=0, lab_hours=3, required_room_type=RoomKind.COMPUTER_LAB)
         self.term = AcademicTerm.objects.create(name="First Semester", school_year="2026-2027", starts_on=date(2026, 8, 1), ends_on=date(2026, 12, 1), is_active=True)
-        self.assignment = TeachingAssignment.objects.create(term=self.term, subject=self.subject, faculty=self.faculty, section=self.section, component=TeachingAssignment.Component.LECTURE)
+        self.assignment = TeachingAssignment.objects.create(term=self.term, subject=self.subject, faculty=self.faculty, section=self.section, component=TeachingAssignment.Component.LABORATORY)
         self.settings = GASettings.objects.create(name="Fast", population_size=12, generations=8, mutation_rate=0.1, crossover_rate=0.8, elitism=2)
 
     def test_manual_entry_detects_room_capacity(self):
@@ -323,7 +323,7 @@ class SchedulingTestCase(TestCase):
     def test_assignment_override_confirmation_stores_audit_details(self):
         required = Credential.objects.create(name="Programming")
         SubjectCredentialRequirement.objects.create(subject=self.subject, required_credential=required)
-        new_subject = Subject.objects.create(code="IT102", title="Advanced Programming", department=self.department, lecture_hours=3, lab_hours=0, required_room_type=RoomKind.COMPUTER_LAB)
+        new_subject = Subject.objects.create(code="IT102", title="Advanced Programming", department=self.department, lecture_hours=3, lab_hours=0, required_room_type=RoomKind.LECTURE)
         SubjectCredentialRequirement.objects.create(subject=new_subject, required_credential=required)
         self.client.login(username="admin", password="admin12345")
 
@@ -426,7 +426,7 @@ class SchedulingTestCase(TestCase):
         )
         other_subject = Subject.objects.create(
             code="IT202", title="Networks", department=self.department,
-            lecture_hours=3, lab_hours=0, required_room_type=RoomKind.COMPUTER_LAB,
+            lecture_hours=3, lab_hours=0, required_room_type=RoomKind.LECTURE,
         )
         other_assignment = TeachingAssignment.objects.create(
             term=self.term, subject=other_subject, faculty=self.faculty, section=self.section,
@@ -528,7 +528,7 @@ class SchedulingTestCase(TestCase):
             "revision": self.client.get(f"/schedules/{schedule.id}/entry/{entry.id}/edit/").context["form"].initial["revision"],
             "assignment": self.assignment.id, "subject_override": self.subject.id,
             "section_override": self.section.id, "faculty_override": alternate.id,
-            "component_override": TeachingAssignment.Component.LECTURE,
+            "component_override": TeachingAssignment.Component.LABORATORY,
             "room": self.room.id, "day": 1, "start_time": "09:00", "end_time": "12:00",
         })
         self.assertEqual(response.status_code, 302)
@@ -611,7 +611,7 @@ class SchedulingTestCase(TestCase):
         Student.objects.create(user=student_user, section=self.section, student_number="RS1", full_name="Restricted Student")
         other_section = Section.objects.create(program=self.program, year_level=self.year, name="B", size=25)
         other_subject = Subject.objects.create(code="PRIVATE201", title="Other Section Course", department=self.department,
-                                               lecture_hours=3, required_room_type=RoomKind.COMPUTER_LAB)
+                                               lecture_hours=3, required_room_type=RoomKind.LECTURE)
         other_assignment = TeachingAssignment.objects.create(term=self.term, subject=other_subject,
                                                               faculty=self.faculty, section=other_section,
                                                               duration_minutes=180)
@@ -670,7 +670,7 @@ class SchedulingTestCase(TestCase):
         Student.objects.create(user=student_user, section=self.section, student_number="OVERRIDE1", full_name="Override Student")
         other_section = Section.objects.create(program=self.program, year_level=self.year, name="B", size=25)
         other_subject = Subject.objects.create(code="VISIBLE201", title="Reassigned Course", department=self.department,
-                                               lecture_hours=3, required_room_type=RoomKind.COMPUTER_LAB)
+                                               lecture_hours=3, required_room_type=RoomKind.LECTURE)
         other_assignment = TeachingAssignment.objects.create(term=self.term, subject=other_subject,
                                                               faculty=self.faculty, section=other_section)
         schedule = Schedule.objects.create(term=self.term, name="Section Overrides")
