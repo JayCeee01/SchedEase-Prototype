@@ -13,6 +13,7 @@ env/
 db.sqlite3
 *.sqlite3
 *.sqlite3-*
+!uat_demo_20261026.sqlite3
 *.db
 *.db-*
 .schedease-*.partial*
