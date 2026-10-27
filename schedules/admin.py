@@ -12,6 +12,10 @@ from .models import (
     SubjectOffering,
     DeliveryPlan,
     DeliveryComponent,
+    SHSAssignmentConfiguration,
+    SHSSectionParticipation,
+    SHSMeetingPattern,
+    FacultyContactMinutePolicy,
     AcademicPathway,
     Cohort,
     AcademicTerm,
@@ -67,12 +71,13 @@ class ProtectedScheduleAdmin(AdministratorPermissionMixin, admin.ModelAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         if obj is not None and protected(obj):
-            return tuple(field.name for field in obj._meta.fields)
+            return tuple(field.name for field in obj._meta.fields
+                         if not isinstance(obj, Faculty) or field.name != "user")
         return super().get_readonly_fields(request, obj)
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
-        if obj is not None and protected(obj):
+        if obj is not None and protected(obj) and not isinstance(obj, Faculty):
             class ProtectedForm(form):
                 def clean(self):
                     super().clean()
@@ -188,6 +193,10 @@ class StudentAdmin(ProtectedScheduleAdmin):
 
 
 for model in [
+    FacultyContactMinutePolicy,
+    SHSAssignmentConfiguration,
+    SHSSectionParticipation,
+    SHSMeetingPattern,
     CurriculumVersion,
     AcademicPathway,
     Cohort,

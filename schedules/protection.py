@@ -18,7 +18,7 @@ FIELDS = {
     "program": "department_id code name education_level",
     "yearlevel": "level label",
     "section": "program_id year_level_id name size cohort_id",
-    "faculty": "user_id department_id employee_id full_name max_weekly_hours",
+    "faculty": "department_id employee_id full_name max_weekly_hours",
     "room": "name room_type capacity is_active",
     "subject": "code title department_id units lecture_hours lab_hours required_room_type",
     "assignment": "term_id subject_id faculty_id section_id",

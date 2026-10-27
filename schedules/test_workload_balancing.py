@@ -216,7 +216,7 @@ class WorkloadBalancingTests(SchedulingDefectFixture):
         schedule = m.Schedule.objects.create(term=other_term, name='Published external')
         schedule.entries.create(assignment=meeting, room=self.room, day=0, start_time=time(8), end_time=time(10))
         publish(schedule, self.admin)
-        with self.assertRaisesMessage(ValidationError, 'conflict-free'):
+        with self.assertRaisesMessage(ValidationError, 'without conflicting with another published term'):
             w.evaluate(self.term.pk, self.ids, self.faculty_ids, {self.parent.pk:self.other.pk})
 
     def test_role_administrator_can_approve_faculty_cannot(self):

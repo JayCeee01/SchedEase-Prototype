@@ -49,6 +49,9 @@ def historical_entries(entries):
             result.append(entry)
             continue
         row = maps[entry.schedule_id][entry.pk]
+        from .shs_scheduling import binding
+        shs = binding(entry.assignment)
+        shs_data = shs.data if shs else None
         snapshot = snapshots[entry.schedule_id]
         section = value(row['section'])
         section.program, section.year_level = value(row['program']), value(row['year_level'])
@@ -57,7 +60,7 @@ def historical_entries(entries):
         schedule.status = entry.schedule.status  # Current lifecycle, original publication content.
         schedule.term = historical_term(snapshot)
         component = row['component']
-        result.append(HistoricalEntry(id=row['id'], pk=row['id'], schedule_id=entry.schedule_id, schedule=schedule,
+        result.append(HistoricalEntry(shs_operational_snapshot=shs_data, id=row['id'], pk=row['id'], schedule_id=entry.schedule_id, schedule=schedule,
             assignment_id=row['meeting_id'], assignment=HistoricalValue(pk=row['meeting_id'],
                 meeting_index=row['meeting_index'], required_duration_minutes=row['required_duration_minutes'],
                 subject=course, section=section, faculty=faculty),

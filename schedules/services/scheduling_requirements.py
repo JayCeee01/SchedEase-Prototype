@@ -1,6 +1,6 @@
-"""Read-only foundation. No consumers or SHS generation are enabled here."""
-from dataclasses import dataclass
-from datetime import date
+"""Shared scheduling contracts with explicit SHS operational approval."""
+from dataclasses import dataclass, replace
+from datetime import date, time
 
 from django.core.exceptions import ValidationError
 
@@ -36,6 +36,8 @@ class SchedulingRequirements:
     workload_policy: str | None
     weekly_limit_minutes: int | None
     blockers: tuple
+    meeting_patterns: tuple = ()
+    assignment_id: int | None = None
 
     def require_schedulable(self):
         if self.blockers:
@@ -65,9 +67,9 @@ def resolve_tertiary(meeting_id):
         meeting.faculty.max_weekly_hours * 60, ())
 
 
-def resolve_shs(plan_id):
+def resolve_shs(plan_id, *, assignment_id=None):
     """Expose approved contact requirements but fail closed for scheduling."""
-    from schedules.models import DeliveryPlan
+    from schedules.models import DeliveryPlan, SHSAssignmentConfiguration
     try:
         plan = DeliveryPlan.objects.select_related('offering__requirement', 'offering__cohort', 'offering__academic_term').get(pk=plan_id)
     except DeliveryPlan.DoesNotExist as exc:
@@ -78,14 +80,50 @@ def resolve_shs(plan_id):
     if not plan.is_approved:
         blockers.append('The delivery plan has not been approved.')
     blockers.extend((
-        'SHS generation is disabled in this foundation phase.',
         'Faculty assignments and participating sections or teaching groups are not configured.',
         'Component-specific room eligibility has not been established.',
         'Effective teaching dates and dated or weekly meeting recurrence require confirmation.',
-        'SHS workload units, conversions and combined workload policy are not verified.',
+        'An approved full-week contact-minute policy is required.',
     ))
     components = tuple(InstructionRequirement(item.pk, item.instruction, item.duration_minutes,
         item.meeting_count, requirement.measurement_basis) for item in plan.components.all())
-    return SchedulingRequirements('SHS', term.pk, term.calendar_context, (term.starts_on, term.ends_on),
+    result = SchedulingRequirements('SHS', term.pk, term.calendar_context, (term.starts_on, term.ends_on),
         requirement.curriculum_version_id, offering.cohort_id, offering.pk, plan.pk, components,
         None, (), None, None, None, published_commitments(term), None, None, tuple(blockers))
+    configs = SHSAssignmentConfiguration.objects.filter(delivery_plan_id=plan.pk)
+    if assignment_id is not None:
+        configs = configs.filter(assignment_id=assignment_id)
+    if configs.count() != 1:
+        return replace(result, blockers=result.blockers + ('Select exactly one existing operational assignment configuration for this delivery plan.',))
+    config = configs.select_related('assignment__faculty', 'assignment__section', 'delivery_plan__offering').get()
+    from .shs_operations import configuration_errors, sections
+    issues = configuration_errors(config, complete=True)
+    if not config.is_confirmed:
+        issues.append('The operational assignment inputs have not been confirmed.')
+    from .shs_scheduling import validate_configurations
+    try:
+        validate_configurations(term)
+    except ValidationError as exc:
+        issues.extend(exc.messages)
+    patterns = tuple(OperationalMeetingPattern(p.pk, p.component_id, p.component.duration_minutes,
+        p.recurrence, p.weekday, p.meeting_date, p.window_start, p.window_end, (p.room_id,))
+        for p in config.patterns.select_related('component').order_by('component_id', 'sequence'))
+    return replace(result, faculty_id=config.assignment.faculty_id,
+        section_ids=tuple(s.pk for s in sections(config)),
+        compatible_room_ids=tuple(sorted({room for p in patterns for room in p.room_ids})),
+        teaching_dates=(config.starts_on, config.ends_on) if config.starts_on and config.ends_on else None,
+        recurrence='EXPLICIT_PATTERNS' if patterns else None,
+        blockers=tuple(dict.fromkeys(issues)), meeting_patterns=patterns, assignment_id=config.assignment_id)
+
+
+@dataclass(frozen=True)
+class OperationalMeetingPattern:
+    identity: int
+    component_id: int
+    minutes: int
+    recurrence: str
+    weekday: int
+    meeting_date: date | None
+    window_start: time
+    window_end: time
+    room_ids: tuple

@@ -7,11 +7,12 @@ from .conflicts import individual_entry_errors
 
 def overlap_conflicts(chromosome, assignment_map):
     """Return (resource kind, left index, right index), once per resource clash."""
+    from .shs_scheduling import participant_ids, dates_overlap
     buckets = defaultdict(list)
     for index, gene in enumerate(chromosome):
         assignment = assignment_map[gene.assignment_id]
-        for kind, pk in (("faculty", assignment.faculty_id), ("section", assignment.section_id),
-                         ("room", gene.room_id)):
+        for kind, pk in (("faculty", assignment.faculty_id), ("room", gene.room_id),
+                         *(("section",pk) for pk in participant_ids(assignment))):
             buckets[kind, gene.day, pk].append((index, gene))
     conflicts = set()
     for (kind, _, _), items in buckets.items():
@@ -19,7 +20,8 @@ def overlap_conflicts(chromosome, assignment_map):
         for index, gene in sorted(items, key=lambda item: item[1].start_time):
             active = [(i, g) for i, g in active if g.end_time > gene.start_time]
             for other_index, _ in active:
-                conflicts.add((kind, min(index, other_index), max(index, other_index)))
+                if dates_overlap(assignment_map[gene.assignment_id],assignment_map[chromosome[other_index].assignment_id],gene.day):
+                    conflicts.add((kind, min(index, other_index), max(index, other_index)))
             active.append((index, gene))
     return conflicts
 

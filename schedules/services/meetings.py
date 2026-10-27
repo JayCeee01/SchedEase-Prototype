@@ -42,6 +42,9 @@ def meeting_records(meetings):
 
 
 def entry_requirement_errors(entry, issue_sink=None):
+    if entry.schedule.term.education_level == 'SHS':
+        from .shs_scheduling import entry_errors
+        return duration_errors(entry.assignment.required_duration_minutes) + entry_errors(entry)
     from .diagnostics import Diagnostic
     errors = duration_errors(entry.assignment.required_duration_minutes)
     if issue_sink is not None:
@@ -68,6 +71,21 @@ def entry_requirement_errors(entry, issue_sink=None):
 
 def scheduled_requirement_errors(schedule, entries, issue_sink=None):
     """Validate actual time spans against each parent's requirements, including empty parents."""
+    if schedule.term.education_level == 'SHS':
+        from django.core.exceptions import ValidationError
+        from .shs_scheduling import assert_prepared
+        errors = []
+        try:
+            expected={m.pk for m in assert_prepared(schedule.term)}
+            actual=[e.assignment_id for e in entries]
+            if len(actual)!=len(set(actual)) or set(actual)!=expected:
+                errors.append('Every approved SHS meeting pattern must be scheduled exactly once.')
+        except ValidationError as exc:
+            errors.extend(exc.messages)
+        if issue_sink is not None:
+            from .diagnostics import Diagnostic
+            issue_sink.extend(Diagnostic('INVALID_DATA', message) for message in errors)
+        return errors
     grouped = defaultdict(list)
     for entry in entries:
         elapsed = datetime.combine(date.min, entry.end_time) - datetime.combine(date.min, entry.start_time)

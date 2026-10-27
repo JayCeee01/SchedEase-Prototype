@@ -74,7 +74,7 @@ def validate_scenario(source, scenario):
         teachers = list(m.Faculty.objects.filter(pk__in=replacements))
         if (not eligible.issubset(allowed) or len(teachers)!=len(set(replacements)) or len(teachers)>3
                 or any(f.pk==original.pk or f.department_id!=original.department_id or f.max_weekly_hours<=0 for f in teachers)):
-            raise ValidationError('Use up to three distinct replacements from the original instructor’s department and authorized meetings only.')
+            raise ValidationError('Use up to three distinct replacements from the original instructorâ€™s department and authorized meetings only.')
     return scenario
 
 
@@ -100,7 +100,9 @@ def gene(entry):
 
 
 def mapping(entries):
-    return {e.assignment_id:SimpleNamespace(faculty_id=e.effective_faculty.pk,section_id=e.effective_section.pk) for e in entries}
+    from .shs_scheduling import binding
+    return {e.assignment_id:SimpleNamespace(faculty_id=e.effective_faculty.pk,section_id=e.effective_section.pk,
+        shs_binding=binding(e.assignment),term=e.schedule.term) for e in entries}
 
 
 def describe(entry):
@@ -201,7 +203,7 @@ def propose(draft_id, actor):
                         if candidate_checks > 100000:
                             raise ValidationError('Candidate limit reached. Review availability or narrow the repair scope; no placements were changed.')
                         end=add_minutes(start,duration)
-                        if placement_conflicts(draft.term, f.pk, room.pk, day, start, end, external):
+                        if placement_conflicts(draft.term, f.pk, room.pk, day, start, end, external, meeting=entry.assignment):
                             continue
                         if end<=start or end>SCHOOL_END or any(p.rejection_reason(day,start,end) for p in (faculty_policy,section_policy,policy)):
                             continue
@@ -246,7 +248,7 @@ def propose(draft_id, actor):
         if PlacementOccupancy(mapping(entries),[gene(e) for e in chosen]).conflicts(gene(candidate)):
             return False
         total=sum(e.assignment.required_duration_minutes for e in entries if e.effective_faculty.pk==candidate.effective_faculty.pk)
-        if total>candidate.effective_faculty.max_weekly_hours*60:
+        if draft.term.education_level != 'SHS' and total>candidate.effective_faculty.max_weekly_hours*60:
             load_failures.add(f'{candidate.effective_faculty.full_name}: combined weekly workload would exceed the {candidate.effective_faculty.max_weekly_hours}-hour limit.')
             return False
         return True

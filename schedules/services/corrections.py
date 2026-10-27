@@ -46,7 +46,7 @@ def placement_suggestions(entry, actor, limit=3):
         if end <= start or end > SCHOOL_END or faculty_policy.rejection_reason(day, start, end):
             continue
         for room in rooms:
-            if placement_conflicts(entry.schedule.term, entry.effective_faculty.pk, room.pk, day, start, end, external):
+            if placement_conflicts(entry.schedule.term, entry.effective_faculty.pk, room.pk, day, start, end, external, meeting=entry.assignment):
                 continue
             if (day, start, end, room.pk) == (entry.day, entry.start_time, entry.end_time, entry.room_id):
                 continue

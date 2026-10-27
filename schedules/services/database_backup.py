@@ -137,11 +137,31 @@ def compatibility(connection):
             elif constraint.name not in table_sql:
                 return False
     guards = {}
-    for module in ('0010_finalized_schedule_guards', '0011_academic_term_guards', '0012_historical_snapshots'):
-        guards.update(dict(import_module('schedules.migrations.' + module).TRIGGERS))
+
+    for module in (
+        '0010_finalized_schedule_guards',
+        '0011_academic_term_guards',
+        '0012_historical_snapshots',
+    ):
+        guards.update(
+            dict(import_module('schedules.migrations.' + module).TRIGGERS)
+        )
+
+    # Migration 0027 allows faculty account linking while
+    # preserving academic-content protection triggers.
+    faculty_link_migration = import_module(
+        'schedules.migrations.0027_faculty_account_link'
+    )
+
+    guards['h2_faculty_update'] = faculty_link_migration.UPDATED
+
     actual = dict(connection.execute("SELECT name,sql FROM sqlite_master WHERE type='trigger'"))
     normalize = lambda sql: ' '.join(sql.strip().rstrip(';').split())
-    return all(name in actual and normalize(actual[name]) == normalize(sql) for name, sql in guards.items())
+
+    return all(
+        name in actual and normalize(actual[name]) == normalize(sql)
+        for name, sql in guards.items()
+    )
 
 
 def verify(connection, *, require_current=False):

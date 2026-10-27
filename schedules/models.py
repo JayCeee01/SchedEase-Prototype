@@ -347,6 +347,131 @@ class RoomKind(models.TextChoices):
     SPECIAL = "SPECIAL", "Specialized Room"
 
 
+class SHSAssignmentConfiguration(AcademicIdentity):
+    assignment = models.OneToOneField("Assignment", on_delete=models.PROTECT, related_name="shs_configuration")
+    delivery_plan = models.ForeignKey(DeliveryPlan, on_delete=models.PROTECT)
+    starts_on = models.DateField(null=True, blank=True)
+    ends_on = models.DateField(null=True, blank=True)
+    calendar_reference = models.CharField(max_length=200, blank=True, help_text="Approval for teaching dates, recurrence and operating windows. Use dated meetings when holidays interrupt weekly recurrence.")
+    combined_class_reference = models.CharField(max_length=200, blank=True, help_text="Institutional approval for additional participating sections.")
+    is_confirmed = models.BooleanField(default=False, help_text="Confirms these operational inputs only; does not authorize SHS generation or approve a workload policy.")
+
+    def clean(self):
+        super().clean()
+        from .services.shs_operations import configuration_errors
+        if self.assignment_id and self.delivery_plan_id:
+            errors = configuration_errors(self, complete=self.is_confirmed)
+            if errors:
+                raise ValidationError(errors)
+
+    def __str__(self):
+        return f"SHS inputs: {self.assignment}"
+
+
+class SHSSectionParticipation(AcademicIdentity):
+    configuration = models.ForeignKey(SHSAssignmentConfiguration, on_delete=models.CASCADE, related_name="additional_sections")
+    section = models.ForeignKey("Section", on_delete=models.PROTECT)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["configuration", "section"], name="unique_shs_participating_section")]
+
+    def clean(self):
+        super().clean()
+        if self.configuration_id and self.section_id:
+            config = self.configuration
+            if self.section_id == config.assignment.section_id:
+                raise ValidationError({"section": "The primary assignment section already participates."})
+            if self.section.cohort_id != config.delivery_plan.offering.cohort_id or self.section.program.education_level != EducationLevel.SHS:
+                raise ValidationError({"section": "Choose an SHS section from the offering's cohort."})
+            if not config.combined_class_reference.strip():
+                raise ValidationError("Record institutional combined-class approval before adding sections.")
+
+    def __str__(self):
+        return str(self.section)
+
+
+class SHSMeetingPattern(AcademicIdentity):
+    configuration = models.ForeignKey(SHSAssignmentConfiguration, on_delete=models.CASCADE, related_name="patterns")
+    component = models.ForeignKey(DeliveryComponent, on_delete=models.PROTECT)
+    sequence = models.PositiveSmallIntegerField(default=1)
+    recurrence = models.CharField(max_length=8, choices=[("WEEKLY", "Weekly throughout teaching dates"), ("DATED", "One explicitly dated meeting")])
+    weekday = models.PositiveSmallIntegerField(choices=Weekday.choices)
+    meeting_date = models.DateField(null=True, blank=True)
+    window_start = models.TimeField()
+    window_end = models.TimeField()
+    required_room_type = models.CharField(max_length=30, choices=RoomKind.choices)
+    room = models.ForeignKey("Room", on_delete=models.PROTECT, help_text="Explicitly approved eligible room for this pattern; other specialized rooms are not assumed equivalent.")
+    room_approval_reference = models.CharField(max_length=200)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["configuration", "component", "sequence"], name="unique_shs_meeting_pattern"),
+            models.CheckConstraint(condition=Q(sequence__gt=0) & Q(weekday__lte=5), name="shs_pattern_sequence_day"),
+            models.CheckConstraint(condition=Q(window_end__gt=models.F("window_start")), name="shs_pattern_window"),
+            models.CheckConstraint(condition=Q(recurrence="WEEKLY",meeting_date__isnull=True) | Q(recurrence="DATED",meeting_date__isnull=False), name="shs_pattern_recurrence_date"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .services.shs_operations import pattern_errors
+        if self.configuration_id and self.component_id and self.room_id:
+            errors = pattern_errors(self)
+            if errors:
+                raise ValidationError(errors)
+
+    def __str__(self):
+        return f"{self.component.instruction} / {self.get_weekday_display()} / {self.get_recurrence_display()}"
+
+
+class FacultyContactMinutePolicy(AcademicIdentity):
+    """Explicit policy input; no institutional default or workload-unit conversion."""
+    faculty = models.ForeignKey("Faculty", on_delete=models.PROTECT)
+    accounting_period = models.CharField(max_length=20, choices=[("CALENDAR_WEEK", "Calendar week")])
+    covered_levels = models.CharField(max_length=20, choices=[("SHS_AND_TERTIARY", "SHS and tertiary combined")])
+    week_starts_on = models.PositiveSmallIntegerField(choices=[(0,"Monday")])
+    starts_on = models.DateField()
+    ends_on = models.DateField()
+    maximum_contact_minutes = models.PositiveIntegerField()
+    reference = models.CharField(max_length=240, blank=True)
+    is_verified = models.BooleanField(default=False)
+    is_approved = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=Q(maximum_contact_minutes__gt=0), name="contact_policy_positive_limit"),
+            models.CheckConstraint(condition=Q(ends_on__gte=models.F("starts_on")), name="contact_policy_dates"),
+            models.CheckConstraint(condition=Q(week_starts_on=0), name="contact_policy_week_start"),
+            models.CheckConstraint(condition=Q(accounting_period="CALENDAR_WEEK",covered_levels="SHS_AND_TERTIARY"), name="contact_policy_supported_contract"),
+            models.CheckConstraint(condition=Q(is_approved=False) | Q(is_verified=True), name="contact_policy_approval_verified"),
+            models.CheckConstraint(condition=Q(is_active=False) | Q(is_verified=True,is_approved=True), name="contact_policy_active_approved"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if (self.is_verified or self.is_approved or self.is_active) and not self.reference.strip():
+            raise ValidationError({"reference": "Record the verified institutional approval reference. Synthetic approvals belong only in isolated tests."})
+        if self.is_active and self.faculty_id and self.starts_on and self.ends_on:
+            if type(self).objects.filter(faculty_id=self.faculty_id,is_active=True,
+                    starts_on__lte=self.ends_on,ends_on__gte=self.starts_on).exclude(pk=self.pk).exists():
+                raise ValidationError("An active contact-minute policy already overlaps these dates for this faculty member.")
+
+    def __str__(self):
+        return f"{self.faculty} / {self.starts_on} to {self.ends_on} / contact minutes"
+
+
+class SHSMeetingBinding(AcademicIdentity):
+    """Immutable operational snapshot for a shared TeachingAssignment."""
+    meeting = models.OneToOneField("TeachingAssignment", on_delete=models.PROTECT, related_name="shs_binding")
+    pattern = models.ForeignKey(SHSMeetingPattern, on_delete=models.PROTECT)
+    data = models.JSONField()
+
+    def clean(self):
+        super().clean()
+        if self.pk and type(self).objects.filter(pk=self.pk).exclude(data=self.data, meeting_id=self.meeting_id, pattern_id=self.pattern_id).exists():
+            raise ValidationError('SHS meeting snapshots cannot be edited; prepare a new operational configuration.')
+
+
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=Role.choices)
@@ -565,7 +690,7 @@ class Subject(IdentityValidationMixin, ProtectedContentMixin, models.Model):
 
 
     def __str__(self):
-        return f"{self.code} — {self.title}"
+        return f"{self.code} â€” {self.title}"
 
     def save(self, *args, **kwargs):
         from django.utils import timezone
@@ -613,7 +738,7 @@ class Assignment(ProtectedContentMixin, models.Model):
         )]
 
     def __str__(self):
-        return f"{self.subject.code} — {self.subject.title} — {self.section} — {self.faculty}"
+        return f"{self.subject.code} â€” {self.subject.title} â€” {self.section} â€” {self.faculty}"
 
     def _shared_changes(self, previous, update_fields=None):
         return [field for field in self.SHARED_FIELDS
@@ -707,7 +832,7 @@ class TeachingAssignment(ProtectedContentMixin, models.Model):
         return self.required_room_type_override or self.subject.required_room_type
 
     def __str__(self):
-        return f"{self.subject.code} — {self.subject.title} — {self.section} — Meeting {self.meeting_index} ({self.get_component_display()})"
+        return f"{self.subject.code} â€” {self.subject.title} â€” {self.section} â€” Meeting {self.meeting_index} ({self.get_component_display()})"
 
     def clean(self):
         super().clean()

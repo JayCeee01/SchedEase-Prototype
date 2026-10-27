@@ -17,6 +17,7 @@ from .generation_lock import generation_lease, GenerationLeaseLost
 from .placements import feasible_placements, PlacementOccupancy
 from .resource_occupancy import published_commitments
 from .meetings import duration_errors
+from .shs_scheduling import participant_size
 from .repair import overlap_conflicts, repair_candidate
 from .credentials import teaching_eligibility
 from .time import ALLOWED_DAYS, SCHOOL_END, SCHOOL_START, add_minutes, contains, slot_starts
@@ -48,6 +49,17 @@ class GeneticScheduler:
     """Genetic Algorithm for assigning teaching assignments to rooms and time slots."""
 
     def __init__(self, term, settings, seed=None, *, repair_budget=64):
+        if term.education_level == 'SHS':
+            from .shs_scheduling import assert_prepared
+            from django.core.exceptions import ValidationError
+            try:
+                assert_prepared(term)
+            except ValidationError as exc:
+                message='SHS generation blocked: ' + '; '.join(exc.messages)
+                raise GenerationFailure(message,[Diagnostic('INVALID_DATA',message)]) from exc
+        elif TeachingAssignment.objects.filter(term=term, section__program__education_level='SHS').exists():
+            message='SHS assignments cannot use tertiary generation.'
+            raise GenerationFailure(message,[Diagnostic('INVALID_DATA',message)])
         if not isinstance(repair_budget, int) or repair_budget < 0:
             raise ValueError("Repair budget must be a non-negative integer.")
         self.repair_budget = repair_budget
@@ -60,7 +72,7 @@ class GeneticScheduler:
         self.random = random.Random(self.seed)
         self.assignments = list(
             TeachingAssignment.objects.filter(term=term)
-            .select_related("subject", "faculty", "section__program", "section__year_level", "assignment")
+            .select_related("subject", "faculty", "section__program", "section__year_level", "assignment", "term", "shs_binding__pattern__configuration")
             .prefetch_related(
                 "faculty__credentials__credential",
                 "subject__credential_requirements__required_credential",
@@ -78,7 +90,7 @@ class GeneticScheduler:
             assignment.id: [
                 room
                 for room in self.rooms
-                if room.room_type == assignment.effective_room_type and room.capacity >= assignment.section.size
+                if room.room_type == assignment.effective_room_type and room.capacity >= participant_size(assignment)
             ]
             for assignment in self.assignments
         }
@@ -251,9 +263,9 @@ class GeneticScheduler:
             faculty_minutes[assignment.faculty_id] += assignment.required_duration_minutes
             if not self.valid_rooms_by_assignment[assignment.id]:
                 add(
-                    f"{assignment.subject.code} / {assignment.section}: no active {dict(RoomKind.choices)[assignment.effective_room_type]} has capacity {assignment.section.size}.",
+                    f"{assignment.subject.code} / {assignment.section}: no active {dict(RoomKind.choices)[assignment.effective_room_type]} has capacity {participant_size(assignment)}.",
                     "ROOM_CAPACITY" if any(r.room_type == assignment.effective_room_type for r in self.rooms) else "ROOM_TYPE", [assignment],
-                    {"required_capacity": assignment.section.size, "required_room_type": assignment.effective_room_type}
+                    {"required_capacity": participant_size(assignment), "required_room_type": assignment.effective_room_type}
                 )
             if not self.qualification_cache[assignment.id]:
                 add(f"{assignment.subject.code} / {assignment.section}: {assignment.faculty} lacks the required credential or override.", "FACULTY_CREDENTIAL", [assignment])
@@ -264,6 +276,8 @@ class GeneticScheduler:
                 add(f"{assignment.subject.code} / {assignment.section}: {message}", "INVALID_DURATION", [assignment])
         faculty_by_id = {assignment.faculty_id: assignment.faculty for assignment in self.assignments}
         for faculty_id, minutes in faculty_minutes.items():
+            if self.term.education_level == 'SHS':
+                continue  # Explicit calendar-week policies are validated by assert_prepared.
             faculty = faculty_by_id[faculty_id]
             if minutes > faculty.max_weekly_hours * 60:
                 add(f"{faculty}: assigned load is {minutes / 60:g} hours but the maximum is {faculty.max_weekly_hours} hours.", "FACULTY_WORKLOAD",
@@ -335,7 +349,7 @@ class GeneticScheduler:
     def _choose_room_for_assignment(self, assignment, rooms):
         best_fit = [
             room for room in rooms
-            if room.capacity >= assignment.section.size and room.capacity <= max(assignment.section.size + 15, assignment.section.size * 1.35)
+            if room.capacity >= participant_size(assignment) and room.capacity <= max(participant_size(assignment) + 15, participant_size(assignment) * 1.35)
         ]
         return self.random.choice(best_fit or rooms)
 
@@ -408,7 +422,7 @@ class GeneticScheduler:
             room = self.room_map[gene.room_id]
             if gene.day not in ALLOWED_DAYS or not contains(SCHOOL_START, SCHOOL_END, gene.start_time, gene.end_time):
                 hard_violations += 1
-            if room.capacity < assignment.section.size:
+            if room.capacity < participant_size(assignment):
                 hard_violations += 1
             if room.room_type != assignment.effective_room_type:
                 hard_violations += 1
@@ -423,9 +437,9 @@ class GeneticScheduler:
                 hard_violations += 1
             if self._preferred(assignment.faculty_id, gene):
                 soft_penalty -= 12
-            capacity_gap = max(0, room.capacity - assignment.section.size)
+            capacity_gap = max(0, room.capacity - participant_size(assignment))
             soft_penalty += capacity_gap * 0.15
-            if capacity_gap > assignment.section.size:
+            if capacity_gap > participant_size(assignment):
                 soft_penalty += 10
             if room.room_type != assignment.effective_room_type and room.room_type != "SPECIAL":
                 soft_penalty += 20

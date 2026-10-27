@@ -38,13 +38,17 @@ def published_commitments(term):
         schedule__term__starts_on__lte=term.ends_on,
         schedule__term__ends_on__gte=term.starts_on,
     ).exclude(schedule__term_id=term.pk).select_related('schedule__term', 'assignment__faculty', 'faculty_override')
-    return tuple(ResourceCommitment(
-        entry.pk, entry.schedule_id, entry.schedule.term_id,
-        entry.schedule.term.education_level, entry.effective_faculty.pk,
-        entry.room_id, entry.day, entry.start_time, entry.end_time,
-        entry.schedule.term.starts_on, entry.schedule.term.ends_on,
-    ) for entry in entries if weekday_intersects(term.starts_on, term.ends_on,
-        entry.schedule.term.starts_on, entry.schedule.term.ends_on, entry.day))
+    result = []
+    from .shs_scheduling import binding
+    for entry in entries.select_related('assignment__shs_binding'):
+        item = binding(entry.assignment)
+        ranges = [(date.fromisoformat(d), date.fromisoformat(d)) for d in item.data['dates']] if item else [(entry.schedule.term.starts_on, entry.schedule.term.ends_on)]
+        for left, right in ranges:
+            if weekday_intersects(term.starts_on,term.ends_on,left,right,entry.day):
+                result.append(ResourceCommitment(entry.pk,entry.schedule_id,entry.schedule.term_id,
+                    entry.schedule.term.education_level,entry.effective_faculty.pk,entry.room_id,
+                    entry.day,entry.start_time,entry.end_time,left,right))
+    return tuple(result)
 
 
 def resource_conflicts(candidate, commitments):
@@ -63,10 +67,17 @@ def resource_conflicts(candidate, commitments):
     return tuple(result)
 
 
-def placement_conflicts(term, faculty_id, room_id, day, start, end, commitments):
+def placement_conflicts(term, faculty_id, room_id, day, start, end, commitments, meeting=None):
     """Adapt a proposed placement to the shared dated occupancy contract."""
     candidate = ResourceCommitment(None, None, term.pk, term.education_level,
         faculty_id, room_id, day, start, end, term.starts_on, term.ends_on)
+    if meeting is not None:
+        from .shs_scheduling import binding
+        from dataclasses import replace
+        item = binding(meeting)
+        if item:
+            return tuple(conflict for d in item.data['dates']
+                for conflict in resource_conflicts(replace(candidate,starts_on=date.fromisoformat(d),ends_on=date.fromisoformat(d)),commitments))
     return resource_conflicts(candidate, commitments)
 
 
@@ -85,9 +96,10 @@ def contact_minutes_by_faculty(commitments, starts_on, ends_on):
     """
     result, seen = {}, set()
     for item in commitments:
-        if item.entry_id is not None and item.entry_id in seen:
+        key = (item.entry_id, item.starts_on, item.ends_on)
+        if item.entry_id is not None and key in seen:
             continue
-        seen.add(item.entry_id)
+        seen.add(key)
         left, right = max(starts_on, item.starts_on), min(ends_on, item.ends_on)
         first = left + timedelta(days=(item.day - left.weekday()) % 7)
         if first > right:

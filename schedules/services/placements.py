@@ -43,6 +43,12 @@ def feasible_placements(assignment, term, rooms, *, eligible=None, faculty_polic
     room_policies = room_policies if room_policies is not None else {
         room.pk: AvailabilityPolicy.for_resource(room) for room in rooms}
     section_policy = section_policy or AvailabilityPolicy.for_resource(assignment.section)
+    from .shs_scheduling import binding, participant_ids, participant_size
+    from datetime import time
+    from schedules.models import Section
+    snapshot = binding(assignment)
+    shs_policies = [AvailabilityPolicy.for_resource(section) for section in
+        Section.objects.filter(pk__in=participant_ids(assignment))] if snapshot else []
     duration = assignment.required_duration_minutes
     grid = tuple(slot_starts(duration))
     options = set()
@@ -59,6 +65,12 @@ def feasible_placements(assignment, term, rooms, *, eligible=None, faculty_polic
                         continue
                     # Include interval boundaries so narrow/non-grid windows work.
                     starts = set(grid) | {start, add_minutes(end, -duration)}
+                    if snapshot:
+                        starts.update((time.fromisoformat(snapshot.data['window_start']),
+                            add_minutes(time.fromisoformat(snapshot.data['window_end']), -duration)))
+                        for participant_policy in shs_policies:
+                            for left, right in participant_policy.effective_intervals(day):
+                                starts.update((left, add_minutes(right, -duration)))
                     starts.update(placement_boundaries(assignment.faculty_id, room.pk, day, duration, external_occupancy))
                     for left, right in section_policy.effective_intervals(day):
                         starts.update((left, add_minutes(right, -duration)))
@@ -66,7 +78,7 @@ def feasible_placements(assignment, term, rooms, *, eligible=None, faculty_polic
                         finish = add_minutes(candidate, duration)
                         if not (start <= candidate < finish <= end):
                             continue
-                        if placement_conflicts(term, assignment.faculty_id, room.pk, day, candidate, finish, external_occupancy):
+                        if placement_conflicts(term, assignment.faculty_id, room.pk, day, candidate, finish, external_occupancy, meeting=assignment):
                             continue
                         entry.room, entry.day, entry.start_time, entry.end_time = room, day, candidate, finish
                         if not individual_entry_errors(entry, eligible=eligible,
@@ -88,11 +100,14 @@ class PlacementOccupancy:
 
     def keys(self, gene):
         assignment = self.assignment_map[gene.assignment_id]
-        return (('faculty', assignment.faculty_id, gene.day),
-                ('section', assignment.section_id, gene.day), ('room', gene.room_id, gene.day))
+        from .shs_scheduling import participant_ids
+        return (('faculty', assignment.faculty_id, gene.day), ('room', gene.room_id, gene.day),
+                *(('section',pk,gene.day) for pk in participant_ids(assignment)))
 
     def conflicts(self, gene):
+        from .shs_scheduling import dates_overlap
         return any(overlaps(gene.start_time, gene.end_time, other.start_time, other.end_time)
+                   and dates_overlap(self.assignment_map[gene.assignment_id],self.assignment_map[other.assignment_id],gene.day)
                    for key in self.keys(gene) for other in self.buckets[key])
 
     def add(self, gene):
