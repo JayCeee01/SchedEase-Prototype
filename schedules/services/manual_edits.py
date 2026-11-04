@@ -72,7 +72,7 @@ def manual_edit_transaction(*, schedule_id, entry_id, actor, revision, draft_onl
         yield schedule, entry, previous, current_user
 
 
-def save_manual_entry(*, schedule_id, entry_id, actor, revision, proposed, confirmed=False, reason="", draft_only=False):
+def save_manual_entry(*, schedule_id, entry_id, actor, revision, proposed, confirmed=False, reason="", draft_only=False, scope_token=None):
     with manual_edit_transaction(schedule_id=schedule_id, entry_id=entry_id, actor=actor, revision=revision, draft_only=draft_only) as (schedule, entry, previous, current_user):
         for field in FIELDS:
             setattr(entry, field, proposed[field])
@@ -83,9 +83,9 @@ def save_manual_entry(*, schedule_id, entry_id, actor, revision, proposed, confi
             if not confirmed or not reason.strip():
                 raise ValidationError("Administrator confirmation and a reason are required for this credential override.")
             # Provisional approval is needed by full_clean; never committed alone.
-            CredentialOverride.objects.create(assignment=entry.assignment, subject=entry.effective_subject,
-                faculty=entry.effective_faculty, admin_user=current_user, reason=reason.strip(),
-                missing_credentials=missing_credential_message(entry.effective_faculty, entry.effective_subject, schedule.term))
+            from .credential_approval import approve_override
+            approve_override(assignment=entry.assignment, subject=entry.effective_subject,
+                faculty=entry.effective_faculty, actor=current_user, reason=reason.strip(), scope_token=scope_token)
         entry.full_clean()
         entry.save()
         current = values(entry)

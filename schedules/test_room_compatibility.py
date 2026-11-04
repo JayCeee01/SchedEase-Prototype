@@ -1,3 +1,4 @@
+from .test_publication_helpers import finalize
 from datetime import time
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -70,8 +71,7 @@ class RoomCompatibilityTests(SchedulingDefectFixture):
         for i, meeting in enumerate(self.meetings):
             source.entries.create(assignment=meeting, room=self.room, day=0,
                                   start_time=time(8+i), end_time=time(9+i))
-        source.status = 'PUBLISHED'
-        source.save(update_fields=['status'])
+        finalize(source)
         draft = smart_repair.create_draft(source.pk, self.admin, dict(
             kind='room', resource=self.room.pk, day=0, start='08:00', end='09:00', rearrange=False))
         before = list(draft.entries.values())

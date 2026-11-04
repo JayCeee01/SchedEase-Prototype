@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from . import models as m
 from .test_known_defects import SchedulingDefectFixture
 from .services.credentials import faculty_qualification, teaching_eligibility
+from .test_support.credential_approvals import scoped_override
 
 
 class CredentialValidityTests(SchedulingDefectFixture):
@@ -71,6 +72,9 @@ class CredentialValidityTests(SchedulingDefectFixture):
         values = dict(assignment=self.meetings[0], faculty=self.faculty, subject=self.subject,
                       admin_user=self.admin, reason='Dean approved exception', missing_credentials='Teaching license not valid for term')
         values.update(changes)
+        if not changes:
+            values.pop('missing_credentials')
+            return scoped_override(**values)
         return m.CredentialOverride.objects.create(**values)
 
     def test_overrides_match_meeting_faculty_course_and_preserve_audit(self):
@@ -109,7 +113,9 @@ class CredentialValidityTests(SchedulingDefectFixture):
         self.client.force_login(self.admin)
         url = f'/schedules/{self.schedule.pk}/entry/new/'
         payload = {**self.payload(), "revision": self.client.get(url).context["form"].initial["revision"]}
-        self.assertContains(self.client.post(url, payload), 'Credential Override Required')
+        response = self.client.post(url, payload)
+        self.assertContains(response, 'Credential Override Required')
+        payload['credential_scope'] = response.context['credential_scope']
         self.assertFalse(m.CredentialOverride.objects.exists())
         payload.update(credential_override_confirm='yes', credential_override_reason='Approved for this term')
         # Failure after override creation must roll back both records.
@@ -165,6 +171,7 @@ class CredentialValidityTests(SchedulingDefectFixture):
         payload = {**self.payload(), 'faculty_override': other.pk, 'revision': self.client.get(url).context['form'].initial['revision']}
         response = self.client.post(url, payload)
         self.assertContains(response, 'Replacement Teacher is not qualified')
+        payload['credential_scope'] = response.context['credential_scope']
         entry.refresh_from_db()
         self.assertIsNone(entry.faculty_override_id)
         payload.update(credential_override_confirm='yes', credential_override_reason='Approved replacement')
@@ -184,7 +191,9 @@ class CredentialValidityTests(SchedulingDefectFixture):
             for field in ('id', 'component', 'meeting_index', 'duration_minutes', 'required_room_type_override'):
                 data[f'meetings-{index}-{field}'] = getattr(meeting, field)
         url = f'/schedules/manage/assignments/{self.parent.pk}/edit/'
-        self.assertContains(self.client.post(url, data), 'Unqualified faculty assignment')
+        response = self.client.post(url, data)
+        self.assertContains(response, 'Unqualified faculty assignment')
+        data['credential_scope'] = response.context['credential_scope']
         data.update(credential_override_confirm='yes', credential_override_reason='Approved teaching exception')
         self.assertEqual(self.client.post(url, data).status_code, 302)
         self.assertEqual(m.CredentialOverride.objects.count(), 2)

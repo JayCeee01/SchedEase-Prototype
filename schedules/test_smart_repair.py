@@ -7,6 +7,7 @@ from . import models as m
 from .test_known_defects import SchedulingDefectFixture
 from .services import smart_repair as service
 from .services.conflicts import schedule_validation_messages
+from .test_publication_helpers import finalize, legacy_case, upgrade
 
 
 def measurement(scenario, result):
@@ -26,8 +27,18 @@ class SmartRepairTests(SchedulingDefectFixture):
         for i, meeting in enumerate(self.meetings):
             self.source.entries.create(assignment=meeting, room=self.room, day=0,
                 start_time=time(8+i), end_time=time(9+i))
-        self.source.status = 'PUBLISHED'
-        self.source.save(update_fields=['status'])
+        if self._testMethodName == 'test_unqualified_replacement_is_not_used':
+            from datetime import date
+            credential = m.Credential.objects.create(name='Required certification')
+            m.SubjectCredentialRequirement.objects.create(
+                subject=self.subject, required_credential=credential)
+            m.FacultyCredential.objects.create(
+                faculty=self.faculty, credential=credential, issued_on=date(2020, 1, 1))
+        if self._testMethodName == 'test_replacement_workload_capacity_blocks_entire_batch':
+            # Cover both original meetings; the draft override occupies 09:00-10:00.
+            m.Availability.objects.create(faculty=self.faculty, day=0,
+                start_time=time(8), end_time=time(10), kind='AVAILABLE')
+        finalize(self.source)
         self.original = list(self.source.entries.values())
 
     def draft(self, kind='room', **extra):
@@ -187,7 +198,6 @@ class SmartRepairTests(SchedulingDefectFixture):
         draft, other=self.replacement(max_weekly_hours=1)
         # An existing authorized override already consumes the replacement's limit.
         draft.entries.filter(assignment=self.meetings[1]).update(faculty_override=other)
-        m.Availability.objects.create(faculty=self.faculty,day=0,start_time=time(8),end_time=time(9),kind='AVAILABLE')
         result=service.propose(draft.pk,self.admin)
         self.assertFalse(result['success'],result)
         self.assertTrue(any('weekly workload' in reason for reason in result['reasons']))
@@ -195,11 +205,7 @@ class SmartRepairTests(SchedulingDefectFixture):
         self.assertEqual(draft.entries.get(assignment=self.meetings[0]).effective_faculty.pk,self.faculty.pk)
 
     def test_unqualified_replacement_is_not_used(self):
-        from datetime import date
         draft, other=self.replacement()
-        credential=m.Credential.objects.create(name='Required certification')
-        m.SubjectCredentialRequirement.objects.create(subject=self.subject,required_credential=credential)
-        m.FacultyCredential.objects.create(faculty=self.faculty,credential=credential,issued_on=date(2020,1,1))
         result=service.propose(draft.pk,self.admin)
         self.assertFalse(result['success'],result)
         self.assertTrue(any('qualification' in reason for reason in result['reasons']))
@@ -210,8 +216,12 @@ class SmartRepairTests(SchedulingDefectFixture):
         m.TeachingAssignment.objects.create(assignment=parent,component='LECTURE',meeting_index=1,duration_minutes=120)
         return section
 
+    @legacy_case
     def test_new_section_uses_recorded_requirements_and_preserves_original(self):
+        # This incomplete historical publication predates membership enforcement.
+        # Construct it under 0033, then retain all 0034 guards during repair.
         section=self.add_section()
+        upgrade()
         draft=self.draft('sections',sections=[section.pk])
         result=service.propose(draft.pk,self.admin)
         self.assertTrue(result['success'],result)
@@ -283,7 +293,7 @@ class SmartRepairTests(SchedulingDefectFixture):
         meeting=m.TeachingAssignment.objects.create(assignment=parent,component='LECTURE',meeting_index=1,duration_minutes=120)
         external=m.Schedule.objects.create(term=term,name='Other term')
         external.entries.create(assignment=meeting,room=self.room,day=0,start_time=time(10),end_time=time(12))
-        external.status='PUBLISHED';external.save(update_fields=['status'])
+        finalize(external)
         result=service.propose(self.draft().pk,self.admin)
         self.assertFalse(result['success'],result)
 

@@ -27,6 +27,7 @@ FIELDS = {
     "scheduleentry": "schedule_id assignment_id room_id day start_time end_time subject_override_id section_override_id faculty_override_id component_override",
     "scheduleentryaudit": "schedule_id entry_id user_id previous_values new_values created_at",
     "credentialoverride": "assignment_id subject_id faculty_id admin_user_id reason missing_credentials created_at",
+    "shssectionparticipation": "configuration_id section_id",
 }
 
 
@@ -62,9 +63,15 @@ def reference_sql(model, alias="OLD"):
 
 def protected(instance, using=None):
     name = instance._meta.model_name
-    if name not in FIELDS or not instance.pk:
+    if name not in FIELDS or (not instance.pk and name != 'shssectionparticipation'):
         return False
-    connection = connections[using or instance._state.db or "default"]
+    using = using or instance._state.db or "default"
+    from .services.participation_dependencies import MODELS, affected_schedules
+    if name == 'shssectionparticipation':
+        return bool(affected_schedules('configuration', instance.configuration_id, using))
+    if name in MODELS and affected_schedules(name, instance.pk, using):
+        return True
+    connection = connections[using]
     with connection.cursor() as cursor:
         cursor.execute(f'SELECT 1 FROM "{instance._meta.db_table}" target WHERE target.id=%s AND ({reference_sql(name, "target")})', [instance.pk])
         return cursor.fetchone() is not None
@@ -76,11 +83,24 @@ def check_changes(instance, update_fields=None, using=None):
         return
     using = using or instance._state.db or "default"
     previous = type(instance)._base_manager.using(using).filter(pk=instance.pk).first() if instance.pk else None
+    if name == 'credentialoverride' and previous:
+        from .services.credential_approval import has_evidence
+        if has_evidence(previous.pk, using):
+            raise ValidationError('This approval has immutable requirement evidence. Request a new approval instead of editing it.')
     columns = {field.column: field for field in instance._meta.concrete_fields}
     changed = {column for column in FIELDS[name].split()
                if (update_fields is None or columns[column].name in update_fields or columns[column].attname in update_fields)
                and (previous is None or getattr(instance, columns[column].attname) != getattr(previous, columns[column].attname))}
     check_term_relationships(instance, previous, changed, using)
+    from .services.publication_boundary import check
+    check(instance, previous, changed, using)
+    if name == 'shssectionparticipation':
+        # Both sides matter: moving away from a finalized configuration cannot
+        # erase its dependency, and moving into one changes its participants.
+        if (previous is None or changed) and (protected(instance, using) or
+                                              (previous and protected(previous, using))):
+            raise ValidationError(MESSAGE)
+        return
     if previous and changed and protected(previous, using):
         lifecycle = {"status", "archived_at", "replaced_by_id"}
         if not (name == "schedule" and _archiving.get() and previous.status == "PUBLISHED"
@@ -140,6 +160,13 @@ def before_save(sender, instance, using, update_fields=None, **kwargs):
 
 
 def before_delete(sender, instance, using, **kwargs):
+    from .services.publication_boundary import check
+    if instance._meta.model_name in ('assignment','teachingassignment'):
+        check(instance, instance, set(), using, deleting=True)
+    if instance._meta.model_name == 'credentialoverride':
+        from .services.credential_approval import has_evidence
+        if has_evidence(instance.pk, using):
+            raise ProtectedError('Scoped credential approvals cannot be deleted.', [instance])
     if protected(instance, using):
         raise ProtectedError(MESSAGE, [instance])
 

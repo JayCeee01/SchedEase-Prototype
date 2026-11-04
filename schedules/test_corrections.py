@@ -1,3 +1,5 @@
+from .test_publication_helpers import legacy_case, upgrade
+from django.db import transaction
 """M2 correction links, validated alternatives and atomic application."""
 from datetime import time
 from unittest.mock import patch
@@ -167,6 +169,7 @@ class CorrectionTests(SchedulingDefectFixture):
         with self.assertRaises(ValidationError):
             placement_suggestions(self.entry, student)
 
+    @legacy_case
     def test_finalized_status_rechecked_and_links_hidden(self):
         for status in ('PUBLISHED', 'ARCHIVED'):
             with self.subTest(status=status):
@@ -179,10 +182,13 @@ class CorrectionTests(SchedulingDefectFixture):
                     self.schedule.status = status
                     with archive_transition():
                         self.schedule.save(update_fields=['status'])
-                self.assertEqual(self.suggestions(), [])
-                with self.assertRaises(ValidationError):
-                    self.apply(result['token'])
-                self.assertNotContains(self.client.get(f'/schedules/{self.schedule.pk}/'), 'Fix Conflict')
+                with transaction.atomic():
+                    upgrade()
+                    self.assertEqual(self.suggestions(), [])
+                    with self.assertRaises(ValidationError):
+                        self.apply(result['token'])
+                    self.assertNotContains(self.client.get(f'/schedules/{self.schedule.pk}/'), 'Fix Conflict')
+                    transaction.set_rollback(True)
         self.unchanged(self.schedule.updated_at)
 
     def test_changed_credentials_revalidated_without_creating_override(self):

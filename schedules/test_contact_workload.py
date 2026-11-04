@@ -1,3 +1,4 @@
+from .test_publication_helpers import finalize, legacy_case, upgrade
 from datetime import date, time
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -83,24 +84,27 @@ class ContactPolicyTests(TestCase):
 
 class PublishedContactTests(fixtures.SchedulingDefectFixture):
     def setUp(self):
+        self.meetings[1].delete()
+        self.subject.lecture_hours=1; self.subject.save()
         self.schedule=m.Schedule.objects.create(term=self.term,name='Synthetic publication')
         self.schedule.entries.create(assignment=self.meetings[0],room=self.room,day=0,start_time=time(8),end_time=time(9))
 
     def test_actual_dates_published_only_and_replacement_exclusion(self):
         self.assertEqual(published_contact_events(date(2026,8,1),date(2026,8,10)),())
-        self.schedule.status='PUBLISHED'
-        self.schedule.save()
+        finalize(self.schedule)
         events=published_contact_events(date(2026,8,1),date(2026,8,10))
         self.assertEqual([e.teaching_date for e in events],[date(2026,8,3),date(2026,8,10)])
         self.assertEqual(sum(e.minutes for e in events),120)
         self.assertEqual(published_contact_events(date(2027,1,1),date(2027,2,1)),())
         self.assertEqual(published_contact_events(date(2026,8,1),date(2026,8,10),exclude_term_id=self.term.pk),())
 
+    @legacy_case
     def test_legacy_shs_entries_are_not_silently_counted_as_weekly(self):
         self.term.education_level='SHS'
         self.term.save()
         self.schedule.status='PUBLISHED'
         self.schedule.save()
+        upgrade()
         with self.assertRaises(ValidationError):
             published_contact_events(date(2026,8,1),date(2026,8,10))
 

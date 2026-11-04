@@ -1,3 +1,4 @@
+from .test_publication_helpers import finalize
 import csv
 import io
 import zipfile
@@ -121,9 +122,10 @@ class AcademicImportTests(TestCase):
     def test_repeat_import_preserves_matching_administrator_overrides(self):
         self.commit()
         m.FacultyCredential.objects.update(expires_on=date(2025, 12, 31))
+        from .test_support.credential_approvals import scoped_override
         for meeting in m.TeachingAssignment.objects.all():
-            m.CredentialOverride.objects.create(assignment=meeting, subject=meeting.subject, faculty=meeting.faculty,
-                admin_user=self.admin, reason='Explicit term exception', missing_credentials='Expired credential')
+            scoped_override(assignment=meeting, subject=meeting.subject, faculty=meeting.faculty,
+                admin_user=self.admin, reason='Explicit term exception')
         self.commit()
         self.assertEqual(m.CredentialOverride.objects.count(), 2)
 
@@ -427,6 +429,24 @@ class AcademicImportTests(TestCase):
         room.refresh_from_db()
         self.assertFalse(room.is_active)
 
+    def test_finalized_term_import_cannot_expand_membership(self):
+        self.commit()
+        from datetime import time
+        schedule=m.Schedule.objects.create(term=self.term,name='Import membership')
+        for i,meeting in enumerate(m.TeachingAssignment.objects.all()):
+            schedule.entries.create(assignment=meeting,room=m.Room.objects.get(room_type=meeting.effective_room_type),
+                day=i,start_time=time(8),end_time=time(9))
+        finalize(schedule)
+        frozen=schedule.snapshot.data
+        rows=[{**row,'course_code':'NEW101','course_description':'Proposed new subject'} for row in self.rows]
+        preview=self.preview(rows)
+        self.assertTrue(any('required assignment membership' in error for error in preview['errors']),preview['errors'])
+        result=run_import(self.payload(rows),list(COLUMNS),self.term,commit=True,expected_signature=preview['signature'])
+        self.assertEqual(result['errors'],preview['errors'])
+        self.assertFalse(m.Subject.objects.filter(code='NEW101').exists())
+        self.assertEqual(m.TeachingAssignment.objects.count(),2)
+        self.assertEqual(m.ScheduleSnapshot.objects.get(schedule=schedule).data,frozen)
+
     def test_H2_import_cannot_change_finalized_course_information(self):
         self.commit()
         schedule = m.Schedule.objects.create(term=self.term, name='Official')
@@ -434,8 +454,7 @@ class AcademicImportTests(TestCase):
             from datetime import time
             schedule.entries.create(assignment=meeting, room=m.Room.objects.get(room_type=meeting.effective_room_type),
                                     day=i, start_time=time(8), end_time=time(9))
-        schedule.status = m.ScheduleStatus.PUBLISHED
-        schedule.save(update_fields=['status'])
+        finalize(schedule)
         result = self.preview([{**row, 'course_description': 'Changed'} for row in self.rows], policy='update')
         self.assertTrue(any('published or archived' in e for e in result['errors']))
         self.assertEqual(m.Subject.objects.get().title, 'Programming')
@@ -448,8 +467,7 @@ class AcademicImportTests(TestCase):
         for i, meeting in enumerate(m.TeachingAssignment.objects.all()):
             schedule.entries.create(assignment=meeting, room=m.Room.objects.get(room_type=meeting.effective_room_type),
                                     day=i, start_time=time(8), end_time=time(9))
-        schedule.status = m.ScheduleStatus.PUBLISHED
-        schedule.save(update_fields=['status'])
+        finalize(schedule)
         original_ids = set(schedule.entries.values_list('assignment_id', flat=True))
         other = m.AcademicTerm.objects.create(name='Next term', school_year='2026', starts_on=date(2026, 7, 1), ends_on=date(2026, 12, 1))
         result = run_import(self.payload(), list(COLUMNS), other)

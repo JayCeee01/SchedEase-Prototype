@@ -1,3 +1,4 @@
+from .test_publication_helpers import finalize
 """H2: finalized content is protected even when model validation is bypassed."""
 from datetime import time
 from django.contrib.auth.models import User
@@ -17,8 +18,7 @@ class FinalizedProtectionTests(SchedulingDefectFixture):
                         start_time=time(8+i), end_time=time(9+i)) for i, meeting in enumerate(self.meetings)]
         self.audit = m.ScheduleEntryAudit.objects.create(schedule=self.schedule, entry=self.entries[0],
                         user=self.admin, previous_values={"day": 1}, new_values={"day": 0})
-        self.schedule.status = m.ScheduleStatus.PUBLISHED
-        self.schedule.save(update_fields=["status"])
+        finalize(self.schedule)
 
     def test_related_content_saves_are_rejected(self):
         records = [(self.subject, 'title', 'Changed'), (self.faculty, 'full_name', 'Changed'),
@@ -129,7 +129,7 @@ class FinalizedProtectionTests(SchedulingDefectFixture):
         self.assertContains(response, 'published or archived')
         entry.refresh_from_db()
         self.assertEqual(entry.day, 0)
-        self.assertEqual(m.ScheduleEntryAudit.objects.count(), 1)
+        self.assertEqual(m.ScheduleEntryAudit.objects.count(), 2)  # Original edit plus authorized publication.
 
     def test_draft_only_records_remain_editable(self):
         room = m.Room.objects.create(name='Draft room', capacity=30, room_type='LECTURE')
@@ -146,9 +146,7 @@ class FinalizedProtectionTests(SchedulingDefectFixture):
 
     def test_archived_records_stay_locked_and_readable(self):
         from .protection import archive_transition
-        self.schedule.status = m.ScheduleStatus.ARCHIVED
-        with archive_transition():
-            self.schedule.save(update_fields=['status'])
+        finalize(self.schedule, archived=True)
         with self.assertRaises(IntegrityError), transaction.atomic():
             m.TeachingAssignment.objects.filter(pk=self.meetings[0].pk).update(component='LABORATORY')
         with self.assertRaises(ValidationError):
@@ -187,8 +185,8 @@ class FinalizedProtectionTests(SchedulingDefectFixture):
         draft = m.Schedule.objects.create(term=self.term, name='Override history')
         draft.entries.create(assignment=self.meetings[0], faculty_override=other, room=self.room,
                              day=0, start_time=time(8), end_time=time(9))
-        draft.status = m.ScheduleStatus.ARCHIVED
-        draft.save(update_fields=['status'])
+        draft.entries.create(assignment=self.meetings[1], room=self.room, day=0, start_time=time(9), end_time=time(10))
+        finalize(draft, archived=True)
         with self.assertRaises(IntegrityError), transaction.atomic():
             m.Faculty.objects.filter(pk=other.pk).update(full_name='Changed')
         other.refresh_from_db()

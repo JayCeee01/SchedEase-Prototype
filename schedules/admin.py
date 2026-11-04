@@ -77,6 +77,13 @@ class ProtectedScheduleAdmin(AdministratorPermissionMixin, admin.ModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
+        if self.model is SHSMeetingPattern:
+            from .services.shs_days import SHS_DAYS
+            if 'weekday' in form.base_fields:
+                form.base_fields['weekday'].choices = [(value, label) for value, label in
+                    form.base_fields['weekday'].choices if value in SHS_DAYS or value == '']
+            if 'meeting_date' in form.base_fields:
+                form.base_fields['meeting_date'].help_text = 'Choose a Monday-Friday teaching date. Weekend dates are rejected.'
         if obj is not None and protected(obj) and not isinstance(obj, Faculty):
             class ProtectedForm(form):
                 def clean(self):
@@ -88,6 +95,12 @@ class ProtectedScheduleAdmin(AdministratorPermissionMixin, admin.ModelAdmin):
 
 class DiagnosticRecordAdmin(ProtectedScheduleAdmin):
     pass
+
+
+@admin.register(SHSMeetingPattern)
+class SHSMeetingPatternAdmin(ProtectedScheduleAdmin):
+    class Media:
+        js = ('js/shs_weekdays.js',)
 
 
 @admin.register(CurriculumSubjectRequirement)
@@ -159,16 +172,22 @@ class WorkflowReadOnlyAdmin(DiagnosticRecordAdmin):
 
 
 admin.site.register(ScheduleEntryAudit, WorkflowReadOnlyAdmin)
+from .models import SHSApprovalEvidence
+admin.site.register(SHSApprovalEvidence, WorkflowReadOnlyAdmin)
 
 
 @admin.register(CredentialOverride)
-class CredentialOverrideAdmin(DiagnosticRecordAdmin):
+class CredentialOverrideAdmin(WorkflowReadOnlyAdmin):
     readonly_fields = ('admin_user',)
 
     def save_model(self, request, obj, form, change):
         if not change:
             obj.admin_user = request.user
         super().save_model(request, obj, form, change)
+
+
+from .models import CredentialApprovalEvidence
+admin.site.register(CredentialApprovalEvidence, WorkflowReadOnlyAdmin)
 
 
 @admin.register(Schedule)
@@ -192,11 +211,18 @@ class StudentAdmin(ProtectedScheduleAdmin):
     form = StudentForm
 
 
+from .forms import RequirementForm
+
+
+@admin.register(SubjectCredentialRequirement)
+class RequirementAdmin(ProtectedScheduleAdmin):
+    form = RequirementForm
+
+
 for model in [
     FacultyContactMinutePolicy,
     SHSAssignmentConfiguration,
     SHSSectionParticipation,
-    SHSMeetingPattern,
     CurriculumVersion,
     AcademicPathway,
     Cohort,
@@ -213,7 +239,6 @@ for model in [
     Room,
     Section,
     Subject,
-    SubjectCredentialRequirement,
     TeachingAssignment,
     YearLevel,
 ]:

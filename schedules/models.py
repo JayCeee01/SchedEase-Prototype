@@ -26,6 +26,11 @@ class AcademicIdentity(models.Model):
     class Meta:
         abstract = True
 
+    def clean(self):
+        super().clean()
+        from .services.shs_approval import check_save
+        check_save(type(self), self, using=self._state.db or 'default')
+
     def save(self, *args, **kwargs):
         self.full_clean()
         return super().save(*args, **kwargs)
@@ -377,6 +382,8 @@ class SHSSectionParticipation(AcademicIdentity):
 
     def clean(self):
         super().clean()
+        from .protection import check_changes
+        check_changes(self)
         if self.configuration_id and self.section_id:
             config = self.configuration
             if self.section_id == config.assignment.section_id:
@@ -642,6 +649,11 @@ class FacultyCredential(models.Model):
     def __str__(self):
         return f"{self.faculty} - {self.credential}"
 
+    def clean(self):
+        super().clean()
+        from .services.faculty_dependencies import check_save
+        check_save(type(self), self, using=self._state.db or 'default')
+
 
 class Student(IdentityValidationMixin, models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -705,6 +717,11 @@ class SubjectCredentialRequirement(models.Model):
     required_credential = models.ForeignKey(Credential, on_delete=models.PROTECT, related_name="subject_requirements")
     acceptable_equivalents = models.ManyToManyField(Credential, blank=True, related_name="equivalent_subject_requirements")
     notes = models.TextField(blank=True)
+
+    def clean(self):
+        super().clean()
+        from .services.credential_approval import check_requirement_change
+        check_requirement_change(type(self), self, self._state.db or 'default')
 
     class Meta:
         ordering = ["subject__code", "required_credential__name"]
@@ -881,6 +898,44 @@ class CredentialOverride(ProtectedContentMixin, models.Model):
         return f"Override: {self.faculty} for {self.subject}"
 
 
+class CredentialApprovalEvidence(models.Model):
+    """Append-only, explicit approval scope; legacy overrides have no evidence."""
+    override = models.OneToOneField(CredentialOverride, on_delete=models.PROTECT, related_name='scope_evidence')
+    schema_version = models.PositiveSmallIntegerField(default=1)
+    data = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        from .services.credential_approval import evidence_allowed
+        if self.pk or not evidence_allowed(self.override_id, self.schema_version, self.data):
+            raise ValidationError('Credential approval evidence must be created through an authorized approval workflow and cannot be edited.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Credential approval evidence cannot be deleted.')
+
+
+class SHSApprovalEvidence(models.Model):
+    """Current-scope attestations; never backfilled proof of legacy approval."""
+    from django.utils.timezone import now
+    term = models.ForeignKey(AcademicTerm, on_delete=models.PROTECT)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    schema_version = models.PositiveSmallIntegerField(default=1)
+    kind = models.CharField(max_length=20, choices=[('PREPARATION','New preparation'),('CURRENT_REVIEW','Current validity review')])
+    reason = models.TextField()
+    data = models.JSONField()
+    created_at = models.DateTimeField(default=now, editable=False)
+
+    def save(self, *args, **kwargs):
+        from .services.shs_approval import evidence_allowed
+        if self.pk or not evidence_allowed(self.term_id,self.actor_id,self.kind,self.reason,self.data):
+            raise ValidationError('Use the authorized SHS scope review workflow. Approval evidence is immutable.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('SHS approval evidence cannot be deleted.')
+
+
 class AvailabilityKind(models.TextChoices):
     AVAILABLE = "AVAILABLE", "Available"
     PREFERRED = "PREFERRED", "Preferred"
@@ -920,6 +975,10 @@ class Availability(models.Model):
             raise ValidationError("Section availability must be Available or Unavailable.")
         if self.start_time >= self.end_time:
             raise ValidationError("Start time must be earlier than end time.")
+        from .services.faculty_dependencies import check_save
+        check_save(type(self), self, using=self._state.db or 'default')
+        from .services.resource_dependencies import check_save as check_resource_availability
+        check_resource_availability(type(self), self, using=self._state.db or 'default')
 
 
 class GASettings(models.Model):

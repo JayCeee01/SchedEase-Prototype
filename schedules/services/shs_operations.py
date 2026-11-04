@@ -12,6 +12,9 @@ def sections(config):
 def pattern_errors(pattern):
     config = pattern.configuration
     errors = []
+    from .shs_days import valid_day, WEEKDAY_ERROR
+    if not valid_day(pattern.weekday) or (pattern.meeting_date and not valid_day(pattern.meeting_date.weekday())):
+        errors.append(WEEKDAY_ERROR)
     if pattern.component.plan_id != config.delivery_plan_id:
         errors.append('The instructional component must belong to this delivery plan.')
     if not pattern.room.is_active or pattern.room.room_type != pattern.required_room_type:

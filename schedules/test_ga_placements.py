@@ -93,8 +93,9 @@ class FeasiblePlacementTests(SchedulingDefectFixture):
         with self.assertRaisesMessage(ValueError, 'credential'):
             ga.placement_options(ga.assignments[0])
         admin = User.objects.create_superuser(username='placements-admin', password='test')
-        m.CredentialOverride.objects.create(assignment=self.meetings[0], faculty=self.faculty,
-            subject=self.subject, admin_user=admin, reason='Approved term exception', missing_credentials='Expired')
+        from .test_support.credential_approvals import scoped_override
+        scoped_override(assignment=self.meetings[0], faculty=self.faculty,
+            subject=self.subject, admin_user=admin, reason='Approved term exception')
         ga = self.ga()
         self.assertTrue(ga.placement_options(ga.assignments[0]))
         with self.assertRaisesMessage(ValueError, 'credential'):

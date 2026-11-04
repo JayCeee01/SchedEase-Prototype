@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.test import Client
 from . import models as m
 from .test_known_defects import SchedulingDefectFixture
+from .test_publication_helpers import finalize
 from .services.manual_edits import copy_to_draft, remove_manual_entry, revision_token, FIELDS
 
 
@@ -19,10 +20,10 @@ class CopyRemoveTests(SchedulingDefectFixture):
                                        start_time=time(8+i), end_time=time(9+i))
         self.source_audit = m.ScheduleEntryAudit.objects.create(schedule=self.source, entry=self.source.entries.first(),
                            user=self.admin, previous_values={'day': 1}, new_values={'day': 0})
-        self.source.status = 'PUBLISHED'
-        self.source.save(update_fields=['status'])
+        finalize(self.source)
         self.original = list(self.source.entries.order_by('pk').values())
         self.version = self.source.updated_at
+        self.source_audits = list(self.source.edit_audits.order_by('pk').values())
 
     def copy(self):
         return copy_to_draft(source_id=self.source.pk, actor=self.admin)
@@ -38,7 +39,7 @@ class CopyRemoveTests(SchedulingDefectFixture):
         self.source_audit.refresh_from_db()
         self.assertEqual(self.source.updated_at, self.version)
         self.assertEqual(list(self.source.entries.order_by('pk').values()), self.original)
-        self.assertEqual(self.source.edit_audits.count(), 1)
+        self.assertEqual(list(self.source.edit_audits.order_by('pk').values()), self.source_audits)
         self.assertEqual(self.source_audit.previous_values, {'day': 1})
         self.assertEqual(self.source_audit.new_values, {'day': 0})
 
@@ -59,10 +60,9 @@ class CopyRemoveTests(SchedulingDefectFixture):
         self.assert_source_unchanged()
 
     def test_archived_copy_and_ui(self):
-        from .protection import archive_transition
-        self.source.status = 'ARCHIVED'
-        with archive_transition():
-            self.source.save(update_fields=['status'])
+        finalize(self.source, archived=True)
+        self.version = self.source.updated_at
+        self.source_audits = list(self.source.edit_audits.order_by('pk').values())
         response = self.client.get(f'/schedules/{self.source.pk}/')
         self.assertContains(response, 'Copy to Draft')
         self.assertNotContains(response, 'Restore &amp; Publish')
@@ -167,8 +167,11 @@ class CopyRemoveTests(SchedulingDefectFixture):
                     schedule = self.source
                 else:
                     schedule = self.copy()
-                    schedule.status = status
-                    schedule.save(update_fields=['status'])
+                    if status == 'ARCHIVED':
+                        finalize(schedule, archived=True)
+                    else:
+                        schedule.status = status
+                        schedule.save(update_fields=['status'])
                 entry = schedule.entries.first()
                 token = revision_token(schedule, self.admin, entry)
                 with self.assertRaises(ValidationError):
@@ -217,8 +220,10 @@ class CopyRemoveTests(SchedulingDefectFixture):
         item.subject_override = self.subject
         item.component_override = 'LECTURE'
         item.save()
-        history.status = 'ARCHIVED'
-        history.save(update_fields=['status'])
+        finalize(history, archived=True)
+        self.source.refresh_from_db()
+        self.version = self.source.updated_at
+        self.source_audits = list(self.source.edit_audits.order_by('pk').values())
         draft = copy_to_draft(source_id=history.pk, actor=self.admin)
         copied = draft.entries.get(assignment=item.assignment)
         self.assertEqual(copied.faculty_override_id, faculty.pk)
@@ -230,10 +235,10 @@ class CopyRemoveTests(SchedulingDefectFixture):
     def test_removal_rechecks_status_after_confirmation(self):
         draft = self.copy()
         entry, _, data = self.removal(draft)
-        draft.status = 'ARCHIVED'
-        draft.save(update_fields=['status'])
+        finalize(draft, archived=True)
+        audits = list(draft.edit_audits.order_by('pk').values())
         with self.assertRaises(ValidationError):
             remove_manual_entry(schedule_id=draft.pk, entry_id=entry.pk, actor=self.admin,
                                 revision=data['revision'], confirmed=True)
         self.assertEqual(draft.entries.count(), 2)
-        self.assertEqual(draft.edit_audits.count(), 1)
+        self.assertEqual(list(draft.edit_audits.order_by('pk').values()), audits)

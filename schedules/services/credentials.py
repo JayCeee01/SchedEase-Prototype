@@ -39,22 +39,52 @@ def faculty_qualification(faculty, subject, term=None):
                     reasons.append(f"{name}: issued on {held.issued_on:%Y-%m-%d}, after the term ends on {end:%Y-%m-%d}.")
                 if dates_known and held.expires_on and held.expires_on < end:
                     reasons.append(f"{name}: expires on {held.expires_on:%Y-%m-%d}, before the term ends on {end:%Y-%m-%d}.")
-            missing.append({"required": requirement.required_credential.name, "acceptable": accepted, "reasons": reasons})
+            missing.append({"required": requirement.required_credential.name, "acceptable": accepted, "reasons": reasons,
+                "definition": {"id": requirement.pk, "subject_id": subject.pk,
+                    "required_credential_id": requirement.required_credential_id,
+                    "equivalent_ids": sorted(item.pk for item in requirement.acceptable_equivalents.all())}})
     return {"qualified": not missing, "missing": missing, "matched": matched}
 
 
-def valid_credential_override(assignment, faculty, subject):
+def valid_credential_override(assignment, faculty, subject, *, term=None, qualification=None):
     if not assignment or not assignment.pk:
         return False
-    return any(override.assignment_id == assignment.pk
-               and override.faculty_id == faculty.pk and override.subject_id == subject.pk
-               and override.admin_user_id and override.reason.strip() and override.missing_credentials.strip()
-               for override in assignment.credential_overrides.all())
+    overrides = [o for o in assignment.credential_overrides.all()
+                 if o.faculty_id == faculty.pk and o.subject_id == subject.pk
+                 and o.admin_user_id and o.reason.strip() and o.missing_credentials.strip()]
+    if not overrides:
+        return False
+    from schedules.models import CredentialApprovalEvidence
+    from .credential_approval import scope_context
+    term = term or assignment.term
+    if not term.starts_on or not term.ends_on or term.starts_on >= term.ends_on:
+        return False
+    qualification = qualification or faculty_qualification(faculty, subject, term)
+    expected = scope_context(faculty, subject, term, qualification)
+    if not expected['requirements']:
+        return False  # Independent qualification does not require an exception.
+    valid_ids = {o.pk: o.admin_user_id for o in overrides}
+    covered = set()
+    for evidence in CredentialApprovalEvidence.objects.filter(override_id__in=valid_ids):
+        data = evidence.data
+        if evidence.schema_version != 1 or not isinstance(data, dict):
+            continue
+        if (data.get('assignment_id') != assignment.pk or
+                data.get('administrator_id') != valid_ids[evidence.override_id] or
+                any(data.get(key) != value for key, value in expected.items() if key != 'requirements')):
+            continue
+        approved = data.get('requirements')
+        if not isinstance(approved, list) or any(not isinstance(item, dict) for item in approved):
+            continue
+        for requirement in expected['requirements']:
+            if requirement in approved:
+                covered.add(requirement['id'])
+    return covered == {item['id'] for item in expected['requirements']}
 
 
 def teaching_eligibility(faculty, subject, term, assignment=None):
     result = faculty_qualification(faculty, subject, term)
-    result["overridden"] = valid_credential_override(assignment, faculty, subject)
+    result["overridden"] = valid_credential_override(assignment, faculty, subject, term=term, qualification=result)
     result["eligible"] = result["qualified"] or result["overridden"]
     return result
 
@@ -66,4 +96,4 @@ def missing_credential_message(faculty, subject, term=None):
     return (f"{faculty} does not meet the credential requirements for {subject}. " +
             " ".join(f"{item['required']}: " + " ".join(item["reasons"]) for item in result["missing"]) +
             " Credentials must be issued on or before the term ends and must not expire before that date. "
-            "A blank expiry date means no expiry restriction. An authorized override requires a reason.")
+            "A blank expiry date means no expiry restriction. An authorized override requires a reason and verified approval for each missing requirement. Legacy free-text approvals do not establish that scope.")

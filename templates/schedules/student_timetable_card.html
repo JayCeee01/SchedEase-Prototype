@@ -1,0 +1,8 @@
+<div class="room-slot personal-class-slot" data-student-timetable-entry="{{ e.entry_id }}" title="{{ e.subject.title }}">
+  <strong><span tabindex="0" data-tooltip="{{ e.subject.title }}">{{ e.subject.code }}</span></strong>
+  {% if e.meeting_date %}<time datetime="{{ e.meeting_date|date:'Y-m-d' }}">{{ e.meeting_date|date:"M j, Y" }}</time>{% else %}<span>{% if e.recurrence.kind == 'WEEKLY' %}Weekly meeting{% else %}Recorded weekday: {{ e.weekday_name }}{% endif %}</span>{% endif %}
+  <span>{{ e.start|time:"g:i A" }} &ndash; {{ e.end|time:"g:i A" }}</span>
+  <span class="personal-class-faculty">{{ e.faculty.label }}</span>
+  <span>{{ e.room.label }} &middot; {{ e.primary_section.label }}</span>
+  <small>{{ e.instructional_label|default:"Instructional type unavailable" }} &middot; {{ e.academic_context.term_name }} &middot; {{ e.academic_context.school_year }}</small>
+</div>

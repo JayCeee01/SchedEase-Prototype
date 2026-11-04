@@ -54,6 +54,7 @@
 {% endif %}
 
 <form method="get" class="panel schedule-entry-filters" data-auto-tooltips="false">
+  <input type="hidden" name="view" value="{{ schedule_view }}" data-schedule-view-state>
   <label><span class="field-label">Search</span>{{ filter_form.q }}</label>
   <label><span class="field-label">Department</span>{{ filter_form.department }}</label>
   <label><span class="field-label">Program</span>{{ filter_form.program }}</label>
@@ -63,18 +64,26 @@
   <label><span class="field-label">Room</span>{{ filter_form.room }}</label>
   <label><span class="field-label">Day</span>{{ filter_form.day }}</label>
   <label><span class="field-label">Class Type</span>{{ filter_form.component }}</label>
+  {% if timetable_weeks %}
+  <label for="schedule-week"><span class="field-label">Timetable week (Monday&ndash;Sunday)</span>
+    <select id="schedule-week" name="week" aria-describedby="schedule-week-help">
+      {% for week in timetable_weeks %}<option value="{{ week|date:'Y-m-d' }}"{% if week == timetable_week %} selected{% endif %}>Week of {{ week|date:"M j, Y" }}</option>{% endfor %}
+    </select>
+    <small id="schedule-week-help">Applies to Timetable View only. Table View and exports include all filtered meetings.</small>
+  </label>
+  {% endif %}
   <div class="toolbar"><button class="primary" type="submit">Apply Filters</button><a class="button" href="{% url 'schedule_detail' schedule.pk %}">Clear</a></div>
 </form>
 
 <div class="view-switcher" role="tablist" aria-label="Schedule view">
-  <button class="view-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="schedule-table-view" data-schedule-view-button="table">Table View</button>
-  <button class="view-tab" type="button" role="tab" aria-selected="false" aria-controls="schedule-timetable-view" data-schedule-view-button="timetable">Timetable View</button>
+  <button class="view-tab{% if schedule_view == 'table' %} is-active{% endif %}" type="button" role="tab" aria-selected="{% if schedule_view == 'table' %}true{% else %}false{% endif %}" aria-controls="schedule-table-view" data-schedule-view-button="table">Table View</button>
+  <button class="view-tab{% if schedule_view == 'timetable' %} is-active{% endif %}" type="button" role="tab" aria-selected="{% if schedule_view == 'timetable' %}true{% else %}false{% endif %}" aria-controls="schedule-timetable-view" data-schedule-view-button="timetable">Timetable View</button>
 </div>
 
-<section id="schedule-table-view" role="tabpanel" data-schedule-view-panel="table">
+<section id="schedule-table-view" role="tabpanel" data-schedule-view-panel="table"{% if schedule_view != 'table' %} hidden{% endif %}>
   {% include "schedules/schedule_table_view.html" %}
 </section>
-<section id="schedule-timetable-view" role="tabpanel" data-schedule-view-panel="timetable" hidden>
+<section id="schedule-timetable-view" role="tabpanel" data-schedule-view-panel="timetable"{% if schedule_view != 'timetable' %} hidden{% endif %}>
   {% include "schedules/schedule_timetable_view.html" %}
 </section>
 {% endblock %}

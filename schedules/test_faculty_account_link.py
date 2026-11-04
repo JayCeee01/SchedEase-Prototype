@@ -8,7 +8,7 @@ from django.urls import reverse
 from . import models as m
 from .forms import MODEL_FORMS
 from .test_known_defects import SchedulingDefectFixture
-from .protection import archive_transition
+from .test_publication_helpers import finalize
 
 
 class FacultyAccountLinkTests(SchedulingDefectFixture):
@@ -20,8 +20,7 @@ class FacultyAccountLinkTests(SchedulingDefectFixture):
         for i,meeting in enumerate(self.meetings):
             self.schedule.entries.create(assignment=meeting,room=self.room,day=0,
                 start_time=time(8+i),end_time=time(9+i))
-        self.schedule.status='PUBLISHED'
-        self.schedule.save()
+        finalize(self.schedule)
         self.original_snapshot=m.ScheduleSnapshot.objects.get(schedule=self.schedule).data
         self.original_entries=list(self.schedule.entries.values())
         self.original_meetings=list(m.TeachingAssignment.objects.values())
@@ -34,9 +33,7 @@ class FacultyAccountLinkTests(SchedulingDefectFixture):
     def test_link_and_unlink_finalized_faculty(self):
         for status in ('PUBLISHED','ARCHIVED'):
             if status=='ARCHIVED':
-                with archive_transition():
-                    self.schedule.status=status
-                    self.schedule.save()
+                finalize(self.schedule, archived=True)
             for account in (self.account,None):
                 self.faculty.user=account
                 self.faculty.full_clean()

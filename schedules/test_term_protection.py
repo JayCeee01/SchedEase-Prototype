@@ -1,3 +1,4 @@
+from .test_publication_helpers import finalize
 """Task 3.2: term history and draft relationship consistency."""
 from datetime import date, time
 from django.contrib.auth.models import User
@@ -20,8 +21,11 @@ class TermProtectionTests(SchedulingDefectFixture):
             schedule.entries.create(assignment=meeting, room=self.room, day=0, start_time=time(8+i), end_time=time(9+i))
         m.ScheduleEntryAudit.objects.create(schedule=schedule, entry=schedule.entries.first(), user=self.admin,
                                            previous_values={'day': 1}, new_values={'day': 0})
-        schedule.status = status
-        schedule.save(update_fields=['status'])
+        if status in ('PUBLISHED','ARCHIVED'):
+            finalize(schedule, archived=status=='ARCHIVED')
+        else:
+            schedule.status=status
+            schedule.save(update_fields=['status'])
         return schedule
 
     def test_published_and_archived_term_reassignment_rejected(self):
@@ -36,7 +40,7 @@ class TermProtectionTests(SchedulingDefectFixture):
                 schedule.refresh_from_db()
                 self.assertEqual(schedule.term_id, self.term.pk)
                 self.assertEqual(schedule.entries.count(), 2)
-                self.assertEqual(schedule.edit_audits.count(), 1)
+                self.assertEqual(schedule.edit_audits.count(), 2)  # Original edit plus authorized publication.
                 self.assertEqual(self.client.get(f'/schedules/{schedule.pk}/').status_code, 200)
 
     def test_protected_term_identifiers_and_dates_are_frozen(self):
@@ -64,7 +68,7 @@ class TermProtectionTests(SchedulingDefectFixture):
         with self.assertRaises(ProtectedError), transaction.atomic():
             m.AcademicTerm.objects.filter(pk__in=[self.other.pk, self.term.pk]).delete()
         self.assertEqual(m.AcademicTerm.objects.count(), 2)
-        self.assertEqual(m.ScheduleEntryAudit.objects.count(), 1)
+        self.assertEqual(m.ScheduleEntryAudit.objects.count(), 2)  # Original edit plus authorized publication.
 
     def test_term_sql_deletion_update_and_replacement_are_rejected(self):
         self.schedule('ARCHIVED')

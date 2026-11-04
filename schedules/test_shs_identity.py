@@ -1,3 +1,4 @@
+from .test_publication_helpers import finalize
 """Academic identities only: no SHS scheduling policy or curriculum seeding."""
 from datetime import time
 
@@ -123,8 +124,8 @@ class TertiaryIdentityCompatibilityTests(SchedulingDefectFixture):
     def test_finalized_identity_changes_blocked_even_by_queryset(self):
         schedule = m.Schedule.objects.create(term=self.term, name="Final")
         schedule.entries.create(assignment=self.meetings[0], room=self.room, day=0, start_time=time(8), end_time=time(9))
-        schedule.status = m.ScheduleStatus.PUBLISHED
-        schedule.save(update_fields=['status'])
+        schedule.entries.create(assignment=self.meetings[1], room=self.room, day=0, start_time=time(9), end_time=time(10))
+        finalize(schedule)
         for obj, change in [(self.section.program, {'education_level':'SHS'}), (self.term, {'calendar_context':'Changed'}), (self.term, {'education_level':'SHS'})]:
             with self.subTest(change=change):
                 with self.assertRaises(IntegrityError), transaction.atomic():

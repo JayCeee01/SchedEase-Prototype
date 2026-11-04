@@ -54,9 +54,10 @@ class CSVEndpointSecurityTests(SchedulingDefectFixture):
                 response = self.client.get(reverse('export_csv', args=[self.schedule.pk]))
                 self.assertEqual(response.status_code, 200)
                 data = rows(response)
-                self.assertEqual(data[0], ['Day', 'Start', 'End', 'Course', 'Section', 'Faculty', 'Room'])
+                self.assertEqual(data[0][:7], ['Day', 'Start', 'End', 'Course', 'Section', 'Faculty', 'Room'])
                 self.assertEqual(len(data), 2)
-                self.assertEqual(len(data[1]), 7)
+                self.assertEqual(len(data[1]), 19)
+                self.assertEqual(data[0][7], 'Meeting Date')
                 expected = "'" + value if value in ATTACKS else value
                 self.assertEqual([data[1][i] for i in (3, 5, 6)], [expected] * 3)
                 self.assertEqual(data[1][4], str(self.section))

@@ -2,7 +2,7 @@
 <div class="legend"><span><i class="legend-swatch occupied"></i> Scheduled class</span><span><i class="legend-swatch vacant"></i> No class</span></div>
 <div class="panel table-wrap personal-timetable-wrap">
   <table class="room-schedule-grid personal-timetable">
-    <thead><tr><th>Time</th><th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th><th>Saturday</th></tr></thead>
+    <thead><tr><th>Time</th>{% if personal_weekdays %}{% for day in personal_weekdays %}<th>{{ day }}</th>{% endfor %}{% else %}<th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th><th>Saturday</th>{% endif %}</tr></thead>
     <tbody>{% for row in timetable_grid %}<tr>
       <th>{{ row.start|time:"g:i A" }}<small>{{ row.end|time:"g:i A" }}</small></th>
       {% for cell in row.cells %}<td class="{% if cell.entries %}occupied-cell{% else %}vacant-cell{% endif %}">
@@ -20,3 +20,5 @@
 {% else %}
 <div class="panel empty-state"><h2>No published classes yet</h2><p>Your timetable will appear here when an administrator publishes a schedule assigned to you.</p></div>
 {% endif %}
+
+{% include "schedules/shs_weekend_warning.html" %}

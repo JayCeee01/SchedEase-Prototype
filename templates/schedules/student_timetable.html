@@ -1,0 +1,43 @@
+{% if timetable_has_weekly %}
+<h3>Recurring Weekly Timetable</h3>
+<p class="subtle">Weekly meetings use recorded weekdays and times. They do not establish attendance on specific calendar dates; dated meetings are labeled separately.</p>
+{% endif %}
+{% if timetable_weeks %}
+<form method="get" class="panel" data-auto-tooltips="false">
+  <label for="{{ week_control_id|default:'student-week' }}">Timetable week (Monday&ndash;Sunday)</label>
+  <select id="{{ week_control_id|default:'student-week' }}" name="week" aria-describedby="{{ week_control_id|default:'student-week' }}-help">
+    {% for week in timetable_weeks %}<option value="{{ week|date:'Y-m-d' }}"{% if week == timetable_week %} selected{% endif %}>Week of {{ week|date:"M j, Y" }}</option>{% endfor %}
+  </select>
+  <button type="submit" class="primary">View Week</button>
+  <p id="{{ week_control_id|default:'student-week' }}-help" class="subtle">Dated meetings appear only in their teaching week. Confirmed weekly meetings remain visible.</p>
+</form>
+<p><strong>{{ timetable_week|date:"M j, Y" }} &ndash; {{ timetable_week_end|date:"M j, Y" }}</strong></p>
+{% endif %}
+{% if timetable_week_invalid %}<p role="status">The requested week is unavailable. Showing the first available week.</p>{% endif %}
+{% if timetable_grid %}
+<div class="legend"><span><i class="legend-swatch occupied"></i> Scheduled class</span><span><i class="legend-swatch vacant"></i> No class</span></div>
+<div class="panel table-wrap personal-timetable-wrap">
+  <table class="room-schedule-grid personal-timetable">
+    <caption>{{ timetable_caption|default:"Class timetable" }}{% if timetable_week %}: week of {{ timetable_week|date:"M j, Y" }}{% endif %}</caption>
+    <thead><tr><th scope="col">Time</th>{% for day in timetable_days %}<th scope="col">{{ day.name }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for row in timetable_grid %}<tr>
+      <th scope="row">{{ row.start|time:"g:i A" }}<small>{{ row.end|time:"g:i A" }}</small></th>
+      {% for cell in row.cells %}<td class="{% if cell.occupied %}occupied-cell{% else %}vacant-cell{% endif %}">
+        {% for entry in cell.entries %}{% include "schedules/student_timetable_card.html" with e=entry.presentation %}{% empty %}{% if cell.occupied %}<small>Class continues</small>{% endif %}{% endfor %}
+      </td>{% endfor %}
+    </tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endif %}
+{% if timetable_unknown %}
+<section class="panel" aria-labelledby="student-unknown-dates">
+  <h3 id="student-unknown-dates">Meeting dates unavailable</h3>
+  <p class="subtle">These published records do not establish teaching dates or weekly recurrence. They are shown separately from the selected week.</p>
+  {% for e in timetable_unknown %}{% include "schedules/student_timetable_card.html" %}{% endfor %}
+</section>
+{% endif %}
+{% if not entries %}
+<div class="panel empty-state"><h2>No published classes yet</h2><p>Your timetable will appear here when an administrator publishes a schedule assigned to you.</p></div>
+{% endif %}
+
+{% include "schedules/shs_weekend_warning.html" %}

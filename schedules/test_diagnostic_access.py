@@ -9,6 +9,7 @@ from django.urls import reverse
 
 from . import models as m
 from .test_known_defects import SchedulingDefectFixture
+from .test_publication_helpers import finalize
 
 
 class DiagnosticAccessTests(SchedulingDefectFixture):
@@ -43,8 +44,7 @@ class DiagnosticAccessTests(SchedulingDefectFixture):
         for i, meeting in enumerate(cls.meetings):
             cls.published.entries.create(assignment=meeting, room=cls.room, day=0,
                 start_time=time(8+i), end_time=time(9+i))
-        cls.published.status = 'PUBLISHED'
-        cls.published.save(update_fields=['status'])
+        finalize(cls.published)
         cls.batch = m.AcademicImport.objects.create(user=cls.admin, payload={})
 
     def setUp(self):

@@ -1,3 +1,5 @@
+from .test_publication_helpers import legacy_case, upgrade
+from django.db import transaction
 import json
 from datetime import date, time
 from django.contrib.auth.models import User
@@ -155,6 +157,7 @@ class MeetingEditorTests(TestCase):
         self.assertEqual(list(self.parent.meetings.values_list('subject_id', flat=True)), [self.subject.pk, self.subject.pk])
         self.assertEqual(m.TeachingAssignment.objects.count(), 3)
 
+    @legacy_case
     def test_shared_edits_rejected_for_draft_published_and_archived_references(self):
         replacement = m.Faculty.objects.create(department=self.faculty.department, employee_id='T2', full_name='Replacement')
         room = m.Room.objects.create(name='Protected Room', room_type='LECTURE', capacity=30)
@@ -167,15 +170,18 @@ class MeetingEditorTests(TestCase):
                 from .protection import archive_transition
                 with archive_transition():
                     schedule.save(update_fields=['status'])
-                data = self.payload()
-                data['faculty'] = str(replacement.pk)
-                self.assertContains(self.client.post(self.url, data), 'meetings used by a schedule')
-                self.parent.refresh_from_db()
-                entry.refresh_from_db()
-                self.assertEqual(self.parent.faculty_id, self.faculty.pk)
-                self.assertEqual(set(self.parent.meetings.values_list('faculty_id', flat=True)), {self.faculty.pk})
-                self.assertEqual(entry.faculty_override_id, self.faculty.pk)
-                self.assertEqual(entry.assignment_id, self.lecture.pk)
+                with transaction.atomic():
+                    upgrade()
+                    data = self.payload()
+                    data['faculty'] = str(replacement.pk)
+                    self.assertContains(self.client.post(self.url, data), 'meetings used by a schedule')
+                    self.parent.refresh_from_db()
+                    entry.refresh_from_db()
+                    self.assertEqual(self.parent.faculty_id, self.faculty.pk)
+                    self.assertEqual(set(self.parent.meetings.values_list('faculty_id', flat=True)), {self.faculty.pk})
+                    self.assertEqual(entry.faculty_override_id, self.faculty.pk)
+                    self.assertEqual(entry.assignment_id, self.lecture.pk)
+                    transaction.set_rollback(True)
 
     def test_admin_parent_save_synchronizes_unchanged_meetings(self):
         replacement = m.Faculty.objects.create(department=self.faculty.department, employee_id='T2', full_name='Replacement')
@@ -186,6 +192,7 @@ class MeetingEditorTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(list(self.parent.meetings.values_list('faculty_id', flat=True)), [replacement.pk, replacement.pk])
 
+    @legacy_case
     def test_legacy_mismatch_cannot_silently_change_a_scheduled_meeting(self):
         replacement = m.Faculty.objects.create(department=self.faculty.department, employee_id='T2', full_name='Replacement')
         # Reproduce data left behind by H1 before this fix.
@@ -196,6 +203,7 @@ class MeetingEditorTests(TestCase):
                                         day=0, start_time=time(8), end_time=time(10))
         schedule.status = m.ScheduleStatus.PUBLISHED
         schedule.save(update_fields=["status"])
+        upgrade()
         data = self.payload()
         data['faculty'] = str(replacement.pk)
         self.assertContains(self.client.post(self.url, data), 'meetings used by a schedule')

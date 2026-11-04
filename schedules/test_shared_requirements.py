@@ -13,8 +13,10 @@ from .services.resource_occupancy import (
     contact_minutes_by_faculty, weekday_intersects,
 )
 from .services.scheduling_requirements import resolve_shs, resolve_tertiary
+from .test_publication_helpers import historical_visibility, upgrade
 
 
+@historical_visibility
 class SharedOccupancyTests(fixtures.SchedulingDefectFixture):
     def setUp(self):
         self.schedule=m.Schedule.objects.create(term=self.term,name='Published commitment')
@@ -22,8 +24,10 @@ class SharedOccupancyTests(fixtures.SchedulingDefectFixture):
         self.query_term=SimpleNamespace(pk=-1,starts_on=date(2026,8,1),ends_on=date(2026,12,1))
 
     def publish(self):
+        # Intentionally incomplete legacy commitments: test occupancy, not approval.
         self.schedule.status='PUBLISHED'
         self.schedule.save()
+        upgrade()
 
     def candidate(self):
         return ResourceCommitment(None,None,-1,'SHS',self.faculty.pk,self.room.pk,0,time(8,30),time(9,30),date(2026,8,1),date(2026,12,1))
@@ -76,6 +80,7 @@ class SharedOccupancyTests(fixtures.SchedulingDefectFixture):
         self.assertEqual(contact_minutes_by_faculty(occupancy+occupancy,date(2026,8,3),date(2026,8,10)),{self.faculty.pk:120})
 
     def test_tertiary_adapter_preserves_meeting_contract(self):
+        upgrade()
         result=resolve_tertiary(self.meetings[0].pk)
         self.assertEqual(result.components[0].minutes_per_meeting,60)
         self.assertEqual(result.weekly_limit_minutes,self.faculty.max_weekly_hours*60)

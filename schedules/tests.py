@@ -1,3 +1,4 @@
+from .test_publication_helpers import finalize, legacy_case, upgrade
 import json
 from datetime import date, time
 from django.contrib.auth.models import User
@@ -310,13 +311,13 @@ class SchedulingTestCase(TestCase):
         with self.assertRaises(ValidationError):
             entry.full_clean()
 
-        CredentialOverride.objects.create(
+        from .test_support.credential_approvals import scoped_override
+        scoped_override(
             assignment=self.assignment,
             subject=self.subject,
             faculty=self.faculty,
             admin_user=self.admin_user,
             reason="Temporary emergency assignment.",
-            missing_credentials="Missing Programming",
         )
         entry.full_clean()
 
@@ -342,6 +343,7 @@ class SchedulingTestCase(TestCase):
                 "section": self.section.id,
                 "credential_override_confirm": "yes",
                 "credential_override_reason": "Special approval by dean.",
+                "credential_scope": response.context['credential_scope'],
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -500,8 +502,7 @@ class SchedulingTestCase(TestCase):
         self.client.login(username="admin", password="admin12345")
         current = Schedule.objects.create(term=self.term, name="Current")
         current.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
-        current.status = ScheduleStatus.PUBLISHED
-        current.save(update_fields=["status"])
+        finalize(current)
         candidate = Schedule.objects.create(term=self.term, name="Replacement")
         candidate.entries.create(assignment=self.assignment, room=self.room, day=1, start_time=time(8), end_time=time(11))
 
@@ -558,8 +559,7 @@ class SchedulingTestCase(TestCase):
         self.client.login(username="learner", password="password123")
         self.assertEqual(self.client.get(f"/schedules/{schedule.id}/").status_code, 404)
         self.assertEqual(self.client.get(f"/schedules/{schedule.id}/export/csv/").status_code, 404)
-        schedule.status = ScheduleStatus.PUBLISHED
-        schedule.save(update_fields=["status"])
+        finalize(schedule)
         self.assertEqual(self.client.get(f"/schedules/{schedule.id}/").status_code, 200)
 
     def test_admin_sidebar_groups_real_modules(self):
@@ -572,6 +572,7 @@ class SchedulingTestCase(TestCase):
         self.assertContains(response, ">Academic Terms</a>", html=False)
         self.assertContains(response, ">Error Log</a>", html=False)
 
+    @legacy_case
     def test_faculty_dashboard_shows_weekly_personal_timetable(self):
         faculty_user = User.objects.create_user(username="facultyview", password="password123")
         Profile.objects.create(user=faculty_user, role=Role.FACULTY)
@@ -581,14 +582,20 @@ class SchedulingTestCase(TestCase):
         schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
         schedule.status = ScheduleStatus.PUBLISHED
         schedule.save(update_fields=["status"])
+        upgrade()
         self.client.login(username="facultyview", password="password123")
 
         response = self.client.get("/dashboard/")
-        self.assertContains(response, "Weekly Teaching Timetable")
-        self.assertContains(response, 'class="room-schedule-grid personal-timetable"')
+        self.assertContains(response, "<h2>Teaching Timetable</h2>", html=True)
+        # Legacy frozen snapshots do not establish weekly recurrence.
+        self.assertContains(response, '<h3 id="student-unknown-dates">Meeting dates unavailable</h3>', html=True)
+        self.assertEqual(len(response.context["timetable_unknown"]), 1)
+        self.assertEqual(response.context["timetable_unknown"][0]["recurrence"]["kind"], "UNKNOWN")
+        self.assertFalse(response.context["timetable_grid"])
         self.assertContains(response, self.subject.code)
         self.assertContains(response, self.room.name)
 
+    @legacy_case
     def test_student_dashboard_shows_section_timetable(self):
         student_user = User.objects.create_user(username="studentview", password="password123")
         Profile.objects.create(user=student_user, role=Role.STUDENT)
@@ -597,11 +604,16 @@ class SchedulingTestCase(TestCase):
         schedule.entries.create(assignment=self.assignment, room=self.room, day=2, start_time=time(9), end_time=time(12))
         schedule.status = ScheduleStatus.PUBLISHED
         schedule.save(update_fields=["status"])
+        upgrade()
         self.client.login(username="studentview", password="password123")
 
         response = self.client.get("/dashboard/")
-        self.assertContains(response, "Weekly Class Timetable")
-        self.assertContains(response, 'class="room-schedule-grid personal-timetable"')
+        self.assertContains(response, "<h2>Class Timetable</h2>", html=True)
+        # Legacy frozen snapshots do not establish weekly recurrence.
+        self.assertContains(response, '<h3 id="student-unknown-dates">Meeting dates unavailable</h3>', html=True)
+        self.assertEqual(len(response.context["timetable_unknown"]), 1)
+        self.assertEqual(response.context["timetable_unknown"][0]["recurrence"]["kind"], "UNKNOWN")
+        self.assertFalse(response.context["timetable_grid"])
         self.assertContains(response, self.subject.code)
         self.assertContains(response, "Wednesday")
 
@@ -611,15 +623,14 @@ class SchedulingTestCase(TestCase):
         Student.objects.create(user=student_user, section=self.section, student_number="RS1", full_name="Restricted Student")
         other_section = Section.objects.create(program=self.program, year_level=self.year, name="B", size=25)
         other_subject = Subject.objects.create(code="PRIVATE201", title="Other Section Course", department=self.department,
-                                               lecture_hours=3, required_room_type=RoomKind.LECTURE)
-        other_assignment = TeachingAssignment.objects.create(term=self.term, subject=other_subject,
+                                               lecture_hours=0, lab_hours=3, required_room_type=RoomKind.COMPUTER_LAB)
+        other_assignment = TeachingAssignment.objects.create(component=TeachingAssignment.Component.LABORATORY, term=self.term, subject=other_subject,
                                                               faculty=self.faculty, section=other_section,
                                                               duration_minutes=180)
         schedule = Schedule.objects.create(term=self.term, name="Mixed Official")
         own_entry = schedule.entries.create(assignment=self.assignment, room=self.room, day=0, start_time=time(8), end_time=time(11))
         schedule.entries.create(assignment=other_assignment, room=self.room, day=1, start_time=time(8), end_time=time(11))
-        schedule.status = ScheduleStatus.PUBLISHED
-        schedule.save(update_fields=["status"])
+        finalize(schedule)
         self.client.login(username="restrictedstudent", password="password123")
 
         browse = self.client.get("/schedules/browse/")
@@ -639,18 +650,20 @@ class SchedulingTestCase(TestCase):
         self.assertEqual(list(filtered.context["entries"]), [])
         self.assertContains(filtered, "No schedule entries.")
 
+    @legacy_case
     def test_student_empty_timetable_and_other_section_schedule_access(self):
         student_user = User.objects.create_user(username="empty_student", password="password123")
         Profile.objects.create(user=student_user, role=Role.STUDENT)
         Student.objects.create(user=student_user, section=self.section, student_number="EMPTY1", full_name="Empty Student")
         other_section = Section.objects.create(program=self.program, year_level=self.year, name="B", size=25)
-        other_assignment = TeachingAssignment.objects.create(term=self.term, subject=self.subject,
+        other_assignment = TeachingAssignment.objects.create(component=TeachingAssignment.Component.LABORATORY, term=self.term, subject=self.subject,
                                                               faculty=self.faculty, section=other_section)
         schedule = Schedule.objects.create(term=self.term, name="Other Section")
         schedule.entries.create(assignment=other_assignment, room=self.room, day=0,
                                 start_time=time(8), end_time=time(11))
         schedule.status = ScheduleStatus.PUBLISHED
         schedule.save(update_fields=["status"])
+        upgrade()
         self.client.force_login(student_user)
 
         browse = self.client.get("/schedules/browse/")
@@ -670,16 +683,15 @@ class SchedulingTestCase(TestCase):
         Student.objects.create(user=student_user, section=self.section, student_number="OVERRIDE1", full_name="Override Student")
         other_section = Section.objects.create(program=self.program, year_level=self.year, name="B", size=25)
         other_subject = Subject.objects.create(code="VISIBLE201", title="Reassigned Course", department=self.department,
-                                               lecture_hours=3, required_room_type=RoomKind.LECTURE)
-        other_assignment = TeachingAssignment.objects.create(term=self.term, subject=other_subject,
+                                               lecture_hours=0, lab_hours=3, required_room_type=RoomKind.COMPUTER_LAB)
+        other_assignment = TeachingAssignment.objects.create(component=TeachingAssignment.Component.LABORATORY, term=self.term, subject=other_subject,
                                                               faculty=self.faculty, section=other_section)
         schedule = Schedule.objects.create(term=self.term, name="Section Overrides")
         schedule.entries.create(assignment=self.assignment, section_override=other_section, room=self.room,
                                 day=0, start_time=time(8), end_time=time(11))
         own_entry = schedule.entries.create(assignment=other_assignment, section_override=self.section, room=self.room,
                                             day=1, start_time=time(8), end_time=time(11))
-        schedule.status = ScheduleStatus.PUBLISHED
-        schedule.save(update_fields=["status"])
+        finalize(schedule)
         self.client.force_login(student_user)
 
         browse = self.client.get("/schedules/browse/")
@@ -700,13 +712,12 @@ class SchedulingTestCase(TestCase):
         other_faculty = Faculty.objects.create(department=self.department, employee_id="F9", full_name="Other Teacher")
         other_term = AcademicTerm.objects.create(name="Second Semester", school_year="2026-2027",
                                                  starts_on=date(2027, 1, 1), ends_on=date(2027, 5, 1))
-        other_assignment = TeachingAssignment.objects.create(term=other_term, subject=self.subject,
+        other_assignment = TeachingAssignment.objects.create(component=TeachingAssignment.Component.LABORATORY, term=other_term, subject=self.subject,
                                                               faculty=other_faculty, section=self.section)
         schedule = Schedule.objects.create(term=other_term, name="Other Faculty")
         schedule.entries.create(assignment=other_assignment, room=self.room, day=0,
                                 start_time=time(8), end_time=time(11))
-        schedule.status = ScheduleStatus.PUBLISHED
-        schedule.save(update_fields=["status"])
+        finalize(schedule)
         self.client.login(username="restrictedfaculty", password="password123")
 
         self.assertNotContains(self.client.get("/schedules/browse/"),

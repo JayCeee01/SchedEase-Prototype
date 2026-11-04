@@ -44,7 +44,8 @@ def verify_dataset():
     for name, expected in COUNTS.items():
         if apps.get_model('schedules', name).objects.count() != expected:
             raise CommandError(f'Unexpected {name} count; no repair or overwrite attempted.')
-    term = m.AcademicTerm.objects.get(name='FUA Fictional two-week rehearsal')
+    from schedules.services.fictional_shs_names import TERM_NAME
+    term = m.AcademicTerm.objects.get(name__in=('FUA Fictional two-week rehearsal', TERM_NAME))
     validate_configurations(term)
     for student in m.Student.objects.select_related('section'):
         student.full_clean()
@@ -137,6 +138,8 @@ def populate(passwords):
                 config.is_confirmed=True
                 config.save()
     create(m.GASettings, name='FUA Bounded rehearsal', population_size=8, generations=5, elitism=1)
+    from schedules.services.fictional_shs_names import apply_names
+    apply_names()
     verify_dataset()
     return True
 

@@ -67,6 +67,21 @@ MODEL_FORMS = {
 }
 
 
+class RequirementForm(MODEL_FORMS['subject-credential-requirements']):
+    def clean(self):
+        cleaned = super().clean()
+        from .services.credential_approval import finalized_subjects, LOCKED
+        subject = cleaned.get('subject')
+        previous = type(self.instance).objects.filter(pk=self.instance.pk).first() if self.instance.pk else None
+        changed = not previous or bool(set(self.changed_data) & {'subject', 'required_credential', 'acceptable_equivalents'})
+        if changed and finalized_subjects([subject.pk if subject else None, previous.subject_id if previous else None]):
+            raise forms.ValidationError(LOCKED)
+        return cleaned
+
+
+MODEL_FORMS['subject-credential-requirements'] = RequirementForm
+
+
 # Shared editor guidance only; model fields and validation remain unchanged.
 for resource in ("faculty", "students"):
     field = MODEL_FORMS[resource].base_fields["user"]
@@ -417,6 +432,10 @@ class ScheduleEntryForm(forms.ModelForm):
     def __init__(self, *args, defer_credential_review=False, revision_user=None, **kwargs):
         self.defer_credential_review = defer_credential_review
         super().__init__(*args, **kwargs)
+        if self.instance.schedule_id and self.instance.schedule.term.education_level == 'SHS':
+            from .services.shs_days import SHS_DAYS
+            self.fields['day'].choices = [(value, label) for value, label in
+                self.fields['day'].choices if value in SHS_DAYS or value == '']
         if revision_user is not None and not self.is_bound:
             from .services.manual_edits import revision_token
             self.initial["revision"] = revision_token(self.instance.schedule, revision_user, self.instance if self.instance.pk else None)

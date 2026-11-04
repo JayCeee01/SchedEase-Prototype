@@ -1,3 +1,4 @@
+from .test_publication_helpers import legacy_case, upgrade
 """M3: database ownership, fencing, lifecycle and simultaneous HTTP requests."""
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
@@ -279,9 +280,11 @@ class GenerationLockTests(SchedulingDefectFixture):
         self.assertEqual(schedule.entries.count(), 2)
         self.assertIsNone(m.GenerationLease.objects.get(term=self.term).owner)
 
+    @legacy_case
     def test_generation_preserves_published_and_archived_history(self):
         for status in ('PUBLISHED', 'ARCHIVED'):
             m.Schedule.objects.create(term=self.term, name=status, status=status)
+        upgrade()
         before = list(m.ScheduleSnapshot.objects.order_by('pk').values())
         finalized = list(m.Schedule.objects.order_by('pk').values())
         result = GeneticScheduler(self.term, self.settings, seed=2).generate()

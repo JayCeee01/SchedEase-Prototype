@@ -611,6 +611,9 @@
   document.querySelectorAll("[data-schedule-view-button]").forEach((button) => {
     button.addEventListener("click", () => {
       const selected = button.dataset.scheduleViewButton;
+      if (selected !== "table" && selected !== "timetable") return;
+      const state = document.querySelector(".schedule-entry-filters [data-schedule-view-state]");
+      if (state) state.value = selected;
       document.querySelectorAll("[data-schedule-view-button]").forEach((item) => {
         const active = item.dataset.scheduleViewButton === selected;
         item.classList.toggle("is-active", active);

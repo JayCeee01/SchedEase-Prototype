@@ -35,6 +35,8 @@
   </div>
   <template data-empty-meeting>{% include "schedules/meeting_fields.html" with meeting=meetings.empty_form number="__number__" %}</template>
   {% if credential_result and not credential_result.qualified %}
+  <input type="hidden" name="credential_scope" value="{{ credential_scope }}">
+  <ul>{% for item in credential_result.missing %}<li>{{ item.required }}. Accepted credentials: {{ item.acceptable|join:", " }}.</li>{% endfor %}</ul>
   <div class="draft-conflict" role="alert"><strong>Unqualified faculty assignment</strong><small>The selected faculty does not satisfy this course's credential requirements. An authorized credential override is required.</small><label><input type="checkbox" name="credential_override_confirm" value="yes" required> Confirm authorized override</label><label>Override reason<textarea name="credential_override_reason" required></textarea></label></div>
   {% endif %}
   <div class="draft-save-status" data-draft-status role="status" aria-live="polite">{% if draft %}Draft saved{% endif %}</div>

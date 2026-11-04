@@ -183,19 +183,22 @@ def room_schedule_grid(room, schedule, slot_minutes=30):
     return rows
 
 
-def personal_schedule_grid(entries, slot_minutes=30):
+def personal_schedule_grid(entries, slot_minutes=30, *, days=None, single_cards=False):
     """Build the same 7 AM–7 PM grid used by room schedules for a user queryset."""
     entries = list(entries)
+    days = ALLOWED_DAYS if days is None else days
     rows = []
     current = datetime.combine(timezone.localdate(), SCHOOL_START)
     finish = datetime.combine(timezone.localdate(), SCHOOL_END)
     while current < finish:
         next_time = current + timedelta(minutes=slot_minutes)
         cells = []
-        for day in ALLOWED_DAYS:
+        for day in days:
             matched = [entry for entry in entries if entry.day == day and
                        overlaps(current.time(), next_time.time(), entry.start_time, entry.end_time)]
-            cells.append({"entries": matched})
+            visible = [entry for entry in matched if current.time() == SCHOOL_START or
+                       entry.start_time >= current.time()] if single_cards else matched
+            cells.append({"entries": visible, "occupied": bool(matched)})
         rows.append({"start": current.time(), "end": next_time.time(), "cells": cells})
         current = next_time
     return rows

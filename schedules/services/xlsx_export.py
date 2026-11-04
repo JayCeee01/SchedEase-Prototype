@@ -76,3 +76,45 @@ def workbook_bytes(workbook):
     output = BytesIO()
     workbook.save(output)
     return output.getvalue()
+
+
+def occurrence_workbook(title, term, rows, days):
+    """Keep the tertiary grid; dated/unknown evidence gets explicit date blocks."""
+    from datetime import date, timedelta
+    from types import SimpleNamespace
+    from .schedule_export import HEADERS, day_name, values
+
+    if all(r['recurrence']['kind'] == 'WEEKLY' for r in rows):
+        entries = [SimpleNamespace(pk=r['entry_id'], day=r['weekday'], start_time=r['start'], end_time=r['end'],
+            effective_subject=SimpleNamespace(**r['subject']), effective_section=r['primary_section']['label'],
+            effective_faculty=r['faculty']['label'], room=SimpleNamespace(name=r['room']['label']),
+            effective_component_display=r['instructional_label'], get_day_display=lambda r=r: day_name(r)) for r in rows]
+        return schedule_workbook(title, term, entries, days)
+    workbook = Workbook()
+    workbook.remove(workbook.active)
+    overview = []
+    for row in rows:
+        actual = row['actual_date']
+        block = ('Week of ' + str(actual - timedelta(days=actual.weekday()))) if actual else row['recurrence']['kind']
+        overview.append([block, actual, day_name(row), row['start'], row['end'],
+                         f"{row['subject']['code']} - {row['subject']['title']}", row['sections'],
+                         row['faculty']['label'], row['room']['label'], row['notes']])
+    ws = sheet(workbook, 'Weekly Timetable', title, str(term),
+        ['Calendar block', 'Meeting Date', 'Day', 'Start', 'End', 'Course', 'Sections', 'Faculty', 'Room', 'Warnings'],
+        overview, [22, 16, 14, 12, 12, 38, 32, 28, 24, 45], filters=False)
+    for cells in ws.iter_rows(min_row=4):
+        cells[1].number_format = 'yyyy-mm-dd'
+        cells[3].number_format = cells[4].number_format = 'hh:mm'
+    details = []
+    for row in rows:
+        cells = values(row)
+        for index in (9, 10):
+            cells[index] = date.fromisoformat(cells[index]) if cells[index] else None
+        details.append(cells[:4] + [row['subject']['title']] + cells[4:7] + [row['instructional_label']] + cells[7:])
+    ws = sheet(workbook, 'Schedule Details', title, str(term), ['Day', 'Start', 'End', 'Course Code', 'Course Title', 'Section', 'Faculty', 'Room', 'Session Type'] + HEADERS[7:], details,
+               [14, 12, 12, 18, 38, 24, 28, 24, 18, 16, 16, 16, 16, 40, 30, 18, 18, 28, 18, 32, 50])
+    for cells in ws.iter_rows(min_row=4):
+        cells[1].number_format = cells[2].number_format = 'hh:mm'
+        for index in (9, 11, 12):
+            cells[index].number_format = 'yyyy-mm-dd'
+    return workbook

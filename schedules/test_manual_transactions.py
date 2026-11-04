@@ -68,7 +68,9 @@ class ManualTransactionTests(SchedulingDefectFixture):
 
     def test_override_and_entry_rollback_when_audit_save_fails(self):
         self.require_override()
+        from .services.credential_approval import approval_token
         payload = {**self.payload(), 'credential_override_confirm': 'yes', 'credential_override_reason': 'Approved'}
+        payload['credential_scope'] = approval_token(self.admin, self.faculty, self.subject, self.term)
         with patch.object(m.ScheduleEntryAudit.objects, 'create', side_effect=RuntimeError('private detail')):
             response = self.client.post(self.url, payload)
         self.assertContains(response, 'Nothing was changed')
@@ -77,12 +79,13 @@ class ManualTransactionTests(SchedulingDefectFixture):
 
     def test_override_rollback_when_final_validation_fails(self):
         self.require_override()
+        from .services.credential_approval import approval_token
         proposed = {field: getattr(self.entry, field) for field in FIELDS}
         proposed.update(start_time=time(19), end_time=time(20))
         with self.assertRaises(ValidationError):
             save_manual_entry(schedule_id=self.schedule.pk, entry_id=self.entry.pk, actor=self.admin,
                 revision=revision_token(self.schedule, self.admin, self.entry), proposed=proposed,
-                confirmed=True, reason='Approved')
+                confirmed=True, reason='Approved', scope_token=approval_token(self.admin, self.faculty, self.subject, self.term))
         self.assert_unchanged()
 
     def test_missing_reason_leaves_no_override_or_audit(self):
@@ -102,16 +105,22 @@ class ManualTransactionTests(SchedulingDefectFixture):
         self.assertFalse(m.ScheduleEntryAudit.objects.exists())
 
     def test_status_is_rechecked_after_outer_form_validation(self):
+        from .test_publication_helpers import finalize
+        self.schedule.entries.create(assignment=self.meetings[1], room=self.room,
+            day=0, start_time=time(9), end_time=time(10))
         payload = self.payload()
         from .services.manual_edits import save_manual_entry as real_save
+        publication_audits = []
         def finalize_then_save(**kwargs):
-            m.Schedule.objects.filter(pk=self.schedule.pk).update(status='PUBLISHED')
+            finalize(self.schedule)
+            publication_audits.extend(m.ScheduleEntryAudit.objects.order_by('pk').values())
             return real_save(**kwargs)
         with patch('schedules.services.manual_edits.save_manual_entry', side_effect=finalize_then_save):
             self.assertContains(self.client.post(self.url, payload), 'changed while you were editing')
         self.entry.refresh_from_db()
         self.assertEqual(self.entry.day, 0)
-        self.assertFalse(m.ScheduleEntryAudit.objects.exists())
+        self.assertTrue(publication_audits)
+        self.assertEqual(list(m.ScheduleEntryAudit.objects.order_by('pk').values()), publication_audits)
 
     def test_token_is_required_and_cannot_be_tampered_with(self):
         payload = self.payload()
@@ -138,11 +147,13 @@ class ManualTransactionTests(SchedulingDefectFixture):
 
     def test_new_entry_and_approval_receive_audit_together(self):
         self.require_override()
+        from .services.credential_approval import approval_token
         url = f'/schedules/{self.schedule.pk}/entry/new/'
         token = self.client.get(url).context['form'].initial['revision']
         response = self.client.post(url, {'revision': token, 'assignment': self.meetings[1].pk,
             'room': self.room.pk, 'day': 0, 'start_time': '09:00', 'end_time': '10:00',
-            'credential_override_confirm': 'yes', 'credential_override_reason': 'Approved second meeting'})
+            'credential_override_confirm': 'yes', 'credential_override_reason': 'Approved second meeting',
+            'credential_scope': approval_token(self.admin, self.faculty, self.subject, self.term)})
         self.assertEqual(response.status_code, 302)
         audit = m.ScheduleEntryAudit.objects.get()
         self.assertEqual(audit.previous_values, {})

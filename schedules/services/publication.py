@@ -7,6 +7,8 @@ from schedules.models import Schedule, ScheduleEntryAudit, ScheduleSnapshot, Sch
 from schedules.protection import archive_transition
 from .conflicts import schedule_validation_messages
 from .manual_edits import authorized_administrator
+from .publication_boundary import _validated_transition
+from copy import copy
 
 
 def publish(schedule, actor, replace_confirmed=False):
@@ -19,22 +21,25 @@ def publish(schedule, actor, replace_confirmed=False):
             raise ValidationError("The schedule changed. Reload and review it before publishing.")
         actor = authorized_administrator(actor)
         locked = Schedule.objects.select_for_update().get(pk=schedule.pk)
-        if schedule_validation_messages(locked):
+        if not locked.entries.exists() or schedule_validation_messages(locked):
             raise ValidationError("Resolve conflicts before publishing.")
         current = Schedule.objects.filter(term=locked.term, status=ScheduleStatus.PUBLISHED).exclude(pk=locked.pk).first()
         if current and not replace_confirmed:
             raise ValidationError("The official schedule changed. Reload and confirm its replacement before publishing.")
         now = timezone.now()
         if current:
+            previous = copy(current)
             current.status, current.archived_at, current.replaced_by = ScheduleStatus.ARCHIVED, now, locked
-            with archive_transition():
+            with archive_transition(), _validated_transition(current, previous, actor=actor, candidate=locked):
                 current.save(update_fields=['status', 'archived_at', 'replaced_by', 'updated_at'])
         ScheduleEntryAudit.objects.create(schedule=locked, user=actor, previous_values={'status': locked.status},
             new_values={'action': 'publish', 'status': ScheduleStatus.PUBLISHED, 'published_at': now.isoformat(),
                         'archived_schedule_id': current.pk if current else None})
+        previous = copy(locked)
         locked.status, locked.published_at = ScheduleStatus.PUBLISHED, now
         locked.archived_at, locked.replaced_by = None, None
-        locked.save(update_fields=['status', 'published_at', 'archived_at', 'replaced_by', 'updated_at'])
+        with _validated_transition(locked, previous, actor=actor, candidate=locked):
+            locked.save(update_fields=['status', 'published_at', 'archived_at', 'replaced_by', 'updated_at'])
         # Fail closed if a database was provisioned without the required trigger.
         ScheduleSnapshot.objects.get(schedule=locked)
         return locked, current

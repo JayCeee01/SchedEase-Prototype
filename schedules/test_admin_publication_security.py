@@ -124,17 +124,25 @@ class AdminPublicationSecurityTests(SchedulingDefectFixture):
         self.client.force_login(self.administrator)
         payload={'subject':self.subject.pk,'faculty':self.faculty.pk,'reason':'Synthetic authorized exception',
                  'missing_credentials':'Synthetic test','admin_user':self.superuser.pk}
-        for url in (reverse('resource_create',args=['credential-overrides']),reverse('admin:schedules_credentialoverride_add')):
+        for url, status in ((reverse('resource_create',args=['credential-overrides']),302),
+                            (reverse('admin:schedules_credentialoverride_add'),403)):
             response=self.client.post(url,payload)
-            self.assertEqual(response.status_code,302)
-            record=m.CredentialOverride.objects.latest('pk')
-            self.assertEqual(record.admin_user_id,self.administrator.pk)
+            self.assertEqual(response.status_code,status)
+            self.assertFalse(m.CredentialOverride.objects.exists())
+        from .services.credential_approval import approve_override, approval_token
+        credential=m.Credential.objects.create(name='Synthetic approval requirement')
+        m.SubjectCredentialRequirement.objects.create(subject=self.subject,required_credential=credential)
+        record=approve_override(actor=self.administrator,assignment=self.meetings[0],faculty=self.faculty,
+            subject=self.subject,reason=payload['reason'],
+            scope_token=approval_token(self.administrator,self.faculty,self.subject,self.term))
+        self.assertEqual(record.admin_user_id,self.administrator.pk)
         self.client.force_login(self.superuser)
         response=self.client.post(reverse('resource_update',args=['credential-overrides',record.pk]),
                                   {**payload,'reason':'Updated reason','admin_user':self.staff.pk})
         self.assertEqual(response.status_code,302)
         record.refresh_from_db()
         self.assertEqual(record.admin_user_id,self.administrator.pk)
+        self.assertEqual(record.reason,payload['reason'])
 
     def test_recovery_requires_csrf_and_authorized_post(self):
         client=Client(enforce_csrf_checks=True)

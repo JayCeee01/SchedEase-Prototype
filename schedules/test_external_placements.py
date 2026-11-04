@@ -5,16 +5,18 @@ from . import test_known_defects as fixtures
 from . import test_smart_repair as repair_fixtures
 from .services.ga import GeneticScheduler
 from .services import smart_repair
+from .test_publication_helpers import finalize, legacy_case, upgrade
 
 
 def external(test, status='PUBLISHED', starts=date(2026,8,1), ends=date(2026,12,1), faculty=None, room=None, start=time(10), end=time(11)):
     term=m.AcademicTerm.objects.create(name='External',school_year='2026',starts_on=starts,ends_on=ends)
-    parent=m.Assignment.objects.create(term=term,subject=test.subject,faculty=faculty or test.faculty,section=test.section)
+    subject=m.Subject.objects.create(department=test.department,code='EXT',title='External lecture',lecture_hours=1)
+    parent=m.Assignment.objects.create(term=term,subject=subject,faculty=faculty or test.faculty,section=test.section)
     meeting=m.TeachingAssignment.objects.create(assignment=parent,component='LECTURE',meeting_index=1,duration_minutes=60)
     schedule=m.Schedule.objects.create(term=term,name='External')
     schedule.entries.create(assignment=meeting,room=room or test.room,day=0,start_time=start,end_time=end)
-    schedule.status=status
-    schedule.save()
+    if status != 'DRAFT':
+        finalize(schedule, archived=status == 'ARCHIVED')
     return schedule
 
 
@@ -61,8 +63,10 @@ class ExternalPlacementTests(fixtures.SchedulingDefectFixture):
             item=row['entry']
             self.assertFalse(item.day==0 and item.start_time<time(11,10) and item.end_time>time(10,10))
 
+    @legacy_case
     def test_archived_does_not_reserve(self):
         external(self,status='ARCHIVED')
+        upgrade()
         self.assertIn((self.room.pk,0,time(10),time(11)),self.options())
 
     def test_nonoverlapping_dates_do_not_reserve(self):

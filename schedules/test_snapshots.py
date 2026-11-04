@@ -1,3 +1,4 @@
+from .test_publication_helpers import finalize as finalize_fixture, legacy_case, upgrade
 """H2 immutable publication history and permission-aware display."""
 from datetime import time
 from importlib import import_module
@@ -73,13 +74,16 @@ class SnapshotTests(SchedulingDefectFixture):
         self.assertEqual(snapshot.data, original)
 
     def test_direct_sql_finalization_cannot_omit_snapshot(self):
-        with connection.cursor() as cursor:
+        with self.assertRaises(IntegrityError), transaction.atomic(), connection.cursor() as cursor:
             cursor.execute("UPDATE schedules_schedule SET status='PUBLISHED' WHERE id=%s", [self.schedule.pk])
-        self.assertEqual(m.ScheduleSnapshot.objects.filter(schedule=self.schedule).count(), 1)
-        self.assertTrue(m.ScheduleSnapshot.objects.get(schedule=self.schedule).data['warnings']['publication_time_missing'])
+        self.assertFalse(m.ScheduleSnapshot.objects.filter(schedule=self.schedule).exists())
+        self.finalize()
+        self.assertFalse(self.schedule.snapshot.data['warnings']['publication_time_missing'])
 
+    @legacy_case
     def test_direct_finalized_insert_captures_incomplete_information_honestly(self):
         empty = m.Schedule.objects.create(term=self.term, name='Legacy empty', status='ARCHIVED')
+        upgrade()
         snapshot = empty.snapshot
         self.assertEqual(snapshot.data['entries'], [])
         self.assertIsNone(snapshot.data['schedule']['published_at'])
@@ -136,6 +140,7 @@ class SnapshotTests(SchedulingDefectFixture):
         self.assertEqual(m.ScheduleSnapshot.objects.count(), 1)
         self.assertEqual(self.schedule.edit_audits.count(), 1)
 
+    @legacy_case
     def test_reconstructed_backfill_is_idempotent(self):
         # Simulate pre-0012 finalized rows; these test-local DDL changes roll back.
         with connection.cursor() as cursor:
@@ -144,6 +149,7 @@ class SnapshotTests(SchedulingDefectFixture):
         self.schedule.status = 'PUBLISHED'
         self.schedule.save(update_fields=['status'])
         archived = m.Schedule.objects.create(term=self.term, name='Old archive', status='ARCHIVED')
+        upgrade()
         self.assertEqual(backfill_snapshots(), 2)
         first = list(m.ScheduleSnapshot.objects.order_by('pk').values())
         self.assertTrue(all(s['reconstructed'] for s in first))
@@ -159,13 +165,17 @@ class SnapshotTests(SchedulingDefectFixture):
         snapshot = self.finalize()
         original = snapshot.data
         User.objects.filter(pk=self.admin.pk).update(username='renamed-publisher')
-        m.Availability.objects.create(room=self.room, day=0, start_time=time(7), end_time=time(19), kind='UNAVAILABLE')
+        with self.assertRaises(ValidationError):
+            m.Availability.objects.create(room=self.room, day=0, start_time=time(7), end_time=time(19), kind='UNAVAILABLE')
+        m.Availability.objects.create(room=self.room, day=1, start_time=time(7), end_time=time(19), kind='UNAVAILABLE')
         m.AcademicTerm.objects.filter(pk=self.term.pk).update(is_active=True)
         snapshot.refresh_from_db()
         self.assertEqual(snapshot.data, original)
         self.assertEqual(snapshot.data['entries'][0]['credential_overrides'][0]['admin_username'], 'publisher')
         self.assertEqual(snapshot.data['entries'][0]['credential_overrides'][0]['id'], override.pk)
-        page = self.client.get(f'/schedules/{self.schedule.pk}/')
+        with patch('schedules.views.schedule_validation_messages', side_effect=AssertionError('Historical display must not revalidate live data')), \
+             patch('schedules.views.schedule_validation_issues', side_effect=AssertionError('Historical display must not revalidate live data')):
+            page = self.client.get(f'/schedules/{self.schedule.pk}/')
         self.assertContains(page, 'Read-only historical schedule')
         self.assertNotContains(page, 'Room is unavailable')
         self.assertNotContains(page, 'Private approval')
@@ -190,9 +200,7 @@ class SnapshotTests(SchedulingDefectFixture):
         self.assertNotIn(str(other_section), csv.content.decode())
         self.assertEqual(self.client.get(f'/schedules/{self.schedule.pk}/export/pdf/').status_code, 200)
         from .protection import archive_transition
-        self.schedule.status = 'ARCHIVED'
-        with archive_transition():
-            self.schedule.save(update_fields=['status'])
+        finalize_fixture(self.schedule, archived=True)
         self.assertEqual(self.client.get(f'/schedules/{self.schedule.pk}/').status_code, 404)
 
     def test_faculty_receives_only_authorized_snapshot_rows(self):
@@ -222,7 +230,7 @@ class SnapshotTests(SchedulingDefectFixture):
         expected = import_module('schedules.migrations.0012_historical_snapshots').TRIGGERS
         self.assertTrue(set(expected) <= names)
 
-    def test_concurrent_sql_publication_captures_exactly_once(self):
+    def test_concurrent_unauthorized_sql_publication_is_rejected(self):
         # Serialize this isolated fixture to a private file so two real SQLite
         # writers contend without touching the developer database.
         import sqlite3
@@ -243,20 +251,23 @@ class SnapshotTests(SchedulingDefectFixture):
                     with db:
                         changed = db.execute("UPDATE schedules_schedule SET status='PUBLISHED' WHERE id=? AND status='DRAFT'", [self.schedule.pk]).rowcount
                     return changed
+                except sqlite3.DatabaseError:
+                    return 0
                 finally:
                     db.close()
             with ThreadPoolExecutor(max_workers=2) as workers:
                 results = list(workers.map(lambda _: attempt(), range(2)))
-            self.assertEqual(sorted(results), [0, 1])
+            self.assertEqual(sorted(results), [0, 0])
             db = sqlite3.connect(path)
             try:
-                self.assertEqual(db.execute('SELECT count(*) FROM schedules_schedulesnapshot WHERE schedule_id=?', [self.schedule.pk]).fetchone()[0], 1)
+                self.assertEqual(db.execute('SELECT count(*) FROM schedules_schedulesnapshot WHERE schedule_id=?', [self.schedule.pk]).fetchone()[0], 0)
             finally:
                 db.close()
         finally:
             self.assertEqual(path.resolve().parent, Path.cwd().resolve())
             path.unlink(missing_ok=True)
 
+    @legacy_case
     def test_backfill_failure_is_atomic(self):
         with connection.cursor() as cursor:
             cursor.execute('DROP TRIGGER h2_snapshot_finalize_update')
@@ -264,6 +275,7 @@ class SnapshotTests(SchedulingDefectFixture):
         self.schedule.status = 'PUBLISHED'
         self.schedule.save(update_fields=['status'])
         archived = m.Schedule.objects.create(term=self.term, name='Second legacy record', status='ARCHIVED')
+        upgrade()
         with connection.cursor() as cursor:
             cursor.execute(f"CREATE TRIGGER fail_backfill BEFORE INSERT ON schedules_schedulesnapshot WHEN NEW.schedule_id={archived.pk} BEGIN SELECT RAISE(ABORT,'forced backfill failure'); END")
         with self.assertRaises(IntegrityError):
@@ -276,8 +288,9 @@ class SnapshotTests(SchedulingDefectFixture):
         with self.assertRaises(IntegrityError), transaction.atomic():
             m.ScheduleSnapshot.objects.bulk_create([m.ScheduleSnapshot(schedule=self.schedule,
                 captured_at=__import__('django').utils.timezone.now(), data={})])
-        m.Schedule.objects.filter(pk=self.schedule.pk).update(status='ARCHIVED')
-        self.assertEqual(m.ScheduleSnapshot.objects.filter(schedule=self.schedule).count(), 1)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            m.Schedule.objects.filter(pk=self.schedule.pk).update(status='ARCHIVED')
+        self.assertFalse(m.ScheduleSnapshot.objects.filter(schedule=self.schedule).exists())
 
     def test_publication_failure_returns_safe_message(self):
         with patch('schedules.services.publication.ScheduleSnapshot.objects.get', side_effect=RuntimeError('private failure')):

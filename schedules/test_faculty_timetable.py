@@ -26,6 +26,11 @@ class FacultyTimetableTests(SchedulingDefectFixture):
         publish(self.schedule, self.admin)
         self.login()
         response = self.client.get(reverse('dashboard'))
+        self.assertContains(response, 'Recurring Weekly Timetable')
+        self.assertEqual(response.context['timetable_unknown'], [])
+        cards = [e.presentation for row in response.context['timetable_grid'] for cell in row['cells'] for e in cell['entries']]
+        self.assertEqual({r['entry_id'] for r in cards}, {e.pk for e in self.entries})
+        self.assertTrue(all(r['meeting_date'] is None for r in cards))
         for value in (self.subject.code, str(self.section), self.room.name, self.term.name,
                       self.term.school_year, 'Monday', '8:00 AM', '2.00 hours', '120 minutes',
                       '2 meetings', '1 section', '24 hours'):

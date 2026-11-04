@@ -153,11 +153,16 @@ class ValidationEquivalenceTests(TestCase):
         m.SubjectCredentialRequirement.objects.create(subject=entry.assignment.subject, required_credential=credential)
         self.assertIn('FACULTY_CREDENTIAL', {row['issue'].category for row in self.equivalent()})
         admin = User.objects.create_superuser('validation-admin')
-        approval = m.CredentialOverride.objects.create(assignment=entry.assignment, subject=entry.assignment.subject,
-            faculty=entry.assignment.faculty, admin_user=admin, reason='Approved', missing_credentials='License')
+        from .test_support.credential_approvals import scoped_override
+        approval = scoped_override(assignment=entry.assignment, subject=entry.assignment.subject,
+            faculty=entry.assignment.faculty, admin_user=admin, reason='Approved')
         self.assertEqual(self.equivalent(), [])
         approval.faculty = self.entries[4].assignment.faculty
-        approval.save()
+        from django.core.exceptions import ValidationError
+        with self.assertRaises(ValidationError):
+            approval.save()
+        extra = m.Credential.objects.create(name='New requirement')
+        m.SubjectCredentialRequirement.objects.create(subject=entry.assignment.subject, required_credential=extra)
         self.assertIn('FACULTY_CREDENTIAL', {row['issue'].category for row in self.equivalent()})
 
     def test_availability_changes_and_adjacent_intervals(self):

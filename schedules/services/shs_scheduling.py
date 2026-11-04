@@ -1,7 +1,6 @@
 """SHS adapters for the shared engine; no alternate solver or bypass flags."""
 from datetime import date, timedelta
 from django.core.exceptions import ValidationError
-from django.db import transaction
 
 
 def binding(meeting):
@@ -74,7 +73,24 @@ def validate_configurations(term):
     return configs
 
 
-def assert_prepared(term):
+def scheduling_snapshot(data):
+    """Compare operational values without the frozen participant display labels.
+
+    Only sections[].name is descriptive in pattern_snapshot. Preserve every
+    other key (including approval references and unknown future fields), and
+    never mutate or refresh the stored binding. Malformed evidence fails closed.
+    """
+    if (not isinstance(data, dict) or not isinstance(data.get('sections'), list)
+            or not data['sections'] or any(
+                not isinstance(row, dict) or not isinstance(row.get('name'), str)
+                for row in data['sections'])):
+        raise ValidationError('SHS meeting participation information is incomplete. Review the approved meeting configuration.')
+    return {**data, 'sections': [
+        {key: value for key, value in row.items() if key != 'name'}
+        for row in data['sections']]}
+
+
+def _prepared_inputs(term):
     configs=validate_configurations(term)
     expected={p.pk for c in configs for p in c.patterns.all()}
     meetings=list(term.teachingassignment_set.select_related('shs_binding__pattern__configuration'))
@@ -86,32 +102,61 @@ def assert_prepared(term):
                 or meeting.section_id != item.pattern.configuration.assignment.section_id
                 or meeting.component != 'GENERAL'):
             raise ValidationError('The SHS meeting must retain its approved parent, section and instructional component.')
-        if item.data != pattern_snapshot(item.pattern):
+        if scheduling_snapshot(item.data) != scheduling_snapshot(pattern_snapshot(item.pattern)):
             raise ValidationError('SHS operational inputs changed after meeting preparation; do not reuse this meeting snapshot.')
         if (meeting.faculty_id,meeting.subject_id,meeting.term_id,meeting.duration_minutes,meeting.required_room_type_override) != (item.data['faculty_id'],item.data['subject_id'],item.data['term_id'],item.data['minutes'],item.data['room_type']):
             raise ValidationError('The prepared SHS meeting no longer matches its approved operational snapshot.')
     return meetings
 
 
-@transaction.atomic
-def generate_shs(term, settings, *, actor, seed=None, name='SHS schedule'):
-    """Only validated records create shared meetings; failed runs roll back."""
-    from schedules.models import TeachingAssignment, SHSMeetingBinding
-    from .ga import GeneticScheduler
+def assert_prepared(term):
+    meetings = _prepared_inputs(term)
+    from .shs_approval import validate_evidence
+    validate_evidence(term)
+    return meetings
+
+
+def generate_shs(term, settings, *, actor, seed=None, name='SHS schedule', lease=None):
+    """Reuse a caller's reservation, or own one for the standalone operation.
+
+    Preparation and generation share a write-fenced transaction. SQLite holds
+    its writer lock until completion; renewal uses this same connection.
+    Caller-owned reservations and failure reporting remain the caller's job.
+    """
+    from .generation_lock import generation_lease, GenerationLeaseLost
     from .manual_edits import authorized_administrator
+    from schedules.models import GenerationRun
     authorized_administrator(actor)
     if term.education_level != 'SHS':
         raise ValidationError('The controlled SHS adapter requires an SHS term.')
+    if lease is None:
+        with generation_lease(term.pk) as owned:
+            return generate_shs(term, settings, actor=actor, seed=seed, name=name, lease=owned)
+    if lease.term_id != term.pk:
+        raise GenerationLeaseLost('Generation reservation belongs to a different term.')
+    with lease.saving():
+        if lease.run_id is not None and not GenerationRun.objects.filter(
+                pk=lease.run_id, term=term, lease_owner=lease.owner, status='RUNNING').exists():
+            raise GenerationLeaseLost('The generation request does not belong to this reservation.')
+        return _generate_shs(term, settings, actor=actor, seed=seed, name=name, lease=lease)
+
+
+def _generate_shs(term, settings, *, actor, seed, name, lease):
+    """Only validated records create shared meetings; failed runs roll back."""
+    from schedules.models import TeachingAssignment, SHSMeetingBinding
+    from .ga import GeneticScheduler
     configs=validate_configurations(term)
     if not term.teachingassignment_set.exists():
-        for config in configs:
-            for index,pattern in enumerate(config.patterns.select_related('component','room').order_by('component_id','sequence'),1):
-                meeting=TeachingAssignment.objects.create(assignment=config.assignment,component='GENERAL',
-                    meeting_index=index,duration_minutes=pattern.component.duration_minutes,
-                    required_room_type_override=pattern.required_room_type)
-                SHSMeetingBinding.objects.create(meeting=meeting,pattern=pattern,data=pattern_snapshot(pattern))
+        from .shs_approval import new_preparation
+        with new_preparation(actor=actor, term=term):
+            for config in configs:
+                for index,pattern in enumerate(config.patterns.select_related('component','room').order_by('component_id','sequence'),1):
+                    meeting=TeachingAssignment.objects.create(assignment=config.assignment,component='GENERAL',
+                        meeting_index=index,duration_minutes=pattern.component.duration_minutes,
+                        required_room_type_override=pattern.required_room_type)
+                    SHSMeetingBinding.objects.create(meeting=meeting,pattern=pattern,data=pattern_snapshot(pattern))
     assert_prepared(term)
-    return GeneticScheduler(term,settings,seed=seed).generate(name=name)
+    return GeneticScheduler(term,settings,seed=seed).generate(name=name, lease=lease)
 
 
 def entry_errors(entry):
@@ -122,7 +167,12 @@ def entry_errors(entry):
     if not item:
         return ['SHS meeting is missing its validated operational snapshot.']
     data=item.data
-    errors=[]
+    from .shs_days import snapshot_day_errors, valid_day, WEEKDAY_ERROR
+    errors=snapshot_day_errors(data)
+    if hasattr(entry, 'day') and not valid_day(entry.day):
+        errors.append(WEEKDAY_ERROR)
+    if errors:
+        return list(dict.fromkeys(errors))
     if not hasattr(entry,'room'):
         return errors  # Requirement-only preflight; placement fields follow later.
     if entry.day != data['day'] or entry.room.pk != data['room_id']:

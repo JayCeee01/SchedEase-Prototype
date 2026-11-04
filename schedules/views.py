@@ -48,6 +48,7 @@ from .models import (
 from .services.history import historical_entries, historical_term
 from .services.conflicts import conflict_messages, schedule_validation_messages, schedule_validation_issues
 from .services.credentials import faculty_qualification, missing_credential_message, valid_credential_override
+from .services.credential_approval import approve_override, approval_token
 from .services.ga import GeneticScheduler
 from .services.reproducibility import choose_seed, initial_metadata
 from .services.generation_lock import acquire, GenerationBusy, GenerationLeaseLost
@@ -129,10 +130,8 @@ def entries_visible_to_user(entries, user):
     student = Student.objects.filter(user=user).select_related("section").first()
     if not student or not student.section_id:
         return entries.none()
-    return entries.filter(
-        Q(section_override=student.section)
-        | Q(section_override__isnull=True, assignment__section=student.section)
-    )
+    from .services.schedule_visibility import student_entries
+    return student_entries(entries, student.section_id)
 
 
 def restrict_schedule_filter_choices(form, entries, user):
@@ -140,8 +139,10 @@ def restrict_schedule_filter_choices(form, entries, user):
     if admin_required(user):
         return
     allowed = {name: set() for name in ('term', 'department', 'program', 'year_level', 'section', 'faculty', 'room', 'subject')}
+    student = (Student.objects.filter(user=user).select_related("section__program", "section__year_level").first()
+               if role(user) == Role.STUDENT else None)
     for entry in entries:
-        section = entry.effective_section
+        section = student.section if student and student.section_id else entry.effective_section
         values = {'term': entry.schedule.term_id, 'department': section.program.department_id,
             'program': section.program_id, 'year_level': section.year_level_id, 'section': section.pk,
             'faculty': entry.effective_faculty.pk, 'room': entry.room_id, 'subject': entry.effective_subject.pk}
@@ -234,8 +235,12 @@ def dashboard(request):
         ) if faculty else ScheduleEntry.objects.none()).select_related(
             "schedule__term", "assignment__subject", "assignment__section", "assignment__faculty", "room",
             "subject_override", "section_override", "faculty_override").order_by("day", "start_time")
-        context["entries"] = historical_entries(context["entries"])
-        context["timetable_grid"] = personal_schedule_grid(context["entries"])
+        from .services.detail_timetable import personal_timetable_context
+        from django.db.models import prefetch_related_objects
+        faculty_entries = list(context["entries"])
+        context.update(personal_timetable_context(faculty_entries, request.GET.get("week")))
+        prefetch_related_objects(faculty_entries, "assignment__shs_binding")
+        context["entries"] = historical_entries(faculty_entries)
         from .services.faculty_workload import published_workload
         context["faculty"] = faculty
         context["workloads"] = published_workload(context["entries"])
@@ -243,14 +248,15 @@ def dashboard(request):
         return render(request, "schedules/faculty_dashboard.html", context)
     student = Student.objects.filter(user=request.user).select_related("section").first()
     context["student"] = student
-    student_section = getattr(student, "section", None)
-    context["entries"] = (ScheduleEntry.objects.filter(schedule__status=ScheduleStatus.PUBLISHED).filter(
-        Q(section_override=student_section) | Q(section_override__isnull=True, assignment__section=student_section)
-    ) if student_section else ScheduleEntry.objects.none()).select_related(
+    context["entries"] = entries_visible_to_user(ScheduleEntry.objects.all(), request.user).select_related(
         "schedule__term", "assignment__subject", "assignment__section", "assignment__faculty", "room",
         "subject_override", "section_override", "faculty_override").order_by("day", "start_time")
-    context["entries"] = historical_entries(context["entries"])
-    context["timetable_grid"] = personal_schedule_grid(context["entries"])
+    from .services.detail_timetable import personal_timetable_context
+    from django.db.models import prefetch_related_objects
+    authorized_entries = list(context["entries"])
+    context.update(personal_timetable_context(authorized_entries, request.GET.get("week")))
+    prefetch_related_objects(authorized_entries, "assignment__shs_binding")
+    context["entries"] = historical_entries(authorized_entries)
     return render(request, "schedules/student_dashboard.html", context)
 
 
@@ -267,6 +273,8 @@ def browse_schedules(request):
     )
     entries = entries_visible_to_user(entries, request.user)
     restrict_schedule_filter_choices(form, entries, request.user)
+    # Student section-context choices contain only their own enrollment. Once
+    # validated, do not re-filter combined meetings by the primary section.
     if form.is_valid():
         term = form.cleaned_data.get("term")
         department = form.cleaned_data.get("department")
@@ -276,13 +284,13 @@ def browse_schedules(request):
         subject = form.cleaned_data.get("subject")
         if term:
             entries = entries.filter(schedule__term=term)
-        if department:
+        if department and not (role(request.user) == Role.STUDENT and not admin_required(request.user)):
             entries = entries.filter(assignment__section__program__department=department)
-        if program:
+        if program and not (role(request.user) == Role.STUDENT and not admin_required(request.user)):
             entries = entries.filter(assignment__section__program=program)
-        if year_level:
+        if year_level and not (role(request.user) == Role.STUDENT and not admin_required(request.user)):
             entries = entries.filter(assignment__section__year_level=year_level)
-        if section:
+        if section and not (role(request.user) == Role.STUDENT and not admin_required(request.user)):
             entries = entries.filter(assignment__section=section)
         if subject:
             entries = entries.filter(assignment__subject=subject)
@@ -449,16 +457,37 @@ def room_utilization_dashboard(request):
 @login_required
 @user_passes_test(admin_required)
 def room_schedule_dashboard(request):
-    term = AcademicTerm.objects.filter(pk=request.GET.get("term")).first() if request.GET.get("term") else None
-    schedule = Schedule.objects.filter(pk=request.GET.get("schedule")).first() if request.GET.get("schedule") else latest_schedule(term)
-    room = Room.objects.filter(pk=request.GET.get("room")).first() if request.GET.get("room") else Room.objects.order_by("name").first()
-    return render(request, "schedules/room_schedule.html", {
+    def selection(model, parameter):
+        value = request.GET.get(parameter)
+        if not value:
+            return None
+        if not value.isascii() or not value.isdecimal() or len(value) > 19 or not 0 < int(value) <= 9223372036854775807:
+            raise Http404("Invalid room timetable selection.")
+        return get_object_or_404(model, pk=int(value))
+
+    term = selection(AcademicTerm, "term")
+    schedule = selection(Schedule, "schedule") if request.GET.get("schedule") else latest_schedule(term)
+    if schedule and term and schedule.term_id != term.pk:
+        raise Http404("The selected schedule does not belong to this term.")
+    room = selection(Room, "room") if request.GET.get("room") else Room.objects.order_by("name").first()
+    context = {
         "term": term, "schedule": schedule, "room": room,
         "terms": AcademicTerm.objects.all(),
         "schedules": Schedule.objects.filter(term=term).order_by("-generated_at") if term else Schedule.objects.all().order_by("-generated_at"),
-        "rooms": Room.objects.filter(is_active=True), "weekdays": Weekday.choices,
-        "grid": room_schedule_grid(room, schedule) if room else [],
-    })
+        "rooms": Room.objects.filter(Q(is_active=True) | Q(pk=room.pk)) if room else Room.objects.filter(is_active=True),
+        "grid": [],
+    }
+    if room:
+        from .services.detail_timetable import room_timetable_context
+        from .models import ScheduleSnapshot
+        entries = list(schedule.entries.filter(room=room)) if schedule else []
+        try:
+            context.update(room_timetable_context(entries, room, request.GET.get("week")))
+        except ScheduleSnapshot.DoesNotExist:
+            # Missing history must not be replaced by current assignment labels or
+            # displayed as an empty/vacant schedule.
+            context["history_unavailable"] = True
+    return render(request, "schedules/room_schedule.html", context)
 
 
 @login_required
@@ -538,6 +567,9 @@ def export_room_utilization_pdf(request):
 @user_passes_test(admin_required)
 def resource_create(request, resource):
     resource_model(resource)
+    if resource == 'credential-overrides':
+        messages.info(request, 'Approve credential exceptions from the assignment or schedule-entry editor after reviewing the specific missing requirements.')
+        return redirect('resource_list', resource='assignments')
     if resource == "assignments":
         return assignment_editor(request)
     form_class = FacultyCredentialBatchForm if resource == "faculty-credentials" else MODEL_FORMS[resource]
@@ -575,6 +607,9 @@ def resource_create(request, resource):
 def resource_update(request, resource, pk):
     model = resource_model(resource)
     obj = get_object_or_404(model, pk=pk)
+    if resource == 'credential-overrides':
+        messages.info(request, 'Approval history is read-only. Use the assignment editor to request a new, explicitly scoped approval.')
+        return redirect('resource_list', resource=resource)
     if resource == "assignments":
         return assignment_editor(request, obj)
     draft = FormDraft.objects.filter(user=request.user, resource=resource, object_pk=str(pk)).first()
@@ -665,10 +700,10 @@ def assignment_editor(request, assignment=None):
                     if not credential_result["qualified"] and not covered:
                         for meeting in parent.meetings.all():
                             if not valid_credential_override(meeting, parent.faculty, parent.subject):
-                                CredentialOverride.objects.create(
+                                approve_override(
                                     assignment=meeting, subject=parent.subject, faculty=parent.faculty,
-                                    admin_user=request.user, reason=reason,
-                                    missing_credentials=missing_credential_message(parent.faculty, parent.subject, parent.term),
+                                    actor=request.user, reason=reason,
+                                    scope_token=request.POST.get('credential_scope'),
                                 )
             except (ProtectedError, ValidationError, IntegrityError) as exc:
                 if isinstance(exc, ProtectedError):
@@ -678,9 +713,12 @@ def assignment_editor(request, assignment=None):
                 else:
                     error = "Assignment was not saved because its meetings conflict with existing records. Review the course, section, term, and meeting numbers."
                 form.add_error(None, error)
+                current_qualification = faculty_qualification(form.cleaned_data['faculty'], form.cleaned_data['subject'], form.cleaned_data['term'])
                 return render(request, "schedules/assignment_form.html", {
                     "form": form, "meetings": meetings, "assignment": assignment,
                     "draft": draft, "draft_conflict": draft_conflict,
+                    "credential_result": current_qualification,
+                    "credential_scope": approval_token(request.user, form.cleaned_data['faculty'], form.cleaned_data['subject'], form.cleaned_data['term'], current_qualification),
                     "title": "Edit Assignment" if assignment.pk else "New Assignment",
                 })
             FormDraft.objects.filter(user=request.user, resource="assignments", object_pk__in=["", str(parent.pk)]).delete()
@@ -690,9 +728,11 @@ def assignment_editor(request, assignment=None):
             form.add_error(None, "An override reason is required.")
         else:
             form.add_error(None, missing_credential_message(form.cleaned_data["faculty"], form.cleaned_data["subject"], form.cleaned_data["term"]))
+    scope = approval_token(request.user, form.cleaned_data['faculty'], form.cleaned_data['subject'], form.cleaned_data['term'], credential_result) if credential_result else None
     return render(request, "schedules/assignment_form.html", {
         "form": form, "meetings": meetings, "assignment": assignment,
         "credential_result": credential_result,
+        "credential_scope": scope,
         "draft": draft, "draft_conflict": draft_conflict,
         "title": "Edit Assignment" if assignment.pk else "New Assignment",
     })
@@ -718,13 +758,13 @@ def save_assignment_with_credential_check(request, form, resource):
         with transaction.atomic():
             assignment.save()
             form.save_m2m()
-            CredentialOverride.objects.create(
+            approve_override(
                 assignment=assignment,
                 subject=assignment.subject,
                 faculty=assignment.faculty,
-                admin_user=request.user,
+                actor=request.user,
                 reason=reason,
-                missing_credentials=missing_credential_message(assignment.faculty, assignment.subject, assignment.term),
+                scope_token=request.POST.get('credential_scope'),
             )
             FormDraft.objects.filter(
                 user=request.user, resource=resource, object_pk__in=["", str(assignment.pk)]
@@ -789,6 +829,9 @@ def render_credential_override_confirmation(request, form, result):
     assignment = obj if hasattr(obj, "subject") else {
         "faculty": obj.effective_faculty, "subject": obj.effective_subject,
     }
+    faculty = obj.faculty if hasattr(obj, 'subject') else obj.effective_faculty
+    subject = obj.subject if hasattr(obj, 'subject') else obj.effective_subject
+    term = obj.term if hasattr(obj, 'subject') else obj.schedule.term
     return render(
         request,
         "schedules/credential_override_confirm.html",
@@ -797,6 +840,7 @@ def render_credential_override_confirmation(request, form, result):
             "assignment": assignment,
             "missing": result["missing"],
             "posted": request.POST,
+            "credential_scope": approval_token(request.user, faculty, subject, term, result),
         },
     )
 
@@ -805,6 +849,9 @@ def render_credential_override_confirmation(request, form, result):
 @user_passes_test(admin_required)
 def resource_delete(request, resource, pk):
     model = resource_model(resource)
+    if resource == 'credential-overrides':
+        messages.info(request, 'Credential approval history is retained and cannot be deleted here.')
+        return redirect('resource_list', resource=resource)
     obj = get_object_or_404(model, pk=pk)
     if request.method == "POST":
         try:
@@ -848,8 +895,19 @@ def generate_schedule(request):
                 reproducibility=initial_metadata(seed, form.cleaned_data["settings"]),
             )
             lease.run_id = run.pk
-            scheduler = GeneticScheduler(term, form.cleaned_data["settings"], seed=seed)
-            schedule = scheduler.generate(form.cleaned_data["name"], lease=lease)
+            if term.education_level == 'SHS':
+                from .services.shs_scheduling import generate_shs
+                try:
+                    schedule = generate_shs(term, form.cleaned_data["settings"], actor=request.user,
+                        seed=seed, name=form.cleaned_data["name"], lease=lease)
+                except ValidationError as exc:
+                    # The adapter transaction has rolled back. The existing error
+                    # log records these expected input failures outside that scope.
+                    raise GenerationFailure('SHS configuration requires review.',
+                        [Diagnostic('INVALID_DATA', message) for message in exc.messages]) from exc
+            else:
+                scheduler = GeneticScheduler(term, form.cleaned_data["settings"], seed=seed)
+                schedule = scheduler.generate(form.cleaned_data["name"], lease=lease)
         except GenerationLeaseLost as exc:
             if run is not None:
                 GenerationRun.objects.filter(pk=run.pk).update(status=GenerationRun.Status.FAILED, completed_at=timezone.now())
@@ -970,6 +1028,7 @@ def generation_error_detail(request, pk):
 
 def schedule_export_entries(request, schedule):
     entries = schedule.entries.select_related(
+        "schedule__term",
         "assignment__subject__department", "assignment__faculty",
         "assignment__section__program__department", "assignment__section__year_level", "room",
         "subject_override", "section_override__program", "section_override__year_level", "faculty_override",
@@ -977,24 +1036,26 @@ def schedule_export_entries(request, schedule):
     entries = entries_visible_to_user(entries, request.user)
     filter_form = ScheduleEntryFilterForm(request.GET or None)
     restrict_schedule_filter_choices(filter_form, entries, request.user)
+    # The restricted form validates student section-context filters; primary-only
+    # SQL filtering would incorrectly remove additional-section participation.
     if filter_form.is_valid():
         values = filter_form.cleaned_data
-        if values.get("department"):
+        if values.get("department") and not (role(request.user) == Role.STUDENT and not admin_required(request.user)):
             entries = entries.filter(
                 Q(section_override__program__department=values["department"])
                 | Q(section_override__isnull=True, assignment__section__program__department=values["department"])
             )
-        if values.get("program"):
+        if values.get("program") and not (role(request.user) == Role.STUDENT and not admin_required(request.user)):
             entries = entries.filter(
                 Q(section_override__program=values["program"])
                 | Q(section_override__isnull=True, assignment__section__program=values["program"])
             )
-        if values.get("year_level"):
+        if values.get("year_level") and not (role(request.user) == Role.STUDENT and not admin_required(request.user)):
             entries = entries.filter(
                 Q(section_override__year_level=values["year_level"])
                 | Q(section_override__isnull=True, assignment__section__year_level=values["year_level"])
             )
-        if values.get("section"):
+        if values.get("section") and not (role(request.user) == Role.STUDENT and not admin_required(request.user)):
             entries = entries.filter(
                 Q(section_override=values["section"])
                 | Q(section_override__isnull=True, assignment__section=values["section"])
@@ -1039,13 +1100,20 @@ def schedule_export_entries(request, schedule):
 def schedule_detail(request, pk):
     schedule = visible_schedule(request, pk)
     entries, filter_form = schedule_export_entries(request, schedule)
+    from .services.detail_timetable import timetable_context
+    timetable = timetable_context(entries, request.GET.get("week"))
+    timetable["schedule_view"] = "timetable" if request.GET.get("view") == "timetable" else "table"
     if schedule.status in (ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED):
+        # Historical table projection reads bindings too; preload once for this
+        # detail page without changing other timetable/export consumers.
+        from django.db.models import prefetch_related_objects
+        prefetch_related_objects(entries, "assignment__shs_binding")
         snapshot = schedule.snapshot
         return render(request, "schedules/schedule_detail.html", {
             "schedule": schedule, "entries": historical_entries(entries), "filter_form": filter_form,
             "conflicts": [], "can_manage": admin_required(request.user), "historical": True,
             "historical_term": historical_term(snapshot), "snapshot_reconstructed": snapshot.reconstructed,
-            "snapshot_captured_at": snapshot.captured_at,
+            "snapshot_captured_at": snapshot.captured_at, **timetable,
         })
     for entry in entries:
         try:
@@ -1053,6 +1121,9 @@ def schedule_detail(request, pk):
             entry.manual_conflicts = []
         except ValidationError as exc:
             entry.manual_conflicts = exc.messages
+    conflicting_ids = {entry.pk for entry in entries if entry.manual_conflicts}
+    for row in timetable["timetable_unknown"] + [row for day in timetable["timetable_days"] for row in day["rows"]]:
+        row["has_conflicts"] = row["entry_id"] in conflicting_ids
     if admin_required(request.user) and request.GET.get("check") == "1":
         count = len(schedule_validation_messages(schedule))
         if count:
@@ -1062,6 +1133,7 @@ def schedule_detail(request, pk):
     return render(request, "schedules/schedule_detail.html", {
         "schedule": schedule, "entries": entries, "filter_form": filter_form,
         "conflicts": schedule_validation_issues(schedule) if admin_required(request.user) else [], "can_manage": admin_required(request.user),
+        **timetable,
     })
 
 
@@ -1114,7 +1186,7 @@ def save_entry_with_credential_check(request, form, schedule):
         save_manual_entry(schedule_id=schedule.pk, entry_id=entry.pk, actor=request.user,
             revision=form.cleaned_data["revision"], proposed={field: getattr(entry, field) for field in FIELDS},
             confirmed=request.POST.get("credential_override_confirm") == "yes",
-            reason=request.POST.get("credential_override_reason", ""))
+            reason=request.POST.get("credential_override_reason", ""), scope_token=request.POST.get('credential_scope'))
     except ValidationError as exc:
         form.add_error(None, exc)
     except DatabaseError:
@@ -1166,20 +1238,21 @@ def export_csv(request, pk):
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="{schedule.name}.csv"'
     writer = csv_export.writer(response)
-    writer.writerow(["Day", "Start", "End", "Course", "Section", "Faculty", "Room"])
+    from .services.schedule_export import HEADERS, export_occurrences, values
+    writer.writerow(HEADERS)
     entries, _ = schedule_export_entries(request, schedule)
-    for e in historical_entries(entries):
-        writer.writerow([e.get_day_display(), e.start_time, e.end_time, e.effective_subject.code, e.effective_section, e.effective_faculty, e.room.name])
+    writer.writerows(values(row) for row in export_occurrences(entries))
     return response
 
 
 @login_required
 def export_xlsx(request, pk):
-    from .services.xlsx_export import schedule_workbook, workbook_bytes
+    from .services.xlsx_export import occurrence_workbook, workbook_bytes
+    from .services.schedule_export import export_occurrences
     schedule = visible_schedule(request, pk)
     entries, _ = schedule_export_entries(request, schedule)
     term = historical_term(schedule.snapshot) if schedule.status in (ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED) else schedule.term
-    response = HttpResponse(workbook_bytes(schedule_workbook(schedule.name, term, historical_entries(entries), Weekday.choices)),
+    response = HttpResponse(workbook_bytes(occurrence_workbook(schedule.name, term, export_occurrences(entries), Weekday.choices)),
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     response["Content-Disposition"] = f'attachment; filename="schedule-{schedule.pk}.xlsx"'
     return response
@@ -1192,12 +1265,10 @@ def export_pdf(request, pk):
     response["Content-Disposition"] = f'attachment; filename="{schedule.name}.pdf"'
     entries, _ = schedule_export_entries(request, schedule)
     term = historical_term(schedule.snapshot) if schedule.status in (ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED) else schedule.term
+    from .services.schedule_export import export_occurrences, pdf_rows
     write_table_pdf(response, schedule.name, str(term),
-        ["Day / time", "Course", "Section", "Faculty", "Room", "Session"],
-        ([f"{e.get_day_display()}\n{e.start_time:%H:%M} - {e.end_time:%H:%M}",
-          f"{e.effective_subject.code}\n{e.effective_subject.title}", e.effective_section,
-          e.effective_faculty, e.room.name, e.effective_component_display]
-         for e in historical_entries(entries)), [1.4, 2.6, 1.5, 1.8, 1.4, 1.3])
+        ["Date / day / time", "Course", "Sections", "Faculty", "Room", "Instruction / evidence"],
+        pdf_rows(export_occurrences(entries)), [1.6, 2, 1.6, 1.4, 1.2, 2.2])
     return response
 
 

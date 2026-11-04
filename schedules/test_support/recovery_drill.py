@@ -102,6 +102,7 @@ def create(root, source):
         db.create_function('schedease_identity_v1', 1, normalize_identity, deterministic=True)
         db.create_function('schedease_archiving', 0, lambda: 0)
         db.create_function('schedease_term_sync', 2, lambda *args: 0)
+        db.create_function('schedease_publication_v1', 7, lambda *args: 0)
         attempts = [
             "UPDATE schedules_schedule SET name='changed' WHERE status='PUBLISHED'",
             "DELETE FROM schedules_scheduleentry WHERE schedule_id IN (SELECT id FROM schedules_schedule WHERE status='ARCHIVED')",

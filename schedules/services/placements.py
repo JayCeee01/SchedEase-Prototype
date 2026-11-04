@@ -47,6 +47,8 @@ def feasible_placements(assignment, term, rooms, *, eligible=None, faculty_polic
     from datetime import time
     from schedules.models import Section
     snapshot = binding(assignment)
+    from .shs_days import SHS_DAYS
+    allowed_days = SHS_DAYS if snapshot or term.education_level == 'SHS' else ALLOWED_DAYS
     shs_policies = [AvailabilityPolicy.for_resource(section) for section in
         Section.objects.filter(pk__in=participant_ids(assignment))] if snapshot else []
     duration = assignment.required_duration_minutes
@@ -55,7 +57,7 @@ def feasible_placements(assignment, term, rooms, *, eligible=None, faculty_polic
     external_occupancy = published_commitments(term) if external_occupancy is None else external_occupancy
     for room in rooms:
         policy = room_policies[room.pk]
-        for day in ALLOWED_DAYS:
+        for day in allowed_days:
             if checkpoint is not None:
                 checkpoint()
             for faculty_start, faculty_end in faculty_policy.effective_intervals(day):

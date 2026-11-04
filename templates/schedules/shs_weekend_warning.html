@@ -1,0 +1,12 @@
+{% if timetable_weekend %}
+<section class="panel" aria-labelledby="shs-weekend-warning">
+  <h3 id="shs-weekend-warning">Weekend SHS meeting &mdash; review required</h3>
+  <p class="subtle">These preserved records fall outside the Monday&ndash;Friday SHS policy. They are shown for review, not as valid scheduling days.</p>
+  {% for e in timetable_weekend %}<article class="schedule-block" data-weekend-shs-entry="{{ e.entry_id }}">
+    <strong>{{ e.subject.code }} &mdash; {{ e.subject.title }}</strong>
+    <span>{{ e.weekday_name }}: {{ e.start|time:"g:i A" }} &ndash; {{ e.end|time:"g:i A" }}</span>
+    {% for day in e.review_dates %}<time datetime="{{ day|date:'Y-m-d' }}">{{ day|date:"M j, Y" }}</time>{% empty %}<span>Actual dates unavailable</span>{% endfor %}
+    <span>{{ e.primary_section.label }} | {{ e.faculty.label }} | {{ e.room.label }}</span>
+  </article>{% endfor %}
+</section>
+{% endif %}

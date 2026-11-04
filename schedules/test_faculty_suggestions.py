@@ -4,6 +4,8 @@ from django.urls import reverse
 
 from . import models as m
 from .test_known_defects import SchedulingDefectFixture
+from .test_support.credential_approvals import scoped_override
+from django.db import IntegrityError, transaction
 
 
 class FacultySuggestionTests(SchedulingDefectFixture):
@@ -50,14 +52,17 @@ class FacultySuggestionTests(SchedulingDefectFixture):
     def test_saved_meeting_overrides_are_distinct_and_require_complete_coverage(self):
         self.assertEqual(self.statuses(assignment=self.parent.pk)[self.faculty.pk]['status'], 'unqualified')
         for index, meeting in enumerate(self.meetings):
-            m.CredentialOverride.objects.create(assignment=meeting, faculty=self.faculty, subject=self.subject,
-                admin_user=self.admin, reason='Authorized exception', missing_credentials='Teaching license')
+            scoped_override(assignment=meeting, faculty=self.faculty, subject=self.subject,
+                admin_user=self.admin, reason='Authorized exception')
             expected = 'override' if index == len(self.meetings) - 1 else 'unqualified'
             self.assertEqual(self.statuses(assignment=self.parent.pk)[self.faculty.pk]['status'], expected)
         self.assertEqual(self.statuses()[self.faculty.pk]['status'], 'unqualified')
         other = m.AcademicTerm.objects.create(name='Other', school_year='2027', starts_on=self.term.starts_on, ends_on=self.term.ends_on)
         self.assertEqual(self.statuses(assignment=self.parent.pk, term=other.pk)[self.faculty.pk]['status'], 'unqualified')
-        m.CredentialOverride.objects.filter(assignment=self.meetings[0]).update(reason='')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            m.CredentialOverride.objects.filter(assignment=self.meetings[0]).update(reason='')
+        alternative = m.Credential.objects.create(name='Changed equivalent')
+        self.requirement.acceptable_equivalents.add(alternative)
         self.assertEqual(self.statuses(assignment=self.parent.pk)[self.faculty.pk]['status'], 'unqualified')
 
     def test_mismatched_override_is_not_suggested(self):
