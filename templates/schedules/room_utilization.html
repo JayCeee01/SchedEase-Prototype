@@ -6,11 +6,12 @@
   <article><span><strong>{{ summary.total_rooms }}</strong><span>Total Rooms</span></span></article>
   <article><span><strong>{{ summary.lecture_rooms }}</strong><span>Lecture Rooms</span></span></article>
   <article><span><strong>{{ summary.laboratories }}</strong><span>Laboratories</span></span></article>
-  <article><span><strong>{{ summary.average_utilization }}%</strong><span>Weekly Utilization</span></span></article>
+  <article><span><strong>{{ summary.average_utilization }}%</strong><span>Weekly Utilization (weighted)</span></span></article>
   <article><span><strong>{{ summary.most_utilized_room }}</strong><span>Most Utilized</span></span></article>
   <article><span><strong>{{ summary.least_utilized_room }}</strong><span>Least Utilized</span></span></article>
   <article><span><strong>{{ summary.underutilized_rooms }}</strong><span>Underutilized</span></span></article>
   <article><span><strong>{{ summary.unused_rooms }}</strong><span>Unused Rooms</span></span></article>
+  <article><span><strong>{{ analytics.busiest.label|default:"Unavailable" }}</strong><span>Busiest Weekday{% if analytics.busiest %} &middot; {{ analytics.busiest.percentage }}%{% endif %}</span></span></article>
 </section>
 <form method="get" class="panel room-report-filters" data-auto-tooltips="false">
   <label><span class="field-label">Academic Term</span><select name="term"><option value="">All terms</option>{% for item in terms %}<option value="{{ item.pk }}"{% if selected_term == item.pk|stringformat:'s' %} selected{% endif %}>{{ item }}</option>{% endfor %}</select></label>
@@ -23,6 +24,7 @@
   <label><span class="field-label">Search Room</span><input type="search" name="q" value="{{ query }}" placeholder="Room name"></label>
   <div class="toolbar"><button class="primary" type="submit">Apply Filters</button><a class="button" href="{% url 'room_utilization' %}">Clear</a></div>
 </form>
+{% include "schedules/_room_usage_charts.html" %}
 <div class="panel table-wrap"><table class="daily-utilization-table"><thead><tr><th data-sort>Room</th><th data-sort>Type</th><th data-sort>Capacity</th><th data-sort>Mon</th><th data-sort>Tue</th><th data-sort>Wed</th><th data-sort>Thu</th><th data-sort>Fri</th><th data-sort>Sat</th><th data-sort><span data-tooltip="Scheduled weekly hours divided by actual available weekly hours.">Weekly %</span></th><th data-sort><span data-tooltip="Average section size compared with room capacity.">Seat %</span></th><th data-sort>Scheduled / Available</th><th data-sort>Classes</th><th data-sort>Status</th></tr></thead><tbody>
 {% for row in rows %}<tr><td><strong>{{ row.room.name }}</strong></td><td>{{ row.room.get_room_type_display }}</td><td>{{ row.room.capacity }}</td>{% for daily in row.daily %}<td><span class="daily-percent">{{ daily.percentage }}%</span><small>{{ daily.scheduled }}/{{ daily.available }}h</small></td>{% endfor %}<td><div class="utilization-meter"><span style="width:{{ row.utilization_percentage }}%"></span></div><strong>{{ row.utilization_percentage }}%</strong></td><td>{{ row.capacity_utilization }}%</td><td>{{ row.scheduled_hours }} / {{ row.available_hours }}h</td><td>{{ row.assigned_classes }}</td><td><span class="badge {{ row.badge_class }}">{{ row.status }}</span></td></tr>{% empty %}<tr><td colspan="14" class="table-empty">No rooms match the selected filters.</td></tr>{% endfor %}
 </tbody></table></div>

@@ -1,0 +1,19 @@
+<div class="panel table-wrap shared-time-grid" role="region" aria-label="{{ grid_caption|default:'Weekly timetable' }}" tabindex="0">
+  <div class="continuous-grid-caption">{{ grid_caption|default:"Weekly timetable" }}</div>
+  <div class="continuous-grid" style="grid-template-columns: 100px {% for column in timetable_columns %}minmax({{ column.min_width }}px, auto) {% endfor %};">
+    <div class="continuous-time"><div class="continuous-heading">Time</div>
+      {% for row in grid %}<div class="continuous-slot"><strong>{{ row.start|time:"g:i A" }}</strong><small>{{ row.end|time:"g:i A" }}</small></div>{% endfor %}
+    </div>
+    {% for column in timetable_columns %}<section class="continuous-day" aria-label="{{ column.name }}">
+      <h4 class="continuous-heading">{{ column.name }}</h4>
+      <div class="continuous-track">
+        {% for cell in column.cells %}<div class="continuous-slot {% if cell.occupied %}occupied-cell{% elif not room_policy or cell.available %}vacant-cell{% else %}unavailable-cell{% endif %}">
+          {% if room_policy and cell.occupied and not cell.available %}<small>Outside current room availability</small>{% endif %}
+        </div>{% endfor %}
+        {% for block in column.blocks %}<div class="continuous-meeting" aria-label="{{ block.presentation.subject.code }} {{ block.presentation.start|time:'g:i A' }} to {{ block.presentation.end|time:'g:i A' }}" style="top: {{ block.top }}%; height: {{ block.height }}%; left: {{ block.left }}%; width: {{ block.width }}%;">
+          {% include "schedules/student_timetable_card.html" with e=block.presentation outside_availability=block.outside_availability continuous=True %}
+        </div>{% endfor %}
+      </div>
+    </section>{% endfor %}
+  </div>
+</div>

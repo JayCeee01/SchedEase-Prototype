@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260906-assignments">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20261111-role-overview">
 </head>
 <body>
   <div class="app-shell">
@@ -34,20 +34,19 @@
       <nav class="nav-group" aria-label="Primary navigation">
         <a href="{% url 'dashboard' %}" data-icon="grid"{% if request.resolver_match.url_name == 'dashboard' %} class="is-active" aria-current="page"{% endif %}>Dashboard</a>
         {% if user.profile.role == "FACULTY" %}
-        <a href="{% url 'browse_schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'browse_schedules' %} class="is-active" aria-current="page"{% endif %}>Browse Schedules</a>
+        <a href="{% url 'browse_schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'browse_schedules' %} class="is-active" aria-current="page"{% endif %}>Manage Schedules</a>
         <a href="{% url 'my_availability' %}" data-icon="clock"{% if 'my_availability' in request.resolver_match.url_name %} class="is-active" aria-current="page"{% endif %}>My Availability</a>
         {% elif not user.is_superuser and user.profile.role != "ADMIN" %}
-        <a href="{% url 'browse_schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'browse_schedules' %} class="is-active" aria-current="page"{% endif %}>Browse Schedules</a>
+        <a href="{% url 'browse_schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'browse_schedules' %} class="is-active" aria-current="page"{% endif %}>Manage Schedules</a>
         {% endif %}
         {% if user.is_superuser or user.profile.role == "ADMIN" %}
         <details class="nav-disclosure" data-nav-group="scheduling"{% if request.resolver_match.url_name == 'generate_schedule' or request.resolver_match.url_name == 'generation_error_log' or request.resolver_match.url_name == 'generation_error_detail' or request.resolver_match.url_name == 'browse_schedules' or request.resolver_match.url_name == 'schedule_detail' or request.resolver_match.kwargs.resource == 'schedules' or request.resolver_match.kwargs.resource == 'assignments' or request.resolver_match.kwargs.resource == 'ga-settings' %} open{% endif %}>
           <summary data-tooltip="Scheduling"><span class="nav-category-icon" data-group-icon="scheduling"></span><span class="nav-category-label">Scheduling</span><span class="nav-chevron" aria-hidden="true"></span></summary>
           <div class="nav-children">
             <a href="{% url 'generate_schedule' %}" data-icon="spark">Generate Schedule</a>
-            <a href="{% url 'resource_list' 'schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'schedule_detail' or request.resolver_match.url_name == 'entry_create' or request.resolver_match.url_name == 'entry_update' %} class="is-active" aria-current="page"{% endif %}>Manage Schedules</a>
+            <a href="{% url 'resource_list' 'schedules' %}" data-icon="calendar"{% if request.resolver_match.url_name == 'browse_schedules' or request.resolver_match.kwargs.resource == 'schedules' or request.resolver_match.url_name == 'schedule_detail' or request.resolver_match.url_name == 'entry_create' or request.resolver_match.url_name == 'entry_update' %} class="is-active" aria-current="page"{% endif %}>Manage Schedules</a>
             <a href="{% url 'resource_list' 'assignments' %}" data-icon="check">Assignments</a>
             <a href="{% url 'generation_error_log' %}" data-icon="flag">Error Log</a>
-            <a href="{% url 'browse_schedules' %}" data-icon="calendar">Browse Published</a>
             <a href="{% url 'resource_list' 'ga-settings' %}" data-icon="sliders">GA Settings</a>
           </div>
         </details>
@@ -148,7 +147,7 @@
     </div>
   </div>
   <div class="backdrop" data-sidebar-toggle></div>
-  <script src="{% static 'js/app.js' %}"></script>
+  <script src="{% static 'js/app.js' %}?v=20261110-shared-grid"></script>
   <script src="{% static 'js/table-scroll.js' %}"></script>
 </body>
 </html>

@@ -1,0 +1,12 @@
+<div class="page-hero">
+  <div>
+    <p class="eyebrow">Scheduling</p>
+    <h1>Manage Schedules</h1>
+  </div>
+</div>
+<nav class="view-switcher schedule-primary-tabs" aria-label="Schedule workspace">
+  {% if user.is_superuser or user.profile.role == "ADMIN" %}
+  <a class="button view-tab{% if workspace == 'manage' %} is-active{% endif %}" href="{% url 'resource_list' 'schedules' %}"{% if workspace == 'manage' %} aria-current="page"{% endif %}>Manage</a>
+  {% endif %}
+  <a class="button view-tab{% if workspace == 'published' %} is-active{% endif %}" href="{% url 'browse_schedules' %}"{% if workspace == 'published' %} aria-current="page"{% endif %}>Browse Published</a>
+</nav>

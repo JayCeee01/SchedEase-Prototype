@@ -3,25 +3,29 @@
 <div class="page-hero">
   <div>
     <p class="eyebrow">Faculty Workspace</p>
-    <h1>Assigned teaching schedule</h1>
+    <h1>Teaching overview</h1>
     <p class="subtle">Review published class assignments and keep availability up to date for future schedule generation.</p>
   </div>
-  <a class="button primary" href="{% url 'my_availability' %}">Update Availability</a>
+  <div class="actions"><a class="button primary" href="{% url 'browse_schedules' %}">View My Schedule</a><a class="button" href="{% url 'my_availability' %}">Update Availability</a></div>
 </div>
+<section class="metrics">
+<article><span class="metric-icon">CO</span><span><strong>{{ subject_count }}</strong><span>Published subjects</span></span></article>
+<article><span class="metric-icon">SC</span><span><strong>{{ primary_section_count }}</strong><span>Primary assigned sections</span></span></article>
+<article><span class="metric-icon">MT</span><span><strong>{{ meeting_count }}</strong><span>Published meetings</span></span></article>
+</section>
 <section class="panel" aria-labelledby="faculty-workload-heading">
   <h2 id="faculty-workload-heading">Published teaching workload</h2>
-  <p class="subtle">Required contact time summed once per published meeting, grouped by schedule. These totals are not academic units or actual teaching hours for the selected SHS week. Changing the timetable week does not change these totals.</p>
+  <p class="subtle">Required contact time summed once per published meeting, grouped by schedule. These totals are not academic units or actual teaching hours for a particular SHS calendar week. Each schedule is reported separately.</p>
   {% if faculty %}<p>Configured faculty weekly teaching limit: <strong>{{ faculty.max_weekly_hours }} hours</strong></p>{% endif %}
   {% for workload in workloads %}
-  <div class="panel">
+  <div class="dashboard-workload">
     <h3>{{ workload.schedule.name }}</h3>
     <p class="subtle">{{ workload.schedule.term }}</p>
     <p><strong>{{ workload.hours|floatformat:2 }} hours</strong> ({{ workload.minutes }} minutes) total</p>
+    {% if workload.limit_percent != None %}<div class="utilization-meter" role="img" aria-label="{{ workload.hours|floatformat:2 }} required contact hours; configured weekly limit {{ faculty.max_weekly_hours }} hours. Not a dated workload compliance calculation."><span style="width: {{ workload.limit_percent }}%"></span></div>{% endif %}
     <p>{{ workload.meetings }} meeting{{ workload.meetings|pluralize }} &middot; {{ workload.sections }} section{{ workload.sections|pluralize }}</p>
   </div>
   {% empty %}<p>No published teaching workload yet.</p>{% endfor %}
 </section>
-<h2>Teaching Timetable</h2>
-{% include "schedules/student_timetable.html" with week_control_id="faculty-week" timetable_caption="Teaching timetable" %}
-{% if entries %}<details class="panel schedule-list-disclosure"><summary>View all published meetings as a list</summary>{% include "schedules/entry_table.html" with entries=entries %}</details>{% endif %}
+{% include "schedules/_schedule_notifications.html" %}
 {% endblock %}

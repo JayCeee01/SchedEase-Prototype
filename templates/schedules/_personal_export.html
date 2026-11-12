@@ -1,0 +1,5 @@
+{% if not request.user.is_superuser %}{% if request.user.profile.role == 'FACULTY' or request.user.profile.role == 'STUDENT' %}
+{% if selected_schedule %}<details class="panel"><summary>Export Schedule</summary><div class="actions">
+<a class="button" href="{% url 'personal_schedule_export' 'pdf' %}?{{ request.GET.urlencode }}&amp;schedule={{ selected_schedule.pk }}{% if detail_source %}&amp;source=detail{% else %}&amp;source=browse{% endif %}">Export as PDF</a>
+<a class="button" href="{% url 'personal_schedule_export' 'xlsx' %}?{{ request.GET.urlencode }}&amp;schedule={{ selected_schedule.pk }}{% if detail_source %}&amp;source=detail{% else %}&amp;source=browse{% endif %}">Export as Excel (.xlsx)</a>
+</div></details>{% else %}<div class="panel"><button type="button" disabled aria-describedby="export-guidance">Export Schedule</button><p id="export-guidance" class="subtle">{{ export_hint|default:"Select a published schedule to export." }}</p></div>{% endif %}{% endif %}{% endif %}

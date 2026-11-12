@@ -43,7 +43,7 @@ class FacultyDateTimetableTests(TestCase):
         self.client.force_login(self.user)
 
     def page(self, **params):
-        return self.client.get(reverse('dashboard'), params)
+        return self.client.get(reverse('browse_schedules'), dict(params, view='timetable'))
 
     def cards(self, response):
         return [e.presentation for row in response.context['timetable_grid'] for cell in row['cells'] for e in cell['entries']]
@@ -54,16 +54,17 @@ class FacultyDateTimetableTests(TestCase):
             response = self.page(week=week)
             self.assertEqual(response.status_code, 200)
             self.assertEqual([r['entry_id'] for r in self.cards(response)], [entry.pk])
-            self.assertContains(response, f'data-student-timetable-entry="{entry.pk}"', count=1)
+            self.assertContains(response, f'data-timetable-entry="{entry.pk}"', count=1)
             self.assertContains(response, f'datetime="{week}"')
-            self.assertContains(response, 'id="faculty-week"')
+            self.assertContains(response, 'id="published-week"')
             self.assertEqual(len(response.context['timetable_days']), 5)
             self.assertEqual(sum(c['occupied'] for row in response.context['timetable_grid'] for c in row['cells']), 2)
-            group = response.context['workloads'][0]
+            dashboard = self.client.get(reverse('dashboard'), {'week': week})
+            group = dashboard.context['workloads'][0]
             self.assertEqual((group['minutes'], group['hours'], group['meetings'], group['sections']), (120, Decimal(2), 2, 1))
-            self.assertContains(response, 'not academic units or actual teaching hours for the selected SHS week')
-            self.assertContains(response, '(120 minutes) total')
-            self.assertNotContains(response, '(120 minutes) per week')
+            self.assertContains(dashboard, 'not academic units or actual teaching hours for a particular SHS calendar week')
+            self.assertContains(dashboard, '(120 minutes) total')
+            self.assertNotContains(dashboard, '(120 minutes) per week')
             self.assertEqual(self.cards(response)[0]['source'], 'FINALIZED_SNAPSHOT')
             self.assertEqual(self.cards(response)[0]['faculty']['label'], self.faculty.full_name)
 
@@ -73,7 +74,8 @@ class FacultyDateTimetableTests(TestCase):
             response = self.page(**params)
             self.assertEqual(response.context['timetable_week'], date(2026, 8, 3))
             self.assertEqual(response.context['timetable_weeks'], [date(2026, 8, 3), date(2026, 8, 10)])
-            self.assertNotContains(response, '2026-08-17')
+            self.assertNotContains(response, 'datetime="2026-08-17"')
+            self.assertEqual([r['entry_id'] for r in self.cards(response)], [self.first.pk])
             self.assertNotContains(response, self.other_faculty.full_name)
 
     def test_unknown_dates_are_separate(self):
@@ -81,8 +83,8 @@ class FacultyDateTimetableTests(TestCase):
         response = self.page()
         self.assertEqual([e['entry_id'] for e in response.context['timetable_unknown']], [self.unknown.pk])
         self.assertContains(response, 'Meeting dates unavailable')
-        self.assertContains(response, f'data-student-timetable-entry="{self.unknown.pk}"', count=1)
-        self.assertEqual(response.context['workloads'][0]['minutes'], 180)
+        self.assertContains(response, f'data-timetable-entry="{self.unknown.pk}"', count=1)
+        self.assertEqual(self.client.get(reverse('dashboard')).context['workloads'][0]['minutes'], 180)
 
     def test_effective_override_and_missing_faculty_link(self):
         upgrade()
@@ -99,7 +101,7 @@ class FacultyDateTimetableTests(TestCase):
         self.other_faculty.save()
         response = self.page()
         self.assertEqual(response.context['timetable_weeks'], [])
-        self.assertEqual(response.context['workloads'], [])
+        self.assertEqual(self.client.get(reverse('dashboard')).context['workloads'], [])
 
     def test_draft_and_archived_dates_denied(self):
         draft = m.Schedule.objects.create(term=self.term, name='Private draft')

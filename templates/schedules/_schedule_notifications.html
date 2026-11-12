@@ -1,0 +1,15 @@
+<section class="panel" aria-labelledby="schedule-notifications"><div class="heading-row"><h2 id="schedule-notifications">Notifications</h2><span class="badge">{{ notification_unread }} unread</span></div>
+{% for notice in notifications %}<article class="dashboard-workload">
+<p><strong>{{ notice.get_kind_display }}</strong>{% if not notice.read_at %} <span class="badge">Unread</span>{% endif %}</p>
+<p>{{ notice.schedule_name }} &middot; {{ notice.term_label }}</p>
+<p>{% if notice.kind == 'WITHDRAWN' %}This schedule was replaced and is no longer available to you.{% elif notice.kind == 'UPDATED' %}A replacement schedule affecting your classes has been published.{% else %}A schedule containing your classes has been published.{% endif %}</p>
+<time datetime="{{ notice.created_at|date:'c' }}">{{ notice.created_at|date:'M j, Y, g:i A' }}</time>
+<div class="actions">{% if notice.kind == 'WITHDRAWN' %}<a class="button" href="{% url 'browse_schedules' %}">View My Schedule</a>{% else %}<a class="button" href="{% url 'schedule_detail' notice.schedule_id %}">View Schedule</a>{% endif %}
+{% if not notice.read_at %}<form method="post" action="{% url 'notification_read' notice.pk %}" data-auto-tooltips="false">{% csrf_token %}<button type="submit">Mark as Read</button></form>{% endif %}</div>
+</article>{% empty %}<p>No schedule updates yet.</p>{% endfor %}
+{% if notifications.has_other_pages %}<nav class="actions" aria-label="Notification pages">
+{% if notifications.has_previous %}<a class="button" href="?notices_page={{ notifications.previous_page_number }}#schedule-notifications">Newer</a>{% endif %}
+<span>Page {{ notifications.number }} of {{ notifications.paginator.num_pages }}</span>
+{% if notifications.has_next %}<a class="button" href="?notices_page={{ notifications.next_page_number }}#schedule-notifications">Older</a>{% endif %}
+</nav>{% endif %}
+</section>

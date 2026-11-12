@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
+{% if resource == 'schedules' %}
+{% include "schedules/_schedule_navigation.html" with workspace="manage" %}
+{% else %}
 <div class="page-hero">
   <div>
     <p class="eyebrow">Master Data</p>
@@ -9,7 +12,8 @@
   {% if resource == 'assignments' %}<a class="button" href="{% url 'workload_proposals' %}">Workload Balancing Proposals</a>{% endif %}
   {% if resource != 'schedules' %}<a class="button primary" href="{% url 'resource_create' resource %}">New</a>{% endif %}
 </div>
-{% if resource == 'schedules' %}<div class="view-switcher" role="navigation" aria-label="Schedule status"><a class="view-tab{% if schedule_tab == 'active' %} is-active{% endif %}" href="{{ tab_links.active }}">Active</a><a class="view-tab{% if schedule_tab == 'drafts' %} is-active{% endif %}" href="{{ tab_links.drafts }}">Drafts</a><a class="view-tab{% if schedule_tab == 'archived' %} is-active{% endif %}" href="{{ tab_links.archived }}">Archived</a></div>{% endif %}
+{% endif %}
+{% if resource == 'schedules' %}<div class="view-switcher schedule-secondary-tabs" role="navigation" aria-label="Schedule status"><a class="view-tab{% if schedule_tab == 'active' %} is-active{% endif %}" href="{{ tab_links.active }}"{% if schedule_tab == 'active' %} aria-current="page"{% endif %}>Active</a><a class="view-tab{% if schedule_tab == 'drafts' %} is-active{% endif %}" href="{{ tab_links.drafts }}"{% if schedule_tab == 'drafts' %} aria-current="page"{% endif %}>Drafts</a><a class="view-tab{% if schedule_tab == 'archived' %} is-active{% endif %}" href="{{ tab_links.archived }}"{% if schedule_tab == 'archived' %} aria-current="page"{% endif %}>Archived</a></div>{% endif %}
 {% if drafts %}
 <section class="panel draft-list" aria-labelledby="draft-list-title">
   <div><h2 id="draft-list-title">Unfinished drafts</h2><p class="subtle">Resume your saved work or discard it without changing official records.</p></div>

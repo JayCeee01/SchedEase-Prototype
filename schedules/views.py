@@ -134,16 +134,16 @@ def entries_visible_to_user(entries, user):
     return student_entries(entries, student.section_id)
 
 
-def restrict_schedule_filter_choices(form, entries, user):
+def restrict_schedule_filter_choices(form, entries, user, *, include_admin=False):
     """Do not reveal unrelated academic identities in historical filter menus."""
-    if admin_required(user):
+    if admin_required(user) and not include_admin:
         return
-    allowed = {name: set() for name in ('term', 'department', 'program', 'year_level', 'section', 'faculty', 'room', 'subject')}
+    allowed = {name: set() for name in ('term', 'schedule', 'department', 'program', 'year_level', 'section', 'faculty', 'room', 'subject')}
     student = (Student.objects.filter(user=user).select_related("section__program", "section__year_level").first()
                if role(user) == Role.STUDENT else None)
     for entry in entries:
         section = student.section if student and student.section_id else entry.effective_section
-        values = {'term': entry.schedule.term_id, 'department': section.program.department_id,
+        values = {'schedule': entry.schedule_id, 'term': entry.schedule.term_id, 'department': section.program.department_id,
             'program': section.program_id, 'year_level': section.year_level_id, 'section': section.pk,
             'faculty': entry.effective_faculty.pk, 'room': entry.room_id, 'subject': entry.effective_subject.pk}
         for name, pk in values.items():
@@ -202,6 +202,14 @@ def landing_page(request):
     return render(request, "landing.html", {"login_form": login_form, "login_modal_open": login_modal_open})
 
 
+def _personal_dashboard_summary(entries):
+    """Summarize authorized historical rows, without implying enrollment or dates."""
+    return {
+            'subject_count': len({entry.effective_subject.pk for entry in entries}),
+            'primary_section_count': len({entry.effective_section.pk for entry in entries}),
+            'meeting_count': len(entries)}
+
+
 @login_required
 def dashboard(request):
     schedules = Schedule.objects.all()[:5]
@@ -228,6 +236,8 @@ def dashboard(request):
             }
         )
         return render(request, "schedules/admin_dashboard.html", context)
+    from .services.schedule_notifications import notification_context
+    context.update(notification_context(request.user, request.GET.get("notices_page", 1)))
     if user_role == Role.FACULTY:
         faculty = Faculty.objects.filter(user=request.user).first()
         context["entries"] = (ScheduleEntry.objects.filter(schedule__status=ScheduleStatus.PUBLISHED).filter(
@@ -235,33 +245,32 @@ def dashboard(request):
         ) if faculty else ScheduleEntry.objects.none()).select_related(
             "schedule__term", "assignment__subject", "assignment__section", "assignment__faculty", "room",
             "subject_override", "section_override", "faculty_override").order_by("day", "start_time")
-        from .services.detail_timetable import personal_timetable_context
         from django.db.models import prefetch_related_objects
         faculty_entries = list(context["entries"])
-        context.update(personal_timetable_context(faculty_entries, request.GET.get("week")))
         prefetch_related_objects(faculty_entries, "assignment__shs_binding")
         context["entries"] = historical_entries(faculty_entries)
         from .services.faculty_workload import published_workload
         context["faculty"] = faculty
         context["workloads"] = published_workload(context["entries"])
-        context["availability"] = Availability.objects.filter(faculty=faculty) if faculty else Availability.objects.none()
+        context.update(_personal_dashboard_summary(context['entries']))
+        for workload in context['workloads']:
+            limit = faculty.max_weekly_hours if faculty else 0
+            workload['limit_percent'] = min(100, float(workload['hours']) / float(limit) * 100) if limit else None
         return render(request, "schedules/faculty_dashboard.html", context)
-    student = Student.objects.filter(user=request.user).select_related("section").first()
+    student = Student.objects.filter(user=request.user).select_related("section__program", "section__year_level").first()
     context["student"] = student
     context["entries"] = entries_visible_to_user(ScheduleEntry.objects.all(), request.user).select_related(
         "schedule__term", "assignment__subject", "assignment__section", "assignment__faculty", "room",
         "subject_override", "section_override", "faculty_override").order_by("day", "start_time")
-    from .services.detail_timetable import personal_timetable_context
     from django.db.models import prefetch_related_objects
     authorized_entries = list(context["entries"])
-    context.update(personal_timetable_context(authorized_entries, request.GET.get("week")))
     prefetch_related_objects(authorized_entries, "assignment__shs_binding")
     context["entries"] = historical_entries(authorized_entries)
+    context.update(_personal_dashboard_summary(context["entries"]))
     return render(request, "schedules/student_dashboard.html", context)
 
 
-@login_required
-def browse_schedules(request):
+def _browse_schedule_context(request):
     form = ScheduleSearchForm(request.GET or None)
     entries = ScheduleEntry.objects.filter(schedule__status=ScheduleStatus.PUBLISHED).select_related(
         "schedule__term",
@@ -269,13 +278,17 @@ def browse_schedules(request):
         "assignment__section__program__department",
         "assignment__section__year_level",
         "assignment__faculty",
-        "room",
+        "room", "faculty_override", "subject_override",
+        "section_override__program__department", "section_override__year_level",
     )
     entries = entries_visible_to_user(entries, request.user)
-    restrict_schedule_filter_choices(form, entries, request.user)
+    restrict_schedule_filter_choices(form, entries, request.user, include_admin=True)
     # Student section-context choices contain only their own enrollment. Once
     # validated, do not re-filter combined meetings by the primary section.
     if form.is_valid():
+        selected = form.cleaned_data.get("schedule")
+        if selected:
+            entries = entries.filter(schedule=selected)
         term = form.cleaned_data.get("term")
         department = form.cleaned_data.get("department")
         program = form.cleaned_data.get("program")
@@ -296,7 +309,56 @@ def browse_schedules(request):
             entries = entries.filter(assignment__subject=subject)
     elif form.is_bound:
         entries = entries.none()
-    return render(request, "schedules/browse.html", {"form": form, "entries": historical_entries(entries)})
+    entries = list(entries)
+    historical = historical_entries(entries)
+    if form.is_valid():
+        values = form.cleaned_data
+        for field, attribute in (('faculty', 'effective_faculty'), ('room', 'room')):
+            if values.get(field):
+                historical = [e for e in historical if getattr(e, attribute).pk == values[field].pk]
+        if values.get('day') not in ('', None):
+            historical = [e for e in historical if e.day == int(values['day'])]
+        if values.get('component'):
+            historical = [e for e in historical if e.effective_component == values['component']]
+        matching = {e.pk for e in historical}
+        entries = [e for e in entries if e.pk in matching]
+    query = request.GET.get('q', '').strip()
+    if query:
+        matching = {e.pk for e in historical if query.casefold() in ' '.join(str(v) for v in (
+            e.get_day_display(), e.start_time.strftime('%I:%M %p').lstrip('0'),
+            e.end_time.strftime('%I:%M %p').lstrip('0'), e.effective_subject.code,
+            e.effective_subject.title, e.effective_section, e.effective_faculty, e.room.name)).casefold()}
+        entries = [e for e in entries if e.pk in matching]
+        historical = [e for e in historical if e.pk in matching]
+    from .services.detail_timetable import personal_timetable_context
+    context = personal_timetable_context(entries, request.GET.get('week'))
+    links = {}
+    for view in ('table', 'timetable'):
+        params = request.GET.copy()
+        params['view'] = view
+        links[view] = '?' + params.urlencode()
+    export_schedule = None
+    export_hint = 'No published meetings match these filters. Select a Schedule Version or adjust the filters.'
+    if not form.is_bound or form.is_valid():
+        selected = form.cleaned_data.get('schedule') if form.is_bound else None
+        versions = {entry.schedule_id: entry.schedule for entry in entries}
+        export_schedule = selected or (next(iter(versions.values())) if len(versions) == 1 else None)
+        if selected and form.cleaned_data.get('term') and selected.term_id != form.cleaned_data['term'].pk:
+            export_schedule = None
+        if len(versions) > 1:
+            export_hint = 'Select a Schedule Version and apply filters to export one timetable.'
+    else:
+        export_hint = 'Correct the filter selections before exporting.'
+    return {
+        "export_schedule": export_schedule, "export_hint": export_hint,
+        "form": form, "entries": historical, "q": query, "browse_workspace": True,
+        "schedule_view": 'timetable' if request.GET.get('view') == 'timetable' else 'table',
+        "view_links": links, **context}
+
+
+@login_required
+def browse_schedules(request):
+    return render(request, 'schedules/browse.html', _browse_schedule_context(request))
 
 
 @login_required
@@ -433,7 +495,9 @@ def room_utilization_dashboard(request):
         room_group=request.GET.get("room_group", ""),
         day=request.GET.get("day", ""),
     )
+    from .services.room_utilization import utilization_charts
     context = {
+        "analytics": utilization_charts(rows),
         "rows": rows,
         "summary": utilization_summary(rows),
         "schedule": schedule,
@@ -454,9 +518,7 @@ def room_utilization_dashboard(request):
     return render(request, "schedules/room_utilization.html", context)
 
 
-@login_required
-@user_passes_test(admin_required)
-def room_schedule_dashboard(request):
+def _room_schedule_context(request):
     def selection(model, parameter):
         value = request.GET.get(parameter)
         if not value:
@@ -487,7 +549,29 @@ def room_schedule_dashboard(request):
             # Missing history must not be replaced by current assignment labels or
             # displayed as an empty/vacant schedule.
             context["history_unavailable"] = True
-    return render(request, "schedules/room_schedule.html", context)
+    return context
+
+
+@login_required
+@user_passes_test(admin_required)
+def room_schedule_dashboard(request):
+    return render(request, "schedules/room_schedule.html", _room_schedule_context(request))
+
+
+@login_required
+@user_passes_test(admin_required)
+def export_room_schedule(request, format):
+    if format not in ('pdf', 'xlsx') or not all(request.GET.get(k) for k in ('term', 'schedule', 'room')):
+        raise Http404("Select a room, term and schedule before exporting.")
+    context = _room_schedule_context(request)
+    if context.get('history_unavailable'):
+        return HttpResponse("Historical timetable unavailable; export cannot substitute current records.", status=409)
+    from .services.room_schedule_export import room_schedule_export
+    content, mime = room_schedule_export(context, format)
+    response = HttpResponse(content, content_type=mime)
+    response['Content-Disposition'] = f'attachment; filename="room-{context["room"].pk}-schedule-{context["schedule"].pk}.{format}"'
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 @login_required
@@ -1100,8 +1184,8 @@ def schedule_export_entries(request, schedule):
 def schedule_detail(request, pk):
     schedule = visible_schedule(request, pk)
     entries, filter_form = schedule_export_entries(request, schedule)
-    from .services.detail_timetable import timetable_context
-    timetable = timetable_context(entries, request.GET.get("week"))
+    from .services.detail_timetable import personal_timetable_context
+    timetable = personal_timetable_context(entries, request.GET.get("week"))
     timetable["schedule_view"] = "timetable" if request.GET.get("view") == "timetable" else "table"
     if schedule.status in (ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED):
         # Historical table projection reads bindings too; preload once for this
@@ -1332,3 +1416,63 @@ def entry_apply_suggestion(request, pk, entry_pk):
         messages.success(request, "Suggested placement saved. Review any remaining schedule issues.")
         return redirect("schedule_detail", pk=pk)
     return redirect("entry_update", pk=pk, entry_pk=entry_pk)
+
+
+@login_required
+@require_POST
+def notification_read(request, pk):
+    from .services.schedule_notifications import visible_notifications
+    from .models import ScheduleNotification
+    if pk not in {notice.pk for notice in visible_notifications(request.user)}:
+        raise Http404("Notification unavailable.")
+    ScheduleNotification.objects.filter(pk=pk, user=request.user, read_at__isnull=True).update(read_at=timezone.now())
+    return redirect('dashboard')
+
+
+@login_required
+def personal_schedule_export(request, format):
+    if role(request.user) not in (Role.FACULTY, Role.STUDENT) or admin_required(request.user):
+        raise Http404("Personal exports are available to faculty and students.")
+    value = request.GET.get('schedule', '')
+    if format not in ('pdf', 'xlsx') or (value and (not value.isascii() or not value.isdecimal() or len(value) > 19)):
+        raise Http404("Select an authorized published schedule.")
+    schedule = visible_schedule(request, int(value)) if value else None
+    if schedule and schedule.status != ScheduleStatus.PUBLISHED:
+        raise Http404("Published schedule unavailable.")
+    from .models import ScheduleSnapshot
+    try:
+        if request.GET.get('source') == 'detail':
+            if not schedule:
+                raise Http404('Select a schedule.')
+            term = request.GET.get('term')
+            if term and term != str(schedule.term_id):
+                raise Http404("Term does not match schedule.")
+            entries, form = schedule_export_entries(request, schedule)
+            if not form.is_valid():
+                raise Http404("Invalid filters.")
+            from .services.detail_timetable import personal_timetable_context
+            context = personal_timetable_context(entries, request.GET.get('week'))
+        else:
+            context = _browse_schedule_context(request)
+            form = context['form']
+            schedule = context['export_schedule']
+            if not schedule:
+                raise Http404('Select one authorized Schedule Version before exporting.')
+            schedule = visible_schedule(request, schedule.pk)
+    except ScheduleSnapshot.DoesNotExist:
+        return HttpResponse('Historical timetable unavailable.', status=409)
+    if role(request.user) == Role.FACULTY:
+        person = get_object_or_404(Faculty, user=request.user)
+        identity = person.full_name
+    else:
+        person = get_object_or_404(Student.objects.select_related('section__program', 'section__year_level'), user=request.user)
+        identity = person.full_name
+        if person.section:
+            identity += f' | {person.section.program} | {person.section.year_level} | {person.section}'
+    context.update(schedule=schedule, export_identity=identity)
+    from .services.room_schedule_export import room_schedule_export
+    data, mime = room_schedule_export(context, format)
+    response = HttpResponse(data, content_type=mime)
+    response['Content-Disposition'] = f'attachment; filename="my-schedule-{schedule.pk}.{format}"'
+    response['Cache-Control'] = 'private, no-store'
+    return response

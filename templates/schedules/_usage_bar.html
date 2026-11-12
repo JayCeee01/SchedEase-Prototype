@@ -1,0 +1,8 @@
+<details class="usage-bar">
+  <summary title="{{ bar.label }}: {{ bar.scheduled }} scheduled / {{ bar.available }} available hours">
+    <span class="usage-label">{{ bar.label }}</span>
+    <span class="usage-track" aria-hidden="true"><span style="width: {{ bar.width }}%"></span></span>
+    <strong>{% if bar.valid %}{{ bar.percentage }}%{% else %}N/A{% endif %}</strong>
+  </summary>
+  <p>{{ bar.label }}: {{ bar.scheduled }} scheduled hours / {{ bar.available }} available hours.{% if not bar.valid %} No available hours; utilization cannot be calculated.{% endif %}</p>
+</details>

@@ -16,18 +16,7 @@
 {% if timetable_week_invalid %}<p role="status">The requested week is unavailable. Showing the first available week.</p>{% endif %}
 {% if timetable_grid %}
 <div class="legend"><span><i class="legend-swatch occupied"></i> Scheduled class</span><span><i class="legend-swatch vacant"></i> No class</span></div>
-<div class="panel table-wrap personal-timetable-wrap">
-  <table class="room-schedule-grid personal-timetable">
-    <caption>{{ timetable_caption|default:"Class timetable" }}{% if timetable_week %}: week of {{ timetable_week|date:"M j, Y" }}{% endif %}</caption>
-    <thead><tr><th scope="col">Time</th>{% for day in timetable_days %}<th scope="col">{{ day.name }}</th>{% endfor %}</tr></thead>
-    <tbody>{% for row in timetable_grid %}<tr>
-      <th scope="row">{{ row.start|time:"g:i A" }}<small>{{ row.end|time:"g:i A" }}</small></th>
-      {% for cell in row.cells %}<td class="{% if cell.occupied %}occupied-cell{% else %}vacant-cell{% endif %}">
-        {% for entry in cell.entries %}{% include "schedules/student_timetable_card.html" with e=entry.presentation %}{% empty %}{% if cell.occupied %}<small>Class continues</small>{% endif %}{% endfor %}
-      </td>{% endfor %}
-    </tr>{% endfor %}</tbody>
-  </table>
-</div>
+{% include "schedules/_time_grid.html" with grid=timetable_grid grid_caption=timetable_caption %}
 {% endif %}
 {% if timetable_unknown %}
 <section class="panel" aria-labelledby="student-unknown-dates">

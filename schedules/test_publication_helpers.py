@@ -49,6 +49,12 @@ from django.core.management import call_command
 call_command('migrate','auth',verbosity=0)
 call_command('migrate','sessions',verbosity=0)
 call_command('migrate','schedules','0033',verbosity=0)
+# Current dashboard infrastructure is independent of historical publication guards.
+from schedules.models import ScheduleNotification
+from django.db import connection
+with connection.schema_editor() as editor:
+    editor.create_model(ScheduleNotification)
+
 from django.test import Client
 module=importlib.import_module(__TEST_MODULE__)
 cls=getattr(module,__TEST_CLASS__)
@@ -106,6 +112,12 @@ from django.core.management import call_command
 call_command('migrate','auth',verbosity=0)
 call_command('migrate','sessions',verbosity=0)
 call_command('migrate','schedules','0033',verbosity=0)
+# Current dashboard infrastructure is independent of historical publication guards.
+from schedules.models import ScheduleNotification
+from django.db import connection
+with connection.schema_editor() as editor:
+    editor.create_model(ScheduleNotification)
+
 from django.test import Client
 cls=getattr(importlib.import_module(__MODULE__), __CLASS__)
 test=cls(__METHOD__)

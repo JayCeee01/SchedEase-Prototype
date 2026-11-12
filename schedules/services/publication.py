@@ -26,6 +26,8 @@ def publish(schedule, actor, replace_confirmed=False):
         current = Schedule.objects.filter(term=locked.term, status=ScheduleStatus.PUBLISHED).exclude(pk=locked.pk).first()
         if current and not replace_confirmed:
             raise ValidationError("The official schedule changed. Reload and confirm its replacement before publishing.")
+        from .schedule_notifications import recipients, record_publication
+        old_recipients = recipients(current)
         now = timezone.now()
         if current:
             previous = copy(current)
@@ -42,4 +44,5 @@ def publish(schedule, actor, replace_confirmed=False):
             locked.save(update_fields=['status', 'published_at', 'archived_at', 'replaced_by', 'updated_at'])
         # Fail closed if a database was provisioned without the required trigger.
         ScheduleSnapshot.objects.get(schedule=locked)
+        record_publication(locked, current, old_recipients)
         return locked, current

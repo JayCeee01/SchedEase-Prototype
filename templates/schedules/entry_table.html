@@ -1,9 +1,9 @@
 <div class="panel table-wrap">
   <div class="table-tools">
-    <label class="table-search">
+    {% if not browse_workspace %}<label class="table-search">
       <span class="icon search-icon"></span>
-      <input type="search" data-table-filter placeholder="Search schedules">
-    </label>
+      <input type="search" data-table-filter placeholder="Search schedules"{% if browse_workspace %} name="q" form="published-filters" value="{{ q }}" data-browse-search aria-label="Search published schedules"{% endif %}>
+    </label>{% endif %}
     <span class="badge">{{ entries|length }} entries</span>
   </div>
   <table>

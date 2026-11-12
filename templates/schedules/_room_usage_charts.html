@@ -1,0 +1,13 @@
+{% if rows %}
+<section class="room-analytics" aria-label="Room usage analytics">
+  <article class="panel"><h2>Weekly room utilization</h2><p class="subtle">Highest to lowest. Scale: 0?100%. Select a bar for hours.</p>
+    <div class="usage-chart-scroll" tabindex="0" aria-label="Room comparison">
+    {% for bar in analytics.weekly %}{% include "schedules/_usage_bar.html" %}{% endfor %}
+    </div>
+  </article>
+  <article class="panel"><h2>Daily utilization overview</h2><p class="subtle">Total scheduled hours / total available room-hours. Scale: 0?100%.</p>
+    {% for bar in analytics.daily %}{% include "schedules/_usage_bar.html" %}{% endfor %}
+  </article>
+</section>
+<p class="subtle">Same filtered rooms and schedule as the table. Percentages above 100% retain their labels; bars stop at 100%. Weekly figures use the existing recurring-week report, not a count of calendar occurrences.</p>
+{% else %}<div class="panel">No room usage data matches these filters.</div>{% endif %}

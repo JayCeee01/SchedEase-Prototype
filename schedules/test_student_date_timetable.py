@@ -27,7 +27,7 @@ class StudentDateTimetableTests(TestCase):
         detail.DetailTimetableTests.publish(self)
 
     def page(self, **params):
-        return self.client.get(reverse('dashboard'), params)
+        return self.client.get(reverse('browse_schedules'), dict(params, view='timetable'))
 
     def cards(self, response):
         return [entry.presentation for row in response.context['timetable_grid']
@@ -41,10 +41,11 @@ class StudentDateTimetableTests(TestCase):
             cards = self.cards(response)
             self.assertEqual([e['entry_id'] for e in cards], [expected.pk])
             self.assertEqual(cards[0]['meeting_date'].isoformat(), week or '2026-08-03')
-            self.assertContains(response, f'data-student-timetable-entry="{expected.pk}"', count=1)
+            self.assertContains(response, f'data-timetable-entry="{expected.pk}"', count=1)
             self.assertContains(response, f'datetime="{week or "2026-08-03"}"')
             self.assertEqual(sum(cell['occupied'] for row in response.context['timetable_grid'] for cell in row['cells']), 2)
-            self.assertContains(response, 'Class continues')
+            self.assertNotContains(response, 'Class continues')
+            self.assertContains(response, 'continuous-meeting')
 
     def test_invalid_week_never_reveals_hidden_dates(self):
         upgrade()
@@ -52,7 +53,7 @@ class StudentDateTimetableTests(TestCase):
             response = self.page(week=value)
             self.assertEqual(response.context['timetable_week'], date(2026, 8, 3))
             self.assertEqual(response.context['timetable_weeks'], [date(2026, 8, 3), date(2026, 8, 10)])
-            self.assertNotContains(response, '2026-08-17')
+            self.assertNotContains(response, 'datetime="2026-08-17"')
             self.assertEqual([r['entry_id'] for r in self.cards(response)], [self.first.pk])
 
     def test_primary_additional_unrelated_and_archived(self):
@@ -66,7 +67,7 @@ class StudentDateTimetableTests(TestCase):
             response = self.page()
             self.assertEqual(response.context['timetable_weeks'], [])
             self.assertEqual(response.context['timetable_unknown'], [])
-            self.assertContains(response, 'No published classes yet')
+            self.assertContains(response, 'No meetings found')
             transaction.set_rollback(True)
         from .protection import archive_transition
         self.schedule.status = 'ARCHIVED'
@@ -81,7 +82,7 @@ class StudentDateTimetableTests(TestCase):
         response = self.page()
         self.assertEqual([row['entry_id'] for row in response.context['timetable_unknown']], [self.unknown.pk])
         self.assertContains(response, 'Meeting dates unavailable')
-        self.assertContains(response, f'data-student-timetable-entry="{self.unknown.pk}"', count=1)
+        self.assertContains(response, f'data-timetable-entry="{self.unknown.pk}"', count=1)
         self.assertNotContains(response, '2026-08-24')
 
     def test_frozen_identity_survives_live_label_change(self):
@@ -116,6 +117,40 @@ class StudentDateTimetableTests(TestCase):
 
 
 class StudentGridProjectionTests(SimpleTestCase):
+    def test_continuous_partial_slots_and_touching_endpoints(self):
+        first = detail.record(1, 'WEEKLY')
+        first.update(start_time='08:15:00', end_time='09:05:00')
+        second = detail.record(2, 'WEEKLY')
+        second.update(start_time='09:05:00', end_time='10:00:00')
+        result = self.project([first, second])
+        blocks = result['timetable_columns'][0]['blocks']
+        self.assertEqual(len(blocks), 2)
+        self.assertAlmostEqual(float(blocks[0]['top']), 75 / 720 * 100, places=5)
+        self.assertAlmostEqual(float(blocks[0]['height']), 50 / 720 * 100, places=5)
+        self.assertEqual([b['width'] for b in blocks], ['100.000000'] * 2)
+        self.assertIs(blocks[0]['presentation'], result['timetable_days'][0]['rows'][0])
+
+    def test_continuous_overlap_lanes_and_nested_meetings(self):
+        rows = [detail.record(i, 'WEEKLY') for i in range(1, 5)]
+        for row, start, end in zip(rows, ['08:00:00','08:15:00','08:30:00','09:00:00'],
+                                   ['10:00:00','09:00:00','09:00:00','10:00:00']):
+            row.update(start_time=start, end_time=end)
+        blocks = self.project(rows)['timetable_columns'][0]['blocks']
+        self.assertEqual(len(blocks), 4)
+        self.assertGreaterEqual(self.project(rows)['timetable_columns'][0]['min_width'] / 3, 180)
+        self.assertEqual([b['left'] for b in blocks], ['0.000000','33.333333','66.666667','33.333333'])
+        self.assertEqual({b['width'] for b in blocks}, {'33.333333'})
+
+    def test_shared_duration_slots_and_simultaneous_start(self):
+        long=detail.record(1,'WEEKLY'); long['end_time']='09:30:00'
+        short=detail.record(2,'WEEKLY'); short['start_time']='08:30:00'
+        result=self.project([long,short])
+        occupied=[r for r in result['timetable_grid'] if r['cells'][0]['occupied']]
+        self.assertEqual(len(occupied),3)
+        self.assertEqual(occupied[0]['start'].isoformat(),'08:00:00')
+        self.assertEqual(occupied[-1]['end'].isoformat(),'09:30:00')
+        self.assertEqual([e.presentation['entry_id'] for r in occupied for e in r['cells'][0]['entries']],[1,2])
+
     def test_overlapping_weekly_cards_are_both_visible_without_calendar_dates(self):
         result = self.project([detail.record(1, 'WEEKLY'), detail.record(2, 'WEEKLY')])
         cards = [e.presentation for row in result['timetable_grid'] for cell in row['cells'] for e in cell['entries']]

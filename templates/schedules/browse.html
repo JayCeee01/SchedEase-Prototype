@@ -1,15 +1,23 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-hero">
-  <div>
-    <p class="eyebrow">Published Schedules</p>
-    <h1>Browse class schedules</h1>
-    <p class="subtle">Filter by term, department, program, year level, section, or course.</p>
-  </div>
-</div>
-<form method="get" class="panel form filters" data-tooltip-context="schedule-filters">
-  {{ form.as_p }}
-  <button class="primary">Apply Filters</button>
+{% include "schedules/_schedule_navigation.html" with workspace="published" %}
+<form id="published-filters" method="get" class="panel schedule-entry-filters" data-auto-tooltips="false">
+  <input type="hidden" name="view" value="{{ schedule_view }}">
+  {{ form.non_field_errors }}
+  {% for field in form %}<label for="{{ field.id_for_label }}"><span class="field-label">{{ field.label }}</span>{{ field }}{{ field.errors }}</label>{% endfor %}
+  {% if timetable_weeks %}<label for="published-week">Timetable week (Monday&ndash;Sunday)<select id="published-week" name="week">{% for week in timetable_weeks %}<option value="{{ week|date:'Y-m-d' }}"{% if week == timetable_week %} selected{% endif %}>Week of {{ week|date:"M j, Y" }}</option>{% endfor %}</select></label>{% endif %}
+  <div class="actions"><button class="primary" type="submit">Apply Filters</button>
+    <a class="button" href="{% url 'browse_schedules' %}?view={{ schedule_view }}">Clear</a></div>
 </form>
+<nav class="view-switcher" aria-label="Published schedule view">
+  <a class="button view-tab{% if schedule_view == 'table' %} is-active{% endif %}" href="{{ view_links.table }}" data-browse-view{% if schedule_view == 'table' %} aria-current="page"{% endif %}>Table View</a>
+  <a class="button view-tab{% if schedule_view == 'timetable' %} is-active{% endif %}" href="{{ view_links.timetable }}" data-browse-view{% if schedule_view == 'timetable' %} aria-current="page"{% endif %}>Timetable View</a>
+</nav>
+{% include "schedules/_personal_export.html" with selected_schedule=export_schedule %}
+{% if schedule_view == 'table' %}
 {% include "schedules/entry_table.html" with entries=entries %}
+{% else %}
+<p class="subtle">{{ entries|length }} filtered entries. Dated meetings appear only in the selected week; weekly meetings do not establish specific teaching dates.</p>
+{% include "schedules/schedule_timetable_view.html" %}
+{% endif %}
 {% endblock %}

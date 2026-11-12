@@ -6,6 +6,8 @@ from . import repair_views
 from .faculty_suggestions import qualified_faculty
 
 urlpatterns = [
+    path("my-schedule/export/<str:format>/", views.personal_schedule_export, name="personal_schedule_export"),
+    path("notifications/<int:pk>/read/", views.notification_read, name="notification_read"),
     path("qualified-faculty/", qualified_faculty, name="qualified_faculty"),
     path('<int:pk>/repair/', repair_views.repair_start, name='repair_start'),
     path('<int:pk>/repair/review/', repair_views.repair_review, name='repair_review'),
@@ -28,6 +30,7 @@ urlpatterns = [
     path("room-utilization/export/csv/", views.export_room_utilization_csv, name="room_utilization_csv"),
     path("room-utilization/export/xlsx/", views.export_room_utilization_xlsx, name="room_utilization_xlsx"),
     path("room-utilization/export/pdf/", views.export_room_utilization_pdf, name="room_utilization_pdf"),
+    path("room-schedule/export/<str:format>/", views.export_room_schedule, name="room_schedule_export"),
     path("room-schedule/", views.room_schedule_dashboard, name="room_schedule"),
     path("room-capacity-planning/", views.room_capacity_planning, name="room_capacity_planning"),
     path("manage/<slug:resource>/new/", views.resource_create, name="resource_create"),

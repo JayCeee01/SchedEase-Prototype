@@ -459,15 +459,6 @@ class ScheduleEntryForm(forms.ModelForm):
         super()._update_errors(errors)
 
 
-class ScheduleSearchForm(forms.Form):
-    term = forms.ModelChoiceField(queryset=AcademicTerm.objects.all(), required=False)
-    department = forms.ModelChoiceField(queryset=Department.objects.all(), required=False)
-    program = forms.ModelChoiceField(queryset=Program.objects.all(), required=False)
-    year_level = forms.ModelChoiceField(queryset=YearLevel.objects.all(), required=False)
-    section = forms.ModelChoiceField(queryset=Section.objects.all(), required=False)
-    subject = forms.ModelChoiceField(queryset=Subject.objects.all(), required=False, label="Course")
-
-
 class ScheduleEntryFilterForm(forms.Form):
     q = forms.CharField(required=False, label="Search", widget=forms.TextInput(attrs={
         "type": "search", "placeholder": "Section, course, faculty, or room", "data-schedule-live-filter": "true",
@@ -482,6 +473,19 @@ class ScheduleEntryFilterForm(forms.Form):
     component = forms.ChoiceField(
         choices=[("", "All class types"), *TeachingAssignment.Component.choices], required=False, label="Lecture/Laboratory Type"
     )
+
+
+class ScheduleSearchForm(ScheduleEntryFilterForm):
+    schedule = forms.ModelChoiceField(queryset=Schedule.objects.filter(status="PUBLISHED"), required=False, label="Schedule Version")
+    term = forms.ModelChoiceField(queryset=AcademicTerm.objects.all(), required=False)
+    subject = forms.ModelChoiceField(queryset=Subject.objects.all(), required=False, label="Course")
+    field_order = ['q', 'term', 'schedule', 'department', 'program', 'year_level', 'section',
+                   'subject', 'faculty', 'room', 'day', 'component']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['q'].widget.attrs.pop('data-schedule-live-filter', None)
+        self.fields['component'].label = 'Class Type'
 
 
 class EmailOrUsernameAuthenticationForm(LimitedAuthenticationForm):

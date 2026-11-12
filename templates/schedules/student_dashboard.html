@@ -1,14 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-hero">
-  <div>
-    <p class="eyebrow">Student Portal</p>
-    <h1>Class schedule</h1>
-    {% if student %}<p class="subtle">{{ student.section }}</p>{% endif %}
-  </div>
-  <a class="button primary" href="{% url 'browse_schedules' %}">Search Published Schedules</a>
-</div>
-<h2>Class Timetable</h2>
-{% include "schedules/student_timetable.html" %}
-{% if entries %}<details class="panel schedule-list-disclosure"><summary>View all published meetings as a list</summary>{% include "schedules/entry_table.html" with entries=entries %}</details>{% endif %}
+<div class="page-hero"><div><p class="eyebrow">Student Portal</p><h1>Academic overview</h1>
+{% if student %}<p class="subtle">{{ student.section.program }} &middot; {{ student.section.year_level }} &middot; {{ student.section }}</p>{% endif %}</div>
+<a class="button primary" href="{% url 'browse_schedules' %}">View My Schedule</a></div>
+<section class="metrics">
+<article><span class="metric-icon">CO</span><span><strong>{{ subject_count }}</strong><span>Published subjects</span></span></article>
+<article><span class="metric-icon">SC</span><span><strong>{{ student.section|default:"Unassigned" }}</strong><span>Assigned section</span></span></article>
+<article><span class="metric-icon">MT</span><span><strong>{{ meeting_count }}</strong><span>Published meetings</span></span></article>
+</section>
+{% include "schedules/_schedule_notifications.html" %}
 {% endblock %}

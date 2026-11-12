@@ -7,6 +7,12 @@
   {% if timetable_weeks %}<label for="room-week">Calendar week (Monday&ndash;Sunday)<select id="room-week" name="week">{% for week in timetable_weeks %}<option value="{{ week|date:'Y-m-d' }}"{% if week == timetable_week %} selected{% endif %}>Week of {{ week|date:"M j, Y" }}</option>{% endfor %}</select></label>{% endif %}
   <button type="submit" class="primary">View Schedule</button>
 </form>
+{% if room and schedule and not history_unavailable %}
+<details class="panel"><summary>Export Schedule</summary><div class="actions">
+<a class="button" href="{% url 'room_schedule_export' 'pdf' %}?term={{ schedule.term_id }}&amp;schedule={{ schedule.pk }}&amp;room={{ room.pk }}{% if timetable_week %}&amp;week={{ timetable_week|date:'Y-m-d' }}{% endif %}">Export as PDF</a>
+<a class="button" href="{% url 'room_schedule_export' 'xlsx' %}?term={{ schedule.term_id }}&amp;schedule={{ schedule.pk }}&amp;room={{ room.pk }}{% if timetable_week %}&amp;week={{ timetable_week|date:'Y-m-d' }}{% endif %}">Export as Excel (.xlsx)</a>
+</div></details>
+{% endif %}
 {% if room and schedule %}
 <p><strong>Selected schedule: {{ schedule.name }}</strong> &middot; {{ schedule.status }}</p>
 {% if timetable_week %}<p><strong>{{ timetable_week|date:"M j, Y" }} &ndash; {{ timetable_week_end|date:"M j, Y" }}</strong></p>{% endif %}
@@ -16,17 +22,7 @@
 {% else %}
 <p class="subtle">Vacant within the selected schedule does not mean globally available across other schedules or terms. The grid shows confirmed dated or weekly meetings; records listed separately may require review. Room policy indicators reflect current availability settings.</p>
 <div class="legend"><span><i class="legend-swatch occupied"></i> Scheduled</span><span><i class="legend-swatch vacant"></i> Vacant within selected schedule</span><span><i class="legend-swatch unavailable"></i> Unavailable under room policy</span></div>
-<div class="panel table-wrap"><table class="room-schedule-grid">
-  <caption>Selected-schedule room timetable</caption>
-  <thead><tr><th scope="col">Time</th>{% for day in timetable_days %}<th scope="col">{{ day.name }}</th>{% endfor %}</tr></thead>
-  <tbody>{% for row in grid %}<tr>
-    <th scope="row">{{ row.start|time:"g:i A" }}<small>{{ row.end|time:"g:i A" }}</small></th>
-    {% for cell in row.cells %}<td class="{% if cell.occupied %}occupied-cell{% elif cell.available %}vacant-cell{% else %}unavailable-cell{% endif %}">
-      {% for entry in cell.entries %}{% include "schedules/student_timetable_card.html" with e=entry.presentation %}{% empty %}{% if cell.occupied %}<small>Class continues</small>{% endif %}{% endfor %}
-      {% if cell.occupied and not cell.available %}<small>Outside current room availability</small>{% endif %}
-    </td>{% endfor %}
-  </tr>{% endfor %}</tbody>
-</table></div>
+{% include "schedules/_time_grid.html" with grid=grid room_policy=True grid_caption="Selected-schedule room timetable" %}
 {% if timetable_unknown %}<section class="panel" aria-labelledby="room-unknown-dates"><h2 id="room-unknown-dates">Meeting dates unavailable</h2><p class="subtle">These records are preserved separately; no teaching dates or weekly recurrence have been assumed.</p>{% for e in timetable_unknown %}{% include "schedules/student_timetable_card.html" %}{% endfor %}</section>{% endif %}
 {% include "schedules/shs_weekend_warning.html" %}
 {% endif %}

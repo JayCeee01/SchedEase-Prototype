@@ -598,13 +598,25 @@
         const rows = Array.from(group.querySelectorAll("tbody tr"));
         group.hidden = rows.length > 0 && rows.every((row) => row.hidden);
       });
-      timetablePanel?.querySelectorAll(".schedule-block").forEach((block) => {
+      timetablePanel?.querySelectorAll("[data-timetable-entry]").forEach((block) => {
         block.hidden = query.length > 0 && !block.textContent.toLowerCase().includes(query);
       });
       timetablePanel?.querySelectorAll(".day-column").forEach((column) => {
         const blocks = Array.from(column.querySelectorAll(".schedule-block"));
         column.classList.toggle("has-no-matches", query.length > 0 && blocks.length > 0 && blocks.every((block) => block.hidden));
       });
+    });
+  });
+
+  document.querySelectorAll("[data-browse-view]").forEach((link) => {
+    link.addEventListener("click", () => {
+      const form = document.getElementById("published-filters");
+      if (!form) return;
+      const target = new URL(link.href, window.location.href);
+      const selected = target.searchParams.get("view");
+      for (const [key, value] of new FormData(form)) target.searchParams.set(key, value);
+      target.searchParams.set("view", selected === "timetable" ? "timetable" : "table");
+      link.href = target.href;
     });
   });
 

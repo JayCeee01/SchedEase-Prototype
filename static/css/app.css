@@ -1009,6 +1009,9 @@ td.actions-cell button + button {
 .view-switcher { display: inline-flex; gap: 4px; padding: 4px; margin: 0 0 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-soft); }
 .view-tab { min-height: 40px; border: 0; box-shadow: none; background: transparent; color: var(--muted); }
 .view-tab.is-active { background: var(--surface); color: var(--primary-strong); box-shadow: var(--shadow-soft); }
+.schedule-primary-tabs { display: flex; width: 100%; padding: 0 0 8px; margin-bottom: 12px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
+.schedule-secondary-tabs { display: flex; width: fit-content; margin-bottom: 16px; }
+.schedule-secondary-tabs .view-tab { display: inline-flex; align-items: center; padding: 8px 12px; font-size: 13px; border-radius: var(--radius); }
 .academic-schedule-panel { overflow: clip; padding: 0; }
 .academic-schedule-panel .table-tools small { display: block; margin-top: 4px; color: var(--muted); }
 .schedule-section-group + .schedule-section-group { border-top: 1px solid var(--line-strong); }
@@ -1045,6 +1048,8 @@ td.actions-cell button + button {
 .occupied-cell { background: color-mix(in srgb, var(--primary-soft) 48%, var(--surface)); }
 .room-slot { display: grid; gap: 2px; padding: 6px; border-left: 3px solid var(--primary); border-radius: 5px; background: var(--surface); font-size: 11px; }
 .room-slot span, .room-slot small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shared-time-grid .room-slot span, .shared-time-grid .room-slot small { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+.shared-time-grid .room-slot + .room-slot { margin-top: 4px; }
 .planning-assumptions { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)) auto; gap: 16px; align-items: end; margin-bottom: 16px; }
 .planning-submit { display: flex; align-items: end; }
 .planning-submit button { width: 100%; min-height: 42px; }
@@ -2149,3 +2154,74 @@ body.modal-open .table-scroll-proxy, body.sidebar-open .table-scroll-proxy { vis
 @media (max-width: 640px) {
   [data-arrangement-controls] { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Exact-time meeting overlays share the existing availability slot background. */
+.continuous-grid { display: grid; width: max-content; min-width: 100%; --slot-height: 54px; }
+.continuous-grid-caption { text-align: center; padding: 8px; }
+.continuous-heading { box-sizing: border-box; height: 40px; margin: 0; padding: 10px; font-size: 12px; border-bottom: 1px solid var(--line); }
+.continuous-slot { box-sizing: border-box; height: var(--slot-height); padding: 5px; border-bottom: 1px solid var(--line); }
+.continuous-time small { display: block; color: var(--muted); }
+.continuous-day { min-width: 0; border-left: 1px solid var(--line); }
+.continuous-track { position: relative; }
+.continuous-meeting { position: absolute; box-sizing: border-box; padding: 2px; min-width: 0; }
+.continuous-meeting > .room-slot { box-sizing: border-box; height: 100%; min-height: 0; overflow: visible; align-content: start; }
+.continuous-meeting:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; z-index: 1; }
+.shared-time-grid .continuous-meeting .room-slot * { min-width: 0; overflow-wrap: normal; word-break: normal; white-space: normal; }
+
+/* Four-pixel visual gutters stay inside the exact-time/lane rectangles. */
+.continuous-meeting > .room-slot {
+  border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 6px;
+}
+.continuous-meeting > .room-slot:not(.conflict-row) {
+  background: color-mix(in srgb, var(--primary-soft) 18%, var(--surface));
+}
+.continuous-meeting:hover > .room-slot,
+.continuous-meeting:focus-within > .room-slot {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+/* Lanes retain a readable width; only the shared timetable scrolls. */
+.continuous-meeting > .room-slot { display: block; padding: 0; container-type: size; }
+.meeting-preview { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; gap: 1px; width: 100%; height: 100%; min-height: 0; padding: 4px 6px; border: 0; background: transparent; color: inherit; text-align: left; overflow: hidden; font: 12px/1.25 var(--font-family); }
+.meeting-preview > * { display: block; }
+.shared-time-grid .meeting-preview > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meeting-preview:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.meeting-details { width: min(440px, 90vw); padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); }
+.meeting-details:popover-open { display: grid; gap: 8px; }
+.meeting-details::backdrop { background: rgb(0 0 0 / 20%); }
+
+/* One native scroll viewport keeps its horizontal bar accessible at any row. */
+.shared-time-grid { width: 100%; max-width: 100%; box-sizing: border-box; max-height: 65vh; max-height: 65dvh; overflow: auto; scrollbar-gutter: stable; }
+.continuous-time { position: sticky; left: 0; z-index: 2; background: var(--surface); border-right: 1px solid var(--line); box-shadow: 2px 0 3px rgb(0 0 0 / 8%); font-size: 12px; }
+.continuous-heading { white-space: nowrap; }
+.meeting-preview > * { flex: 0 0 auto; }
+.meeting-preview strong { font-size: 13px; font-weight: 700; }
+.shared-time-grid .meeting-preview .meeting-section { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@container (max-height: 100px) {
+  .meeting-preview .meeting-extra { display: none; }
+}
+@container (max-height: 70px) {
+  .meeting-preview .meeting-secondary { display: none; }
+}
+@container (max-height: 48px) {
+  .meeting-preview .meeting-section { display: none; }
+}
+
+.room-analytics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.room-analytics h2 { font-size: 18px; }
+.usage-chart-scroll { max-height: 380px; overflow-y: auto; }
+.usage-bar summary { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(60px, 2fr) 60px; align-items: center; gap: 10px; padding: 8px 2px; cursor: pointer; font-size: 13px; }
+.usage-label { overflow-wrap: anywhere; }
+.usage-track { height: 16px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.usage-track > span { display: block; height: 100%; background: var(--primary); }
+.usage-bar summary:hover { background: var(--surface-soft); }
+.usage-bar summary:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.usage-bar p { font-size: 13px; margin: 0 0 8px; }
+@media (max-width: 900px) { .room-analytics { grid-template-columns: minmax(0, 1fr); } }
+
+.dashboard-workload { padding-block: 10px; border-top: 1px solid var(--line); }
+.dashboard-workload p { margin-block: 6px; }

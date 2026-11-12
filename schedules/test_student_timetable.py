@@ -26,20 +26,22 @@ class StudentTimetableTests(SchedulingDefectFixture):
         publish(self.schedule, self.admin)
         self.login()
         response = self.client.get(reverse('dashboard'))
-        self.assertContains(response, 'Recurring Weekly Timetable')
-        self.assertEqual(response.context['timetable_unknown'], [])
-        cards = [e.presentation for row in response.context['timetable_grid'] for cell in row['cells'] for e in cell['entries']]
-        self.assertEqual({r['entry_id'] for r in cards}, {e.pk for e in self.entries})
-        self.assertTrue(all(r['meeting_date'] is None for r in cards))
+        self.assertNotContains(response, 'continuous-grid')
+        self.assertNotIn('timetable_grid', response.context)
+        self.assertContains(response, 'View My Schedule')
+        self.assertEqual(response.context['subject_count'], 1)
+        self.assertEqual(response.context['meeting_count'], 2)
+        self.assertContains(self.client.get(reverse('browse_schedules'), {'view':'timetable'}), 'continuous-grid')
         for value in (self.subject.code, self.subject.title, self.room.name, self.term.name,
                       self.term.school_year, 'Monday', '8:00 AM', '9:00 AM'):
-            self.assertContains(response, value)
-        self.assertContains(response, f'<span class="personal-class-faculty">{self.faculty.full_name}</span>', html=True)
+            schedule_page = self.client.get(reverse('browse_schedules'))
+            self.assertTrue(value in response.content.decode() or value in schedule_page.content.decode(), value)
+        self.assertContains(self.client.get(reverse('browse_schedules')), self.faculty.full_name)
         self.assertEqual({e.pk for e in response.context['entries']}, {e.pk for e in self.entries})
 
     def test_draft_and_empty_state_and_direct_exports(self):
         self.login()
-        self.assertContains(self.client.get(reverse('dashboard')), 'No published classes yet')
+        self.assertContains(self.client.get(reverse('dashboard')), 'No schedule updates yet')
         self.assertNotContains(self.client.get(reverse('dashboard')), self.subject.code)
         for name in ('schedule_detail', 'export_csv', 'export_pdf'):
             self.assertEqual(self.client.get(reverse(name, args=[self.schedule.pk])).status_code, 404)
@@ -71,5 +73,5 @@ class StudentTimetableTests(SchedulingDefectFixture):
         publish(self.schedule, self.admin)
         m.Student.objects.filter(user=self.user).delete()
         self.login()
-        self.assertContains(self.client.get(reverse('dashboard')), 'No published classes yet')
+        self.assertContains(self.client.get(reverse('dashboard')), 'No schedule updates yet')
         self.assertEqual(self.client.get(reverse('schedule_detail', args=[self.schedule.pk])).status_code, 404)

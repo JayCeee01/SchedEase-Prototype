@@ -113,6 +113,18 @@ class DetailTimetableTests(TestCase):
         self.assertEqual(response.context['filter_form']['section'].value(), str(self.extra.pk))
         self.assertEqual(list(response.context['filter_form'].fields['section'].queryset), [self.extra])
 
+    def test_published_grid_uses_only_authorized_selected_week(self):
+        upgrade()
+        response=self.client.get(reverse('browse_schedules'), {'view':'timetable','week':'2026-08-10','section':self.extra.pk})
+        self.assertTemplateUsed(response,'schedules/_time_grid.html')
+        cards=[e.presentation for row in response.context['timetable_grid'] for cell in row['cells'] for e in cell['entries']]
+        self.assertEqual([r['entry_id'] for r in cards],[self.second.pk])
+        self.assertEqual(cards[0]['meeting_date'],date(2026,8,10))
+        self.assertNotContains(response,f'data-timetable-entry="{self.hidden.pk}"')
+        denied=self.client.get(reverse('browse_schedules'),{'view':'timetable','section':self.other.pk})
+        self.assertEqual(denied.context['timetable_weeks'],[])
+        self.assertEqual(denied.context['timetable_grid'],[])
+
     def test_primary_additional_unrelated_and_crafted_filter(self):
         upgrade()
         for user in (self.primary_user, self.extra_user):

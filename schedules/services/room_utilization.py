@@ -103,6 +103,7 @@ def utilization_rows(schedule=None, department=None):
             scheduled = sum(entry_hours(entry) for entry in room_entries if entry.day == day)
             available = available_by_day[day]
             daily.append({"day": day, "available": round(available, 2), "scheduled": round(scheduled, 2),
+                          "exact_available": available, "exact_scheduled": scheduled,
                           "percentage": round(scheduled / available * 100, 1) if available else 0})
         # Round display values only, not the denominator used by percentages.
         scheduled_hours = sum(entry_hours(entry) for entry in room_entries if entry.day in ALLOWED_DAYS)
@@ -235,3 +236,22 @@ def capacity_planning(term=None, assumptions=None):
                            "required_hours": round(required_hours, 1), "rooms_needed": assumed_needed,
                            "existing_rooms": lecture_rooms["rooms"], "surplus": lecture_rooms["rooms"] - assumed_needed}
     return result, lecture_assumptions
+
+
+def utilization_charts(rows):
+    """Presentation aggregates of the same filtered rows; no entry re-counting."""
+    weekly = [{'label': row.room.name, 'percentage': row.utilization_percentage,
+               'scheduled': row.scheduled_hours, 'available': row.available_hours,
+               'width': max(0, min(100, row.utilization_percentage)),
+               'valid': row.available_hours > 0} for row in
+              sorted(rows, key=lambda row: (-row.utilization_percentage, row.room.name))]
+    daily = []
+    for day, label in enumerate(('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday')):
+        values = [value for row in rows for value in row.daily if value['day'] == day]
+        available = sum(v.get('exact_available', v['available']) for v in values)
+        scheduled = sum(v.get('exact_scheduled', v['scheduled']) for v in values)
+        percentage = round(scheduled / available * 100, 1) if available > 0 else 0
+        daily.append({'label': label, 'percentage': percentage, 'width': max(0, min(100, percentage)),
+                      'available': round(available, 2), 'scheduled': round(scheduled, 2), 'valid': available > 0})
+    busiest = max((d for d in daily if d['valid']), key=lambda d: d['percentage'], default=None)
+    return {'weekly': weekly, 'daily': daily, 'busiest': busiest}

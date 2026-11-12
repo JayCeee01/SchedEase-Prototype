@@ -1,24 +1,11 @@
 <h2 class="view-heading">Timetable View</h2>
+{% if schedule %}{% include "schedules/_personal_export.html" with selected_schedule=schedule detail_source=True %}{% endif %}
 {% if timetable_week %}
 <p><strong>{{ timetable_week|date:"M j, Y" }} &mdash; {{ timetable_week_end|date:"M j, Y" }}</strong> <span class="subtle">Monday&ndash;Sunday</span></p>
 {% endif %}
 {% if timetable_week_invalid %}<p role="status">The requested week is unavailable. Showing the first available week.</p>{% endif %}
 {% if timetable_has_rows %}
-<section class="schedule-board">
-  {% for day in timetable_days %}
-  <div class="day-column">
-    <header>{{ day.name }}</header>
-    {% for e in day.rows %}
-    <article class="schedule-block{% if e.has_conflicts %} conflict-row{% endif %}" data-timetable-entry="{{ e.entry_id }}">
-      <strong><span tabindex="0" data-tooltip="{{ e.subject.title }}">{{ e.subject.code }}</span> <small>{{ e.instructional_label|default:"Instructional type unavailable" }}</small></strong>
-      {% if e.meeting_date %}<span><time datetime="{{ e.meeting_date|date:'Y-m-d' }}">{{ e.meeting_date|date:"M j, Y" }}</time></span>{% else %}<span class="subtle">Weekly meeting</span>{% endif %}
-      <span>{{ e.start|time:"g:i A" }} - {{ e.end|time:"g:i A" }}</span>
-      <span>{{ e.primary_section.label }} | {{ e.room.label }} | {{ e.faculty.label }}</span>
-    </article>
-    {% endfor %}
-  </div>
-  {% endfor %}
-</section>
+{% include "schedules/_time_grid.html" with grid=timetable_grid grid_caption="Schedule timetable" %}
 {% elif not timetable_unknown and not timetable_weekend %}
 <div class="panel empty-state"><h3>No meetings found</h3><p>Try changing your schedule filters.</p></div>
 {% endif %}

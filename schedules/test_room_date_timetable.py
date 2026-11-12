@@ -20,6 +20,33 @@ class RoomDateTimetableTests(TestCase):
     student = detail.DetailTimetableTests.student
     add_entry = detail.DetailTimetableTests.add_entry
 
+    def test_personal_export_additional_participant_selected_week(self):
+        from io import BytesIO
+        from openpyxl import load_workbook
+        upgrade()
+        self.client.force_login(self.extra_user)
+        response = self.client.get(reverse('personal_schedule_export', args=['xlsx']),
+            {'schedule': self.schedule.pk, 'week': '2026-08-10'})
+        self.assertEqual(response.status_code, 200)
+        values = list(load_workbook(BytesIO(response.content)).active.values)
+        self.assertIn('2026-08-10', str(values))
+        self.assertNotIn('2026-08-03', str(values))
+        self.assertEqual(len(values), 4)
+
+    def test_export_selected_shs_week(self):
+        from io import BytesIO
+        from openpyxl import load_workbook
+        upgrade()
+        params = {'term': self.term.pk, 'schedule': self.schedule.pk, 'room': self.room.pk, 'week': '2026-08-10'}
+        response = self.client.get(reverse('room_schedule_export', args=['xlsx']), params)
+        self.assertEqual(response.status_code, 200)
+        values = list(load_workbook(BytesIO(response.content)).active.values)
+        text = str(values)
+        self.assertIn('2026-08-10', text)
+        self.assertNotIn('2026-08-03', text)
+        self.assertNotIn('Other room', text)
+        self.assertEqual(len(values), 4)
+
     def publish(self):
         self.first = self.entry
         self.second = self.add_entry(2)

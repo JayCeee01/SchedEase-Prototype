@@ -1287,3 +1287,18 @@ class ConcernReview(models.Model):
 
     class Meta:
         ordering = ['-reviewed_at', '-pk']
+
+
+class ScheduleNotification(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
+    kind = models.CharField(max_length=16, choices=[('NEW', 'New Publication'), ('UPDATED', 'Schedule Updated'), ('WITHDRAWN', 'Withdrawn')])
+    scope = models.CharField(max_length=80)
+    schedule_name = models.CharField(max_length=255)
+    term_label = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at', '-pk']
+        constraints = [models.UniqueConstraint(fields=['user', 'schedule', 'kind'], name='unique_schedule_notice')]
