@@ -46,6 +46,9 @@ from .models import (
     YearLevel,
 )
 from .services.history import historical_entries, historical_term
+from .services.education_context import resolve_context, generation_scope_valid
+from .services.academic_scope import schedule_request_scope, check_schedule_request
+from .services.academic_crud import scope_form, check_object_context
 from .services.conflicts import conflict_messages, schedule_validation_messages, schedule_validation_issues
 from .services.credentials import faculty_qualification, missing_credential_message, valid_credential_override
 from .services.credential_approval import approve_override, approval_token
@@ -282,6 +285,10 @@ def _browse_schedule_context(request):
         "section_override__program__department", "section_override__year_level",
     )
     entries = entries_visible_to_user(entries, request.user)
+    terms = (AcademicTerm.objects.all() if admin_required(request.user) else
+             AcademicTerm.objects.filter(pk__in=entries.values('schedule__term_id')))
+    request.education_context = resolve_context(request, terms)
+    entries = request.education_context.scope(entries, 'schedule__term')
     restrict_schedule_filter_choices(form, entries, request.user, include_admin=True)
     # Student section-context choices contain only their own enrollment. Once
     # validated, do not re-filter combined meetings by the primary section.
@@ -416,6 +423,11 @@ def resource_list(request, resource):
     model = resource_model(resource)
     navigation = list_request(request, resource)
     objects = model.objects.all()
+    if resource == 'schedules':
+        request.education_context = resolve_context(request, AcademicTerm.objects.all())
+        objects = request.education_context.scope(objects)
+        if request.education_context.explicit:
+            navigation.GET['education_level'] = request.education_context.level
     schedule_tab = request.GET.get("tab", "active")
     if schedule_tab not in ("active", "drafts", "archived"):
         schedule_tab = "active"
@@ -459,6 +471,12 @@ def resource_list(request, resource):
         navigation.GET['tab'] = schedule_tab
     scope = objects
     objects, filters, filter_errors = filter_records(objects, resource, navigation.GET)
+    if resource == 'schedules' and request.education_context.level != 'COMBINED':
+        term_ids = {str(pk) for pk in AcademicTerm.objects.filter(
+            education_level=request.education_context.level).values_list('pk', flat=True)}
+        for control in filters:
+            if control['name'] == 'term':
+                control['options'] = [(pk, label) for pk, label in control['options'] if str(pk) in term_ids]
     objects = search_records(objects, resource, query, section_search_q)
     filters_active = any(control['value'] for control in filters)
     total_count, filtered_count = record_counts(scope, objects, bool(query or filters_active))
@@ -659,6 +677,7 @@ def resource_create(request, resource):
     form_class = FacultyCredentialBatchForm if resource == "faculty-credentials" else MODEL_FORMS[resource]
     draft = FormDraft.objects.filter(user=request.user, resource=resource, object_pk="").first()
     form = form_class(request.POST or None, initial=draft.payload if draft and request.method == "GET" else None)
+    scope_form(request, form)
     if request.method == "POST" and form.is_valid():
         if resource == "faculty-credentials":
             try:
@@ -674,6 +693,8 @@ def resource_create(request, resource):
                 "description": RESOURCE_DESCRIPTIONS.get(resource), "tooltip_context": resource,
                 "draft": draft, "draft_resource": resource, "draft_object_pk": ""})
         obj = form.save(commit=False)
+        if resource == 'schedules':
+            check_schedule_request(request, obj)
         if resource == 'credential-overrides':
             obj.admin_user = request.user
         obj.save()
@@ -691,6 +712,9 @@ def resource_create(request, resource):
 def resource_update(request, resource, pk):
     model = resource_model(resource)
     obj = get_object_or_404(model, pk=pk)
+    check_object_context(request, obj)
+    if resource == 'schedules':
+        check_schedule_request(request, obj)
     if resource == 'credential-overrides':
         messages.info(request, 'Approval history is read-only. Use the assignment editor to request a new, explicitly scoped approval.')
         return redirect('resource_list', resource=resource)
@@ -700,6 +724,7 @@ def resource_update(request, resource, pk):
     draft_conflict = bool(draft and draft.base_signature and draft.base_signature != object_signature(obj))
     form = MODEL_FORMS[resource](request.POST or None, instance=obj,
         initial=draft.payload if draft and request.method == "GET" else None)
+    scope_form(request, form)
     if request.method == "POST" and form.is_valid():
         if draft_conflict and request.POST.get("draft_conflict_confirm") != "yes":
             form.add_error(None, "This record changed after your draft was created. Review the latest record and confirm before updating.")
@@ -740,6 +765,7 @@ def assignment_editor(request, assignment=None):
                        "meetings-0-duration_minutes": posted.get("duration_minutes", legacy_duration),
                        "meetings-0-required_room_type_override": posted.get("required_room_type_override", "")})
     form = MODEL_FORMS["assignments"](posted, instance=assignment)
+    scope_form(request, form)
     meetings = AssignmentMeetingFormSetFactory(posted, instance=assignment, prefix="meetings")
     meetings.extra = 0
     credential_result = None
@@ -937,6 +963,9 @@ def resource_delete(request, resource, pk):
         messages.info(request, 'Credential approval history is retained and cannot be deleted here.')
         return redirect('resource_list', resource=resource)
     obj = get_object_or_404(model, pk=pk)
+    check_object_context(request, obj)
+    if resource == 'schedules':
+        check_schedule_request(request, obj)
     if request.method == "POST":
         try:
             obj.delete()
@@ -961,9 +990,18 @@ def finish_generation_failure(run, diagnostics):
 @login_required
 @user_passes_test(admin_required)
 def generate_schedule(request):
-    form = ScheduleGenerationForm(request.POST or None)
+    request.education_context = resolve_context(request, AcademicTerm.objects.all(), write=request.method == 'POST')
+    form = ScheduleGenerationForm(request.POST or None, initial={'term': request.education_context.term_id})
+    if request.education_context.level != 'COMBINED':
+        form.fields['term'].queryset = form.fields['term'].queryset.filter(
+            education_level=request.education_context.level)
+    else:
+        form.fields['term'].queryset = form.fields['term'].queryset.none()
     if request.method == "POST" and form.is_valid():
         term = form.cleaned_data["term"]
+        if not generation_scope_valid(term):
+            form.add_error('term', 'An assignment uses a section from another education level. Correct the assignment before generation.')
+            return render(request, "schedules/form.html", {"form": form, "title": "Generate Schedule", "tooltip_context": "generate-schedule"})
         try:
             lease = acquire(term.pk)
         except GenerationBusy as exc:
@@ -1183,6 +1221,9 @@ def schedule_export_entries(request, schedule):
 @login_required
 def schedule_detail(request, pk):
     schedule = visible_schedule(request, pk)
+    check_params = request.GET.copy()
+    check_params['check'] = '1'
+    workflow = {'check_conflicts_url': '?' + check_params.urlencode() + '#schedule-validation'}
     entries, filter_form = schedule_export_entries(request, schedule)
     from .services.detail_timetable import personal_timetable_context
     timetable = personal_timetable_context(entries, request.GET.get("week"))
@@ -1197,7 +1238,7 @@ def schedule_detail(request, pk):
             "schedule": schedule, "entries": historical_entries(entries), "filter_form": filter_form,
             "conflicts": [], "can_manage": admin_required(request.user), "historical": True,
             "historical_term": historical_term(snapshot), "snapshot_reconstructed": snapshot.reconstructed,
-            "snapshot_captured_at": snapshot.captured_at, **timetable,
+            "snapshot_captured_at": snapshot.captured_at, **timetable, **workflow,
         })
     for entry in entries:
         try:
@@ -1217,12 +1258,14 @@ def schedule_detail(request, pk):
     return render(request, "schedules/schedule_detail.html", {
         "schedule": schedule, "entries": entries, "filter_form": filter_form,
         "conflicts": schedule_validation_issues(schedule) if admin_required(request.user) else [], "can_manage": admin_required(request.user),
-        **timetable,
+        "has_meetings": schedule.entries.exists(),
+        **timetable, **workflow,
     })
 
 
 @login_required
 @user_passes_test(admin_required)
+@schedule_request_scope
 def entry_create(request, pk):
     schedule = get_object_or_404(Schedule, pk=pk)
     if schedule.status in {ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED}:
@@ -1237,6 +1280,7 @@ def entry_create(request, pk):
 
 @login_required
 @user_passes_test(admin_required)
+@schedule_request_scope
 def entry_update(request, pk, entry_pk):
     entry = get_object_or_404(ScheduleEntry, pk=entry_pk, schedule_id=pk)
     if entry.schedule.status in {ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED}:
@@ -1288,6 +1332,7 @@ def save_entry_with_credential_check(request, form, schedule):
 @login_required
 @user_passes_test(admin_required)
 @require_POST
+@schedule_request_scope
 def publish_schedule(request, pk):
     schedule = get_object_or_404(Schedule, pk=pk)
     if schedule.status in {ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED}:
@@ -1359,6 +1404,7 @@ def export_pdf(request, pk):
 @login_required
 @user_passes_test(admin_required)
 @require_POST
+@schedule_request_scope
 def copy_schedule_to_draft(request, pk):
     from .services.manual_edits import copy_to_draft
     get_object_or_404(Schedule, pk=pk)
@@ -1377,6 +1423,7 @@ def copy_schedule_to_draft(request, pk):
 
 @login_required
 @user_passes_test(admin_required)
+@schedule_request_scope
 def entry_remove(request, pk, entry_pk):
     from .services.manual_edits import remove_manual_entry, revision_token
     entry = get_object_or_404(ScheduleEntry, pk=entry_pk, schedule_id=pk)
@@ -1402,6 +1449,7 @@ def entry_remove(request, pk, entry_pk):
 @login_required
 @user_passes_test(admin_required)
 @require_POST
+@schedule_request_scope
 def entry_apply_suggestion(request, pk, entry_pk):
     from .services.corrections import apply_suggestion
     get_object_or_404(ScheduleEntry, pk=entry_pk, schedule_id=pk)
@@ -1439,6 +1487,10 @@ def personal_schedule_export(request, format):
     schedule = visible_schedule(request, int(value)) if value else None
     if schedule and schedule.status != ScheduleStatus.PUBLISHED:
         raise Http404("Published schedule unavailable.")
+    if schedule and request.GET.get('education_level'):
+        context = resolve_context(request, AcademicTerm.objects.filter(pk=schedule.term_id))
+        if not context.scope(Schedule.objects.filter(pk=schedule.pk)).exists():
+            raise Http404('Schedule does not belong to the selected education level.')
     from .models import ScheduleSnapshot
     try:
         if request.GET.get('source') == 'detail':

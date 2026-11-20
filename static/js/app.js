@@ -650,6 +650,15 @@
   document.querySelectorAll("[data-schedule-generation]").forEach((form) => {
     const indicator = form.querySelector("[data-generation-loading]");
     const submitter = form.querySelector(".generation-submit");
+    const term = form.querySelector("[name='term']");
+    const context = form.querySelector("[data-generation-context]");
+    const updateContext = () => {
+      if (context) context.textContent = term && term.value
+        ? `Selected term: ${term.selectedOptions[0].textContent}. Generation creates an unpublished draft for review.`
+        : "Choose an academic term. Generation creates an unpublished draft for review.";
+    };
+    if (term) term.addEventListener("change", updateContext);
+    updateContext();
     let submitting = false;
 
     const resetGenerationState = () => {
@@ -679,6 +688,24 @@
     });
 
     window.addEventListener("pageshow", resetGenerationState);
+  });
+
+  document.querySelectorAll("[data-publication-form]").forEach((form) => {
+    const button = form.querySelector("button[type='submit']");
+    let submitting = false;
+    form.addEventListener("submit", (event) => {
+      if (event.defaultPrevented) return;
+      if (submitting) { event.preventDefault(); return; }
+      submitting = true;
+      form.setAttribute("aria-busy", "true");
+      if (button) button.disabled = true;
+    });
+    window.addEventListener("pageshow", () => {
+      if (!submitting) return;
+      submitting = false;
+      form.removeAttribute("aria-busy");
+      if (button) { button.disabled = false; button.classList.remove("loading"); }
+    });
   });
 
   // Initialize before autosave takes its first snapshot of the form.

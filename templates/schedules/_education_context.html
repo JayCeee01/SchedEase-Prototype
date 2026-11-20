@@ -1,0 +1,14 @@
+{% if request.education_context %}
+<form method="get" class="panel actions" aria-label="Education-level context" data-auto-tooltips="false">
+  <label for="education-level">Education level
+    <select id="education-level" name="education_level">
+      {% for value, label in request.education_context.choices %}
+      <option value="{{ value }}"{% if request.education_context.level == value %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% if schedule_view %}<input type="hidden" name="view" value="{{ schedule_view }}">{% endif %}
+  <button type="submit" class="button">Change context</button>
+  <span class="subtle">Changing level clears term and record filters. Combined is for browsing only.</span>
+</form>
+{% endif %}

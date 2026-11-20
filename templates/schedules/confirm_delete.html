@@ -9,6 +9,7 @@
 </div>
 <form method="post" class="panel form">
   {% csrf_token %}
+  {% if request.academic_write_level %}<input type="hidden" name="education_level" value="{{ request.academic_write_level }}">{% endif %}
   <div class="toast error">
     <span class="toast-dot"></span>
     <span>Please confirm that you want to delete this {{ resource|title }} record.</span>

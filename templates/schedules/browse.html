@@ -1,13 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
 {% include "schedules/_schedule_navigation.html" with workspace="published" %}
+{% include "schedules/_education_context.html" %}
 <form id="published-filters" method="get" class="panel schedule-entry-filters" data-auto-tooltips="false">
+  {% if request.education_context.explicit %}<input type="hidden" name="education_level" value="{{ request.education_context.level }}">{% endif %}
   <input type="hidden" name="view" value="{{ schedule_view }}">
   {{ form.non_field_errors }}
   {% for field in form %}<label for="{{ field.id_for_label }}"><span class="field-label">{{ field.label }}</span>{{ field }}{{ field.errors }}</label>{% endfor %}
   {% if timetable_weeks %}<label for="published-week">Timetable week (Monday&ndash;Sunday)<select id="published-week" name="week">{% for week in timetable_weeks %}<option value="{{ week|date:'Y-m-d' }}"{% if week == timetable_week %} selected{% endif %}>Week of {{ week|date:"M j, Y" }}</option>{% endfor %}</select></label>{% endif %}
   <div class="actions"><button class="primary" type="submit">Apply Filters</button>
-    <a class="button" href="{% url 'browse_schedules' %}?view={{ schedule_view }}">Clear</a></div>
+    <a class="button" href="{% url 'browse_schedules' %}?view={{ schedule_view }}{% if request.education_context.explicit %}&amp;education_level={{ request.education_context.level }}{% endif %}">Clear</a></div>
 </form>
 <nav class="view-switcher" aria-label="Published schedule view">
   <a class="button view-tab{% if schedule_view == 'table' %} is-active{% endif %}" href="{{ view_links.table }}" data-browse-view{% if schedule_view == 'table' %} aria-current="page"{% endif %}>Table View</a>

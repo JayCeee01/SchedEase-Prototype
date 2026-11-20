@@ -11,7 +11,7 @@ from .publication_boundary import _validated_transition
 from copy import copy
 
 
-def publish(schedule, actor, replace_confirmed=False):
+def publish(schedule, actor, replace_confirmed=False, *, education_level=None, term_id=None):
     with transaction.atomic():
         # Conditional first write serializes SQLite publishers and manual edits.
         claimed = Schedule.objects.filter(pk=schedule.pk, updated_at=schedule.updated_at,
@@ -21,6 +21,8 @@ def publish(schedule, actor, replace_confirmed=False):
             raise ValidationError("The schedule changed. Reload and review it before publishing.")
         actor = authorized_administrator(actor)
         locked = Schedule.objects.select_for_update().get(pk=schedule.pk)
+        from .academic_scope import require_schedule_scope
+        require_schedule_scope(locked, education_level=education_level, term_id=term_id)
         if not locked.entries.exists() or schedule_validation_messages(locked):
             raise ValidationError("Resolve conflicts before publishing.")
         current = Schedule.objects.filter(term=locked.term, status=ScheduleStatus.PUBLISHED).exclude(pk=locked.pk).first()

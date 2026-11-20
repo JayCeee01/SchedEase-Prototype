@@ -15,29 +15,34 @@
       {% csrf_token %}<button class="primary" type="submit" data-loading-text="Creating draft">Copy to Draft</button>
     </form>
     {% endif %}
-    <a class="button" href="?check=1">Check Conflicts</a>
+    <a class="button" href="{{ check_conflicts_url }}">Check Conflicts</a>
     {% endif %}
     <a class="button" href="{% url 'export_csv' schedule.pk %}?{{ request.GET.urlencode }}">CSV</a>
     <a class="button" href="{% url 'export_pdf' schedule.pk %}?{{ request.GET.urlencode }}">PDF</a>
     <a class="button" href="{% url 'export_xlsx' schedule.pk %}?{{ request.GET.urlencode }}">Excel (.xlsx)</a>
     {% if can_manage and schedule.status != "PUBLISHED" and schedule.status != "ARCHIVED" %}
-    <form method="post" action="{% url 'publish_schedule' schedule.pk %}" onsubmit="return confirm('Publish this schedule? Published schedules become visible to faculty and students.');">
+    <form method="post" data-publication-form action="{% url 'publish_schedule' schedule.pk %}" onsubmit="return confirm('Publish this schedule? Published schedules become visible to faculty and students, and this version becomes read-only.');">
       {% csrf_token %}
-      <button class="primary" type="submit" data-loading-text="Publishing">Publish</button>
+      <button class="primary" type="submit" data-loading-text="Publishing"{% if conflicts or not has_meetings %} disabled aria-describedby="schedule-validation"{% endif %}>Publish</button>
     </form>
     {% endif %}
   </div>
 </div>
 
+{% if schedule.status == 'PUBLISHED' %}<p><a class="button" href="{% url 'browse_schedules' %}?schedule={{ schedule.pk }}&amp;term={{ schedule.term_id }}">Browse this published schedule</a></p>{% endif %}
+<div id="schedule-validation" tabindex="-1" aria-live="polite">
 {% if historical %}
 <div class="panel"><strong>Read-only historical schedule</strong>
 <p>{% if snapshot_reconstructed %}Reconstructed from records available on {{ snapshot_captured_at|date:"Y-m-d H:i" }}. Original publication values cannot be independently verified.{% else %}Preserved when this schedule was finalized.{% endif %}</p>
 </div>
+{% elif not has_meetings %}
+<div class="toast error"><strong>This draft has no meetings. Add meetings or generate a schedule before publishing.</strong></div>
 {% elif conflicts %}
 <div class="toast error">
   <span class="toast-dot"></span>
   <div>
-    <strong>{{ conflicts|length }} conflict{{ conflicts|length|pluralize }} detected</strong>
+    <strong>{{ conflicts|length }} issue{{ conflicts|length|pluralize }} blocking publication</strong>
+    <p>These checks cover the entire schedule, including meetings hidden by filters. Correct the issues below, then check again.</p>
     {% for conflict in conflicts %}
     <p>{{ conflict.message }}
       {% if conflict.entry %}<br><small>Meeting {{ conflict.entry.assignment.meeting_index }} | {{ conflict.entry.effective_faculty }} | {{ conflict.entry.room }} | {{ conflict.entry.get_day_display }} {{ conflict.entry.start_time|time:"g:i A" }} to {{ conflict.entry.end_time|time:"g:i A" }}</small>
@@ -49,10 +54,11 @@
 {% else %}
 <div class="toast">
   <span class="toast-dot"></span>
-  <span>No conflicts detected. This schedule is ready for approval or publishing.</span>
+  <span>No blocking issues detected. This draft is not visible to faculty or students. Publication will revalidate the schedule before making it official.</span>
 </div>
 {% endif %}
 
+</div>
 <form method="get" class="panel schedule-entry-filters" data-auto-tooltips="false">
   <input type="hidden" name="view" value="{{ schedule_view }}" data-schedule-view-state>
   <label><span class="field-label">Search</span>{{ filter_form.q }}</label>

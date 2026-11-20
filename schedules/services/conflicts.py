@@ -32,8 +32,9 @@ def individual_entry_errors(entry, *, eligible=None, faculty_policy=None, room_p
             text = message.messages[0] if isinstance(message, ValidationError) else message
             issue_sink.append(Diagnostic.for_meetings(category, text, [entry.assignment], room_id=entry.room.pk,
                 details={'day': entry.day, 'start_time': str(entry.start_time), 'end_time': str(entry.end_time)}))
-    if entry.assignment.term_id != entry.schedule.term_id:
-        add("The teaching assignment belongs to a different academic term.")
+    from .academic_scope import entry_scope_errors
+    for message in entry_scope_errors(entry):
+        add(message)
     if entry.day not in ALLOWED_DAYS:
         add("Classes must be scheduled Monday to Saturday.")
     if not contains(SCHOOL_START, SCHOOL_END, entry.start_time, entry.end_time):

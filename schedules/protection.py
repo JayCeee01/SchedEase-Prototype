@@ -152,10 +152,15 @@ def assignment_term_sync(parent_id, term_id):
 class ProtectedContentMixin:
     def clean(self):
         super().clean()
+        from .services.academic_crud import validate_relationships
+        validate_relationships(self)
         check_changes(self)
 
 
 def before_save(sender, instance, using, update_fields=None, **kwargs):
+    from .services.academic_crud import validate_relationships
+    if update_fields is None or set(update_fields) & {'term','term_id','section','section_id','program','program_id','education_level','cohort','cohort_id','year_level','year_level_id'}:
+        validate_relationships(instance, using)
     check_changes(instance, update_fields, using)
 
 

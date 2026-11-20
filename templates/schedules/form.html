@@ -2,6 +2,7 @@
 {% block content %}
 <div class="record-editor{% if tooltip_context != 'generate-schedule' and tooltip_context != 'schedule-entry' %} record-editor--standard{% endif %}">
 {% include "schedules/_editor_heading.html" %}
+{% include "schedules/_education_context.html" %}
 {% if draft %}
 <div class="draft-banner" role="status">
   <div><strong>Draft restored</strong><small>You are continuing unfinished changes saved {{ draft.updated_at|timesince }} ago.</small></div>
@@ -12,6 +13,8 @@
 {% endif %}
 <form method="post" aria-labelledby="record-editor-title" class="panel form{% if tooltip_context == 'generate-schedule' %} generation-form{% endif %}" data-tooltip-context="{{ tooltip_context|default:title|slugify }}"{% if tooltip_context == 'generate-schedule' %} data-schedule-generation{% endif %}{% if draft_resource %} data-form-draft data-draft-save-url="{% url 'save_form_draft' %}" data-draft-resource="{{ draft_resource }}" data-draft-object-pk="{{ draft_object_pk }}" data-has-draft="{% if draft %}true{% else %}false{% endif %}"{% endif %}>
   {% csrf_token %}
+  {% if request.academic_write_level %}<input type="hidden" name="education_level" value="{{ request.academic_write_level }}">{% endif %}
+  {% if request.education_context.explicit %}<input type="hidden" name="education_level" value="{{ request.education_context.level }}">{% endif %}
   {% if draft_conflict %}
   <div class="draft-conflict" role="alert">
     <strong>The saved record changed after this draft began.</strong>
@@ -20,6 +23,10 @@
   </div>
   {% endif %}
   {{ form.as_p }}
+  {% if tooltip_context == 'generate-schedule' %}
+  <p class="subtle" data-generation-context aria-live="polite">Choose the academic term above. Generation creates a draft for review; it does not publish a schedule.</p>
+  {% if form.errors %}<p class="toast error" role="alert">Review the highlighted errors before trying again. No schedule has been published by this form.</p>{% endif %}
+  {% endif %}
   {% if tooltip_context == 'sections' %}
   <div class="section-name-preview" data-section-preview role="status" aria-live="polite">
     <small>Section Name Preview <span class="info-icon" tabindex="0" data-tooltip="Shows how this section will appear throughout SchedEase." aria-label="About the section name preview">i</span></small>

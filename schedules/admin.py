@@ -44,6 +44,28 @@ from .models import (
 
 class AdministratorPermissionMixin:
     """The application role supplements, never replaces, Django permissions."""
+    def get_form(self, request, obj=None, **kwargs):
+        from .services.academic_crud import check_object_context, scope_form
+        if obj is not None:
+            check_object_context(request, obj)
+        base = super().get_form(request, obj, **kwargs)
+        class ScopedForm(base):
+            def __init__(self, *args, **form_kwargs):
+                super().__init__(*args, **form_kwargs)
+                scope_form(request, self)
+        return ScopedForm
+
+    def delete_model(self, request, obj):
+        from .services.academic_crud import check_object_context
+        check_object_context(request, obj)
+        return super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        from .services.academic_crud import check_object_context
+        for obj in queryset:
+            check_object_context(request, obj)
+        return super().delete_queryset(request, queryset)
+
     @staticmethod
     def authorized(request):
         from .views import admin_required

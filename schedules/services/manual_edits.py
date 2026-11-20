@@ -72,11 +72,16 @@ def manual_edit_transaction(*, schedule_id, entry_id, actor, revision, draft_onl
         yield schedule, entry, previous, current_user
 
 
-def save_manual_entry(*, schedule_id, entry_id, actor, revision, proposed, confirmed=False, reason="", draft_only=False, scope_token=None):
+def save_manual_entry(*, schedule_id, entry_id, actor, revision, proposed, confirmed=False, reason="", draft_only=False, scope_token=None, education_level=None, term_id=None):
     with manual_edit_transaction(schedule_id=schedule_id, entry_id=entry_id, actor=actor, revision=revision, draft_only=draft_only) as (schedule, entry, previous, current_user):
         for field in FIELDS:
             setattr(entry, field, proposed[field])
         entry.schedule = schedule
+        from .academic_scope import require_schedule_scope, entry_scope_errors
+        require_schedule_scope(schedule, education_level=education_level, term_id=term_id)
+        scope_errors = entry_scope_errors(entry)
+        if scope_errors:
+            raise ValidationError(scope_errors)
         qualified = faculty_qualification(entry.effective_faculty, entry.effective_subject, schedule.term)["qualified"]
         covered = valid_credential_override(entry.assignment, entry.effective_faculty, entry.effective_subject)
         if not qualified and not covered:
@@ -95,11 +100,13 @@ def save_manual_entry(*, schedule_id, entry_id, actor, revision, proposed, confi
         return entry
 
 
-def remove_manual_entry(*, schedule_id, entry_id, actor, revision, confirmed=False):
+def remove_manual_entry(*, schedule_id, entry_id, actor, revision, confirmed=False, education_level=None, term_id=None):
     if not confirmed:
         raise ValidationError("Confirm removal of this meeting before continuing.")
     with manual_edit_transaction(schedule_id=schedule_id, entry_id=entry_id, actor=actor,
                                  revision=revision, draft_only=True) as (schedule, entry, previous, current_user):
+        from .academic_scope import require_schedule_scope
+        require_schedule_scope(schedule, education_level=education_level, term_id=term_id)
         if not entry.pk:
             raise ValidationError("Choose a scheduled meeting to remove.")
         previous["entry_id"] = entry.pk
@@ -108,7 +115,7 @@ def remove_manual_entry(*, schedule_id, entry_id, actor, revision, confirmed=Fal
             previous_values=previous, new_values={"action": "remove_meeting"})
 
 
-def copy_to_draft(*, source_id, actor):
+def copy_to_draft(*, source_id, actor, education_level=None, term_id=None):
     source = Schedule.objects.filter(pk=source_id, status__in=[ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED]).first()
     if source is None:
         raise ValidationError("Only published or archived schedules can be copied to a draft.")
@@ -119,6 +126,8 @@ def copy_to_draft(*, source_id, actor):
                                          status=ScheduleStatus.DRAFT, origin=Schedule.Origin.MANUAL)
         current_user = authorized_administrator(actor)
         source = Schedule.objects.select_for_update().get(pk=source_id)
+        from .academic_scope import require_schedule_scope
+        require_schedule_scope(source, education_level=education_level, term_id=term_id)
         if source.status not in (ScheduleStatus.PUBLISHED, ScheduleStatus.ARCHIVED) or source.term_id != draft.term_id:
             raise ValidationError("The source schedule changed. Reload it before copying.")
         originals = list(source.entries.order_by('pk'))
